@@ -23,7 +23,7 @@ const VARCONV_SCAN_TRANSIENT = 'varconv_scan';
 /**
  * Published simple products with a SKU, shown in the catalog, not already in a collection or made by a split.
  *
- * @return array<int,array{id:int,sku:string,name:string,title:string,price:string,stock:string,cats:int[]}>
+ * @return array<int,array{id:int,sku:string,name:string,title:string,price:string,stock:string,cats:int[],brands:string[]}>
  */
 function varconv_products(): array {
 	global $wpdb;
@@ -55,6 +55,17 @@ function varconv_products(): array {
 	) as $row ) {
 		$cats[ (int) $row->object_id ][] = (int) $row->term_id;
 	}
+	$brands = array();
+	if ( taxonomy_exists( 'product_brand' ) ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		foreach ( $wpdb->get_results(
+			"SELECT tr.object_id, t.name FROM {$wpdb->term_relationships} tr
+			JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = tr.term_taxonomy_id AND tt.taxonomy = 'product_brand'
+			JOIN {$wpdb->terms} t ON t.term_id = tt.term_id"
+		) as $row ) {
+			$brands[ (int) $row->object_id ][] = html_entity_decode( (string) $row->name, ENT_QUOTES | ENT_HTML5, 'UTF-8' );
+		}
+	}
 	$products = array();
 	foreach ( $rows as $row ) {
 		$id = (int) $row->ID;
@@ -66,10 +77,20 @@ function varconv_products(): array {
 			'title' => (string) $row->post_title,
 			'price' => (string) $row->price,
 			'stock' => (string) $row->stock,
-			'cats'  => $cats[ $id ] ?? array(),
+			'cats'   => $cats[ $id ] ?? array(),
+			'brands' => $brands[ $id ] ?? array(),
 		);
 	}
 	return $products;
+}
+
+/** Every brand's name (WooCommerce Brands); titles often start with one, which is not a shared product name. */
+function varconv_brand_names(): array {
+	if ( ! taxonomy_exists( 'product_brand' ) ) {
+		return array();
+	}
+	$names = get_terms( array( 'taxonomy' => 'product_brand', 'hide_empty' => false, 'fields' => 'names' ) );
+	return is_wp_error( $names ) ? array() : $names;
 }
 
 /** The scan, kept for 30 minutes; creating, undoing or dismissing clears it. */
@@ -78,9 +99,31 @@ function varconv_candidates( bool $fresh = false ): array {
 	if ( is_array( $cached ) ) {
 		return $cached;
 	}
+	/**
+	 * Filters the simple products the scan groups, for example to leave out testers or display units.
+	 *
+	 * @param array $products Each with id, sku, name, title, price, stock, cats (term IDs) and brands (names).
+	 */
+	$products = (array) apply_filters( 'varconv_scan_products', varconv_products() );
+	/**
+	 * Filters the brand names a product name can start with. A shared brand is not a shared product name, so
+	 * "Acme Plug" and "Acme Wand" are not proposed as variants. Defaults to the WooCommerce Brands terms.
+	 *
+	 * @param string[] $names
+	 */
+	$brand_names = (array) apply_filters( 'varconv_brand_names', varconv_brand_names() );
+	$dismissed = (array) get_option( VARCONV_DISMISSED_OPTION, array() );
+	/**
+	 * Filters the proposed groups, for example to add products to a group or to drop groups.
+	 *
+	 * @param array $collections Each with key, family, name, brand, attribute, sku, members (each with a label) and
+	 *                           notes (kind => text).
+	 * @param array $products    The products that were scanned.
+	 */
+	$collections = (array) apply_filters( 'varconv_collections', varconv_scan( $products, $dismissed, $brand_names ), $products );
 	$scan = array(
 		'time'        => time(),
-		'collections' => varconv_scan( varconv_products(), (array) get_option( VARCONV_DISMISSED_OPTION, array() ) ),
+		'collections' => $collections,
 	);
 	set_transient( VARCONV_SCAN_TRANSIENT, $scan, 30 * MINUTE_IN_SECONDS );
 	return $scan;
