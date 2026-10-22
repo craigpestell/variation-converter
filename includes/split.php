@@ -10,6 +10,10 @@
  * product and the simple product) while the variable product is kept for Undo.
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 const VARCONV_SPLIT_META = '_varconv_split';
 const VARCONV_SPLIT_FROM_META = '_varconv_split_from';
 
@@ -28,11 +32,12 @@ function varconv_split_name( string $parent, array $values ): string {
 function varconv_split_validate( array $names ): array {
 	$errors = array();
 	if ( ! $names ) {
-		$errors[] = 'Choose at least 1 variation.';
+		$errors[] = __( 'Choose at least 1 variation.', 'variation-converter' );
 	}
 	foreach ( $names as $id => $name ) {
 		if ( '' === trim( (string) $name ) ) {
-			$errors[] = 'Variation ' . $id . ' needs a product name.';
+			/* translators: %d: variation ID. */
+			$errors[] = sprintf( __( 'Variation %d needs a product name.', 'variation-converter' ), $id );
 		}
 	}
 	return $errors;
@@ -52,7 +57,9 @@ function varconv_variables( string $search, int $paged, int $per_page ): array {
 		'fields'         => 'ids',
 		'orderby'        => 'ID',
 		'order'          => 'DESC',
+		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_tax_query
 		'tax_query'      => array( array( 'taxonomy' => 'product_type', 'field' => 'slug', 'terms' => 'variable' ) ),
+		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 		'meta_query'     => array( array( 'key' => VARCONV_SPLIT_META, 'compare' => 'NOT EXISTS' ) ),
 	);
 	if ( '' !== $search ) {
@@ -66,6 +73,7 @@ function varconv_variables( string $search, int $paged, int $per_page ): array {
 /** Variable products split here, newest first. */
 function varconv_split_list(): array {
 	global $wpdb;
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 	return array_map( 'intval', $wpdb->get_col( $wpdb->prepare(
 		"SELECT p.ID FROM {$wpdb->posts} p JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = %s
 		WHERE p.post_type = 'product' ORDER BY p.ID DESC",
@@ -121,7 +129,7 @@ function varconv_split_rows( WC_Product_Variable $parent ): array {
 			'price'   => $variation->get_regular_price( 'edit' ),
 			'stock'   => $variation->get_stock_status( 'edit' ),
 			'image'   => (int) ( $variation->get_image_id( 'edit' ) ?: $parent->get_image_id( 'edit' ) ),
-			'problem' => in_array( '', $values, true ) ? 'Set to "Any" for an attribute, so it is not one product; give it a value first.' : '',
+			'problem' => in_array( '', $values, true ) ? __( 'Set to "Any" for an attribute, so it is not one product; give it a value first.', 'variation-converter' ) : '',
 		);
 	}
 	return $rows;
@@ -140,13 +148,16 @@ function varconv_split_rows( WC_Product_Variable $parent ): array {
 function varconv_split_product( int $parent_id, array $names ): array {
 	$parent = wc_get_product( $parent_id );
 	if ( ! $parent instanceof WC_Product_Variable || 'publish' !== $parent->get_status() ) {
-		throw new RuntimeException( 'Product ' . $parent_id . ' is not a published variable product.' );
+		/* translators: %d: product ID. */
+		throw new RuntimeException( esc_html( sprintf( __( 'Product %d is not a published variable product.', 'variation-converter' ), $parent_id ) ) );
 	}
 	if ( '' !== (string) $parent->get_meta( VARCONV_META ) ) {
-		throw new RuntimeException( 'Product ' . $parent_id . ' was combined by Variation Converter; Undo it instead.' );
+		/* translators: %d: product ID. */
+		throw new RuntimeException( esc_html( sprintf( __( 'Product %d was combined by Variation Converter; Undo it instead.', 'variation-converter' ), $parent_id ) ) );
 	}
 	if ( '' !== (string) $parent->get_meta( VARCONV_SPLIT_META ) ) {
-		throw new RuntimeException( 'Product ' . $parent_id . ' is already split.' );
+		/* translators: %d: product ID. */
+		throw new RuntimeException( esc_html( sprintf( __( 'Product %d is already split.', 'variation-converter' ), $parent_id ) ) );
 	}
 	$names = array_map( static fn( $n ) => trim( (string) $n ), $names );
 	$errors = varconv_split_validate( $names );
@@ -155,15 +166,17 @@ function varconv_split_product( int $parent_id, array $names ): array {
 	foreach ( $names as $id => $name ) {
 		$variation = wc_get_product( (int) $id );
 		if ( ! $variation instanceof WC_Product_Variation || ! in_array( (int) $id, $children, true ) ) {
-			$errors[] = 'Product ' . $id . ' is not a variation of product ' . $parent_id . '.';
+			/* translators: 1: product ID, 2: variable product ID. */
+			$errors[] = sprintf( __( 'Product %1$d is not a variation of product %2$d.', 'variation-converter' ), $id, $parent_id );
 		} elseif ( in_array( '', varconv_variation_values( $parent, $variation ), true ) ) {
-			$errors[] = 'Variation ' . $id . ' is set to "Any" for an attribute; give it a value first.';
+			/* translators: %d: variation ID. */
+			$errors[] = sprintf( __( 'Variation %d is set to "Any" for an attribute; give it a value first.', 'variation-converter' ), $id );
 		} else {
 			$sources[] = array( $variation, $name );
 		}
 	}
 	if ( $errors ) {
-		throw new RuntimeException( implode( ' ', array_unique( $errors ) ) );
+		throw new RuntimeException( esc_html( implode( ' ', array_unique( $errors ) ) ) );
 	}
 
 	$attributes = array_values( array_filter( $parent->get_attributes( 'edit' ), static fn( $a ) => ! $a->get_variation() ) );
@@ -214,13 +227,18 @@ function varconv_split_product( int $parent_id, array $names ): array {
 			$simple->set_tax_class( 'parent' === $variation->get_tax_class( 'edit' ) ? $parent->get_tax_class( 'edit' ) : $variation->get_tax_class( 'edit' ) );
 			$simple->set_shipping_class_id( $variation->get_shipping_class_id( 'edit' ) ?: $parent->get_shipping_class_id( 'edit' ) );
 			$simple->set_attributes( $attributes );
+			// Set on the product, not only as terms after saving: WooCommerce would otherwise give it the default
+			// category, and its cached copy of the product would keep that until the next request.
+			$simple->set_category_ids( $terms['product_cat'] ?? array() );
+			$simple->set_tag_ids( $terms['product_tag'] ?? array() );
 			if ( $parent->get_date_created( 'edit' ) ) {
 				$simple->set_date_created( $parent->get_date_created( 'edit' )->getTimestamp() );
 			}
 			$simple->update_meta_data( VARCONV_SPLIT_FROM_META, (string) $parent_id );
 			$id = $simple->save();
 			if ( ! $id ) {
-				throw new RuntimeException( 'WooCommerce did not save the simple product for variation ' . $variation->get_id() . '.' );
+				/* translators: %d: variation ID. */
+				throw new RuntimeException( esc_html( sprintf( __( 'WooCommerce did not save the simple product for variation %d.', 'variation-converter' ), $variation->get_id() ) ) );
 			}
 			$created[] = $id;
 			foreach ( $terms as $taxonomy => $ids ) {
@@ -232,7 +250,8 @@ function varconv_split_product( int $parent_id, array $names ): array {
 		foreach ( $created as $id ) {
 			wp_delete_post( $id, true );
 		}
-		throw new RuntimeException( 'Not split: ' . $e->getMessage(), 0, $e );
+		/* translators: %s: the reason. */
+		throw new RuntimeException( esc_html( sprintf( __( 'Not split: %s', 'variation-converter' ), $e->getMessage() ) ), 0, $e ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- $e is the previous exception, not output.
 	}
 	remove_filter( 'wc_product_has_unique_sku', '__return_false', 99 );
 
@@ -253,9 +272,11 @@ function varconv_split_product( int $parent_id, array $names ): array {
  */
 function varconv_split_undo( int $parent_id ): int {
 	if ( 'product' !== get_post_type( $parent_id ) || '' === (string) get_post_meta( $parent_id, VARCONV_SPLIT_META, true ) ) {
-		throw new RuntimeException( 'Product ' . $parent_id . ' was not split by Variation Converter.' );
+		/* translators: %d: product ID. */
+		throw new RuntimeException( esc_html( sprintf( __( 'Product %d was not split by Variation Converter.', 'variation-converter' ), $parent_id ) ) );
 	}
 	global $wpdb;
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 	$ids = array_map( 'intval', $wpdb->get_col( $wpdb->prepare(
 		"SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value = %s",
 		VARCONV_SPLIT_FROM_META,

@@ -2,17 +2,20 @@
 /**
  * Variation Converter: groups of simple products that are one product in several variants, the variant written into
  * the name ("Tri-Rings Black", "Tri-Rings Blue"). Members share a SKU family (SE1421-01 CL, SE1421-03 CL) and the
- * start of their name; what follows is the variant label. Pure functions, no WordPress calls; see
+ * start of their name; what follows is the variant label. Pure functions, no WordPress calls besides translation; see
  * variation-converter.php and tests/test-scan.php.
  */
+
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
 
 /** Longest variant label the scan proposes, in words; longer differences are more likely different products. */
 const VARCONV_MAX_LABEL_WORDS = 5;
 
 /**
  * The SKU family: the SKU without its packaging suffix and last segment ("SE1421-01 CL" -> "SE1421",
- * "D1701-12" -> "D1701"). SKUs without a separator keep their first 5 characters ("W622001" -> "W6220"), as the
- * dev preview grouped them; the name check keeps unrelated products in such a family apart.
+ * "D1701-12" -> "D1701"). SKUs without a separator keep their first 5 characters ("W622001" -> "W6220"); the name check keeps unrelated products in such a family apart.
  */
 function varconv_family( string $sku ): string {
 	$sku = strtoupper( trim( preg_replace( '/[\s\x{00a0}]+/u', ' ', $sku ) ) );
@@ -214,20 +217,21 @@ function varconv_notes( array $members ): array {
 	$notes = array();
 	$labels = array_map( static fn( $m ) => strtolower( $m['label'] ), $members );
 	if ( in_array( '', $labels, true ) ) {
-		$notes[] = 'A member has no variant words in its name; give it a label.';
+		$notes[] = __( 'A member has no variant words in its name; give it a label.', 'variation-converter' );
 	}
 	if ( count( array_unique( $labels ) ) < count( $labels ) ) {
-		$notes[] = 'Two members have the same label.';
+		$notes[] = __( 'Two members have the same label.', 'variation-converter' );
 	}
 	foreach ( $labels as $label ) {
 		if ( count( varconv_words( $label ) ) > 3 ) {
-			$notes[] = 'Long labels; check these are variants of one product.';
+			$notes[] = __( 'Long labels; check these are variants of one product.', 'variation-converter' );
 			break;
 		}
 	}
 	$prices = array_unique( array_filter( array_map( static fn( $m ) => (string) ( $m['price'] ?? '' ), $members ), 'strlen' ) );
 	if ( count( $prices ) > 1 ) {
-		$notes[] = 'Prices differ (' . implode( ', ', $prices ) . ').';
+		/* translators: %s: the members' prices, comma separated. */
+		$notes[] = sprintf( __( 'Prices differ (%s).', 'variation-converter' ), implode( ', ', $prices ) );
 	}
 	$cats = array_unique( array_map( static function ( $m ) {
 		$c = array_map( 'intval', $m['cats'] ?? array() );
@@ -235,7 +239,7 @@ function varconv_notes( array $members ): array {
 		return implode( ',', $c );
 	}, $members ) );
 	if ( count( $cats ) > 1 ) {
-		$notes[] = 'Categories differ; the new product takes the first member\'s.';
+		$notes[] = __( 'Categories differ; the new product takes the first member\'s.', 'variation-converter' );
 	}
 	return $notes;
 }
@@ -248,23 +252,26 @@ function varconv_notes( array $members ): array {
 function varconv_validate( string $name, string $attribute, array $members ): array {
 	$errors = array();
 	if ( '' === trim( $name ) ) {
-		$errors[] = 'The product needs a name.';
+		$errors[] = __( 'The product needs a name.', 'variation-converter' );
 	}
 	if ( '' === trim( $attribute ) ) {
-		$errors[] = 'The attribute needs a name (Color, Size, ...).';
+		$errors[] = __( 'The attribute needs a name (Color, Size, ...).', 'variation-converter' );
 	}
 	if ( count( $members ) < 2 ) {
-		$errors[] = 'Choose at least 2 products.';
+		$errors[] = __( 'Choose at least 2 products.', 'variation-converter' );
 	}
 	$seen = array();
 	foreach ( $members as $id => $label ) {
 		$label = trim( (string) $label );
 		if ( '' === $label ) {
-			$errors[] = 'Product ' . $id . ' needs a variant label.';
+			/* translators: %d: product ID. */
+			$errors[] = sprintf( __( 'Product %d needs a variant label.', 'variation-converter' ), $id );
 		} elseif ( str_contains( $label, '|' ) ) {
-			$errors[] = 'Labels cannot contain "|" (product ' . $id . ').';
+			/* translators: %d: product ID. */
+			$errors[] = sprintf( __( 'Labels cannot contain "|" (product %d).', 'variation-converter' ), $id );
 		} elseif ( isset( $seen[ strtolower( $label ) ] ) ) {
-			$errors[] = 'Label "' . $label . '" is used twice.';
+			/* translators: %s: variant label. */
+			$errors[] = sprintf( __( 'Label "%s" is used twice.', 'variation-converter' ), $label );
 		}
 		$seen[ strtolower( $label ) ] = true;
 	}

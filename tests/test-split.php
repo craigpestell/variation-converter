@@ -1,5 +1,6 @@
 <?php
-/** Offline checks for the pure split helpers (includes/split.php). */
+/** Offline checks for the pure split helpers (includes/split.php): php tests/test-split.php */
+require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/../includes/split.php';
 
 function expect( $actual, $expected, string $what ): void {

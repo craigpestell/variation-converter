@@ -19,7 +19,9 @@ function throws( callable $fn, string $needle, string $what ): void {
 	try {
 		$fn();
 	} catch ( RuntimeException $e ) {
-		check( str_contains( $e->getMessage(), $needle ), true, $what . ' (' . $e->getMessage() . ')' );
+		// Messages are escaped for HTML when thrown.
+		$message = html_entity_decode( $e->getMessage(), ENT_QUOTES );
+		check( str_contains( $message, $needle ), true, $what . ' (' . $message . ')' );
 		return;
 	}
 	throw new RuntimeException( $what . ': no exception' );

@@ -11,8 +11,8 @@ This is the development repo. The user-facing docs are in [`readme.txt`](readme.
 
 ## Requirements
 
-- WordPress 6.2+
-- WooCommerce
+- WordPress 6.5+
+- WooCommerce 8.0+
 - PHP 7.4+
 
 ## How it works
@@ -20,10 +20,12 @@ This is the development repo. The user-facing docs are in [`readme.txt`](readme.
 | File | What it does |
 |---|---|
 | `variation-converter.php` | Plugin header, loads the includes, name-cleaning helpers |
-| `includes/scan.php` | Pure matching functions, no WordPress calls: SKU families, shared name prefixes, attribute guess, notes, validation |
+| `includes/scan.php` | Pure matching functions, no WordPress calls besides translation: SKU families, shared name prefixes, attribute guess, notes, validation |
 | `includes/create.php` | Catalog query, scan cache, creating the variable product, Undo |
 | `includes/split.php` | Variable product list, splitting into simple products, Undo of a split |
 | `includes/admin.php` | The **Products > Variation Converter** screen and its form handlers |
+| `assets/admin.css`, `assets/admin.js` | Screen styles, and the confirm before Undo |
+| `uninstall.php` | Removes the dismissed list and cached scan on delete; products are left alone |
 | `tests/test-scan.php` | Offline tests for `scan.php` |
 | `tests/test-split.php` | Offline tests for the pure helpers in `split.php` |
 | `tests/integration-split.php` | Split, Undo and the merge interplay against a real site: `wp eval-file tests/integration-split.php` (makes and deletes its own products; use a test site) |

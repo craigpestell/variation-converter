@@ -10,13 +10,15 @@
  * (the hidden simple product and the variation) while the sources are kept for Undo.
  */
 
+if ( ! defined( 'ABSPATH' ) ) {
+	exit;
+}
+
 const VARCONV_META = '_varconv_collection';
 const VARCONV_PARENT_META = '_varconv_collection_parent';
 const VARCONV_HIDDEN_META = '_varconv_collection_hidden';
 const VARCONV_DISMISSED_OPTION = 'varconv_dismissed';
 const VARCONV_SCAN_TRANSIENT = 'varconv_scan';
-// Product meta the new product takes from its first member, besides the WooCommerce fields set below.
-const VARCONV_COPY_META = array();
 
 /**
  * Published simple products with a SKU, shown in the catalog, not already in a collection or made by a split.
@@ -25,6 +27,9 @@ const VARCONV_COPY_META = array();
  */
 function varconv_products(): array {
 	global $wpdb;
+	// One query for the whole catalog: WC_Product_Query would load every product object. The result is cached by
+	// varconv_candidates().
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 	$rows = $wpdb->get_results( $wpdb->prepare(
 		"SELECT p.ID, p.post_title, sku.meta_value AS sku, price.meta_value AS price, stock.meta_value AS stock
 		FROM {$wpdb->posts} p
@@ -43,6 +48,7 @@ function varconv_products(): array {
 		VARCONV_SPLIT_FROM_META
 	) );
 	$cats = array();
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 	foreach ( $wpdb->get_results(
 		"SELECT tr.object_id, tt.term_id FROM {$wpdb->term_relationships} tr
 		JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = tr.term_taxonomy_id AND tt.taxonomy = 'product_cat'"
@@ -55,7 +61,7 @@ function varconv_products(): array {
 		$products[] = array(
 			'id'    => $id,
 			'sku'   => (string) $row->sku,
-			// Without the SKU line and retailer notices, as feeds' cleaned name.
+			// Plain text, without a leading SKU.
 			'name'  => varconv_clean_name( (string) $row->post_title, (string) $row->sku ),
 			'title' => (string) $row->post_title,
 			'price' => (string) $row->price,
@@ -83,6 +89,7 @@ function varconv_candidates( bool $fresh = false ): array {
 /** Variable products made here, newest first. */
 function varconv_created(): array {
 	global $wpdb;
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 	return array_map( 'intval', $wpdb->get_col( $wpdb->prepare(
 		"SELECT p.ID FROM {$wpdb->posts} p JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = %s
 		WHERE p.post_type = 'product' ORDER BY p.ID DESC",
@@ -93,7 +100,7 @@ function varconv_created(): array {
 /**
  * Makes a published variable product from simple products: one variation per member, in the order given, with the
  * member's SKU, prices, stock, weight and image. The product takes the first member's descriptions, categories,
- * tags, brand and retailer notes, and is dated just after its newest member so the shop order barely moves. The
+ * tags and other taxonomies, and is dated just after its newest member so the shop order barely moves. The
  * members are then hidden from the catalog and search.
  *
  * @param array<int,string> $members Simple product ID => variant label.
@@ -109,19 +116,22 @@ function varconv_create( string $name, string $attribute_name, string $sku, arra
 	foreach ( $members as $id => $label ) {
 		$simple = wc_get_product( (int) $id );
 		if ( ! $simple || ! $simple->is_type( 'simple' ) || 'publish' !== $simple->get_status() ) {
-			$errors[] = 'Product ' . $id . ' is not a published simple product.';
+			/* translators: %d: product ID. */
+			$errors[] = sprintf( __( 'Product %d is not a published simple product.', 'variation-converter' ), $id );
 		} elseif ( $simple->get_meta( VARCONV_PARENT_META ) ) {
-			$errors[] = 'Product ' . $id . ' is already in a variable product.';
+			/* translators: %d: product ID. */
+			$errors[] = sprintf( __( 'Product %d is already in a variable product.', 'variation-converter' ), $id );
 		} else {
 			$sources[] = array( $simple, trim( (string) $label ) );
 		}
 	}
 	$taken = '' === $sku ? 0 : (int) wc_get_product_id_by_sku( $sku );
 	if ( $taken ) {
-		$errors[] = 'SKU ' . $sku . ' is already used by product ' . $taken . '; change it or leave it empty.';
+		/* translators: 1: SKU, 2: product ID. */
+		$errors[] = sprintf( __( 'SKU %1$s is already used by product %2$d; change it or leave it empty.', 'variation-converter' ), $sku, $taken );
 	}
 	if ( $errors ) {
-		throw new RuntimeException( implode( ' ', array_unique( $errors ) ) );
+		throw new RuntimeException( esc_html( implode( ' ', array_unique( $errors ) ) ) );
 	}
 
 	$first = $sources[0][0];
@@ -151,19 +161,16 @@ function varconv_create( string $name, string $attribute_name, string $sku, arra
 		$parent->set_tax_status( $first->get_tax_status( 'edit' ) );
 		$parent->set_shipping_class_id( $first->get_shipping_class_id( 'edit' ) );
 		$parent->set_attributes( array( $attribute ) );
+		// Set on the product, not only as terms after saving, so WooCommerce doesn't add the default category.
+		$parent->set_category_ids( $first->get_category_ids( 'edit' ) );
+		$parent->set_tag_ids( $first->get_tag_ids( 'edit' ) );
 		if ( $newest ) {
 			$parent->set_date_created( $newest + 1 );
 		}
 		$parent->update_meta_data( VARCONV_META, wp_json_encode( array_map( static fn( $s ) => $s[0]->get_id(), $sources ) ) );
-		foreach ( VARCONV_COPY_META as $key ) {
-			$value = $first->get_meta( $key, true, 'edit' );
-			if ( '' !== $value && null !== $value ) {
-				$parent->update_meta_data( $key, $value );
-			}
-		}
 		$parent_id = $parent->save();
 		if ( ! $parent_id ) {
-			throw new RuntimeException( 'WooCommerce did not save the variable product.' );
+			throw new RuntimeException( esc_html__( 'WooCommerce did not save the variable product.', 'variation-converter' ) );
 		}
 		$skip = array( 'product_type', 'product_visibility', 'product_shipping_class' );
 		foreach ( array_diff( get_object_taxonomies( 'product' ), $skip ) as $taxonomy ) {
@@ -195,7 +202,8 @@ function varconv_create( string $name, string $attribute_name, string $sku, arra
 			$variation->set_height( $simple->get_height( 'edit' ) );
 			$variation->set_image_id( $simple->get_image_id( 'edit' ) );
 			if ( ! $variation->save() ) {
-				throw new RuntimeException( 'WooCommerce did not save the variation for product ' . $simple->get_id() . '.' );
+				/* translators: %d: product ID. */
+				throw new RuntimeException( esc_html( sprintf( __( 'WooCommerce did not save the variation for product %d.', 'variation-converter' ), $simple->get_id() ) ) );
 			}
 		}
 		WC_Product_Variable::sync( $parent_id );
@@ -204,7 +212,8 @@ function varconv_create( string $name, string $attribute_name, string $sku, arra
 		if ( $parent_id ) {
 			varconv_delete( $parent_id );
 		}
-		throw new RuntimeException( 'Not created: ' . $e->getMessage(), 0, $e );
+		/* translators: %s: the reason. */
+		throw new RuntimeException( esc_html( sprintf( __( 'Not created: %s', 'variation-converter' ), $e->getMessage() ) ), 0, $e ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- $e is the previous exception, not output.
 	}
 	remove_filter( 'wc_product_has_unique_sku', '__return_false', 99 );
 
@@ -227,9 +236,11 @@ function varconv_create( string $name, string $attribute_name, string $sku, arra
  */
 function varconv_undo( int $parent_id ): int {
 	if ( 'product' !== get_post_type( $parent_id ) || '' === (string) get_post_meta( $parent_id, VARCONV_META, true ) ) {
-		throw new RuntimeException( 'Product ' . $parent_id . ' was not made by Variation Converter.' );
+		/* translators: %d: product ID. */
+		throw new RuntimeException( esc_html( sprintf( __( 'Product %d was not made by Variation Converter.', 'variation-converter' ), $parent_id ) ) );
 	}
 	global $wpdb;
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 	$ids = array_map( 'intval', $wpdb->get_col( $wpdb->prepare(
 		"SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value = %s",
 		VARCONV_PARENT_META,

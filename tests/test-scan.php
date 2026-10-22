@@ -1,5 +1,6 @@
 <?php
-/** Offline checks for the variant collection scan (includes/scan.php). */
+/** Offline checks for the variant collection scan (includes/scan.php): php tests/test-scan.php */
+require_once __DIR__ . '/bootstrap.php';
 require_once __DIR__ . '/../includes/scan.php';
 
 function expect( $actual, $expected, string $what ): void {
