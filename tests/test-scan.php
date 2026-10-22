@@ -25,7 +25,7 @@ expect( varconv_trim( ' - Zen - ' ), 'Zen', 'trim separators' );
 
 $p = static fn( int $id, string $sku, string $name, string $price = '9.99', array $cats = array( 5 ) ) => compact( 'id', 'sku', 'name', 'price', 'cats' );
 
-// The usual family: one name, colour at the end.
+// The usual family: one name, color at the end.
 $scan = varconv_scan( array(
 	$p( 17543, 'SE1421-00 CL', 'Tri-Rings Glow in the Dark' ),
 	$p( 17545, 'SE1421-01 CL', 'Tri-Rings Natural' ),
@@ -37,7 +37,7 @@ $scan = varconv_scan( array(
 expect( count( $scan ), 1, 'one collection' );
 expect( $scan[0]['name'], 'Tri-Rings', 'collection name' );
 expect( $scan[0]['sku'], 'SE1421', 'collection SKU' );
-expect( $scan[0]['attribute'], 'Colour', 'colour attribute' );
+expect( $scan[0]['attribute'], 'Color', 'color attribute' );
 expect( array_column( $scan[0]['members'], 'label' ), array( 'Glow in the Dark', 'Natural', 'Black', 'Red', 'Blue' ), 'labels in SKU order' );
 expect( array_column( $scan[0]['members'], 'id' ), array( 17543, 17545, 17547, 17549, 17551 ), 'members in SKU order' );
 expect( $scan[0]['notes'], array( 'Long labels; check these are variants of one product.' ), 'long label note' );
@@ -63,7 +63,7 @@ expect( count( $scan ), 1, 'closest pair' );
 expect( $scan[0]['name'], 'Pocket Exotics Single Bullet', 'closest pair name' );
 expect( array_column( $scan[0]['members'], 'id' ), array( 1, 2 ), 'closest pair members' );
 
-// Words every label ends with stay in the name; flavours.
+// Words every label ends with stay in the name; flavors.
 $scan = varconv_scan( array(
 	$p( 1, 'AB100-01', '100 ml Frutopia Banana Lube' ),
 	$p( 2, 'AB100-02', '100 ml Frutopia Cherry Lube' ),
@@ -71,7 +71,7 @@ $scan = varconv_scan( array(
 ) );
 expect( $scan[0]['name'], '100 ml Frutopia Lube', 'suffix kept in the name' );
 expect( array_column( $scan[0]['members'], 'label' ), array( 'Banana', 'Cherry', 'Mango' ), 'suffix taken off labels' );
-expect( $scan[0]['attribute'], 'Flavour', 'flavour attribute' );
+expect( $scan[0]['attribute'], 'Flavor', 'flavor attribute' );
 
 // Separators at the split stay out of the name and labels.
 $scan = varconv_scan( array( $p( 1, 'SE2140-03', 'Zen - Tranquility - Black' ), $p( 2, 'SE2140-09', 'Zen - Bliss - White' ) ) );
@@ -103,11 +103,11 @@ expect( array_column( $scan, 'name' ), array( 'Big Thing', 'Small Thing' ), 'ord
 expect( varconv_attribute( array( 'Pink', 'Large', 'Huge' ) ), 'Option', 'mixed labels' );
 expect( varconv_attribute( array( '1 oz', '2 oz' ) ), 'Volume', 'volume' );
 expect( varconv_attribute( array( '7"', '8 inch' ) ), 'Size', 'inches' );
-expect( varconv_attribute( array( 'Green Velvet', 'Purple', 'Rose' ) ), 'Colour', 'colours' );
+expect( varconv_attribute( array( 'Green Velvet', 'Purple', 'Rose' ) ), 'Color', 'colors' );
 
 // Validation of what the admin submits.
-expect( varconv_validate( 'Tri-Rings', 'Colour', array( 1 => 'Red', 2 => 'Blue' ) ), array(), 'valid' );
-expect( varconv_validate( '', ' ', array( 1 => 'Red' ) ), array( 'The product needs a name.', 'The attribute needs a name (Colour, Size, ...).', 'Choose at least 2 products.' ), 'missing fields' );
-expect( varconv_validate( 'X', 'Colour', array( 1 => 'Red', 2 => 'red', 3 => '', 4 => 'A|B' ) ), array( 'Label "red" is used twice.', 'Product 3 needs a variant label.', 'Labels cannot contain "|" (product 4).' ), 'bad labels' );
+expect( varconv_validate( 'Tri-Rings', 'Color', array( 1 => 'Red', 2 => 'Blue' ) ), array(), 'valid' );
+expect( varconv_validate( '', ' ', array( 1 => 'Red' ) ), array( 'The product needs a name.', 'The attribute needs a name (Color, Size, ...).', 'Choose at least 2 products.' ), 'missing fields' );
+expect( varconv_validate( 'X', 'Color', array( 1 => 'Red', 2 => 'red', 3 => '', 4 => 'A|B' ) ), array( 'Label "red" is used twice.', 'Product 3 needs a variant label.', 'Labels cannot contain "|" (product 4).' ), 'bad labels' );
 
 echo "Variant collection scan tests passed.\n";
