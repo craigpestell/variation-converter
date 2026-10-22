@@ -30,7 +30,7 @@ This is the development repo. The user-facing docs are in [`readme.txt`](readme.
 | `tests/test-split.php` | Offline tests for the pure helpers in `split.php` |
 | `tests/integration-split.php` | Split, Undo and the merge interplay against a real site: `wp eval-file tests/integration-split.php` (makes and deletes its own products; use a test site) |
 
-**Grouping.** Only published, visible simple products with a SKU are scanned. Products are grouped by SKU family (the SKU minus its last `-` segment and any short packaging suffix, so `SE1421-01 CL` gives `SE1421`), then split within a family by the longest run of leading name words two members share. The rest of each name becomes the variant label. The attribute (Color, Size, Flavor, Scent, Volume, else Option) is guessed from built-in word lists when most labels match. Results are cached in a transient for 30 minutes.
+**Grouping.** Only published, visible simple products with a SKU are scanned. Products are grouped by SKU family (the SKU minus its last `-` segment and any short packaging suffix, so `SE1421-01 CL` gives `SE1421`), then split within a family by the longest run of leading name words two members share. A brand at the start of a name doesn't count as shared, so "Acme Plug" and "Acme Wand" stay apart: brands are the WooCommerce Brands terms plus any 1 to 3 word name start found in 5 or more SKU families. The rest of each name becomes the variant label, or the SKU when nothing is left. Products sharing one SKU are copies, not variants: the lowest ID is scanned and the rest are noted. The attribute (Color, Size, Flavor, Scent, Volume, else Option) is guessed from built-in word lists when most labels match. Results are cached in a transient for 30 minutes.
 
 **Creating.** Builds the variable product from the first member (description, images, taxonomies, tax and shipping class) and one variation per member (SKU, prices, sale dates, stock, dimensions, image). WooCommerce's unique-SKU check is bypassed while saving, so each SKU then exists on both the variation and the hidden original. If any save fails, the partial product is deleted. Members are set to `hidden` catalog visibility, with their previous visibility and the parent ID stored in post meta.
 
@@ -40,7 +40,17 @@ This is the development repo. The user-facing docs are in [`readme.txt`](readme.
 
 If Relevanssi is active, changed products are reindexed (parent after variations, so variation SKUs are searchable).
 
-There are no public hooks or settings yet. The attribute word lists are hardcoded in `varconv_attribute()`.
+There are no settings. The attribute word lists are hardcoded in `varconv_attribute()`.
+
+## Hooks
+
+| Filter | Arguments | Use |
+|---|---|---|
+| `varconv_scan_products` | `array $products` (id, sku, name, title, price, stock, cats, brands) | Leave products out of the scan, such as testers or display units |
+| `varconv_brand_names` | `string[] $names` (default: WooCommerce Brands terms) | Add or replace the brand names a product name can start with |
+| `varconv_collections` | `array $collections`, `array $products` | Change the proposed groups after the scan: add members, drop groups. Each group has key, family, name, brand, attribute, sku, members (with label) and notes (kind => text) |
+
+The scan result is cached for 30 minutes, so clear the `varconv_scan` transient (or click **Scan again**) after changing a filter.
 
 ## Development
 

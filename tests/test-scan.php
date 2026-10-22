@@ -41,7 +41,7 @@ expect( $scan[0]['sku'], 'SE1421', 'collection SKU' );
 expect( $scan[0]['attribute'], 'Color', 'color attribute' );
 expect( array_column( $scan[0]['members'], 'label' ), array( 'Glow in the Dark', 'Natural', 'Black', 'Red', 'Blue' ), 'labels in SKU order' );
 expect( array_column( $scan[0]['members'], 'id' ), array( 17543, 17545, 17547, 17549, 17551 ), 'members in SKU order' );
-expect( $scan[0]['notes'], array( 'Long labels; check these are variants of one product.' ), 'long label note' );
+expect( $scan[0]['notes'], array( 'long' => 'Long labels; check these are variants of one product.' ), 'long label note' );
 expect( strlen( $scan[0]['key'] ), 12, 'key length' );
 
 // Sizes; a different product in the same family stays out.
@@ -52,7 +52,7 @@ $scan = varconv_scan( array(
 ) );
 expect( count( $scan ), 1, 'sizes' );
 expect( $scan[0]['attribute'], 'Size', 'size attribute' );
-expect( $scan[0]['notes'], array( 'Prices differ (9.99, 10.99).' ), 'price note' );
+expect( $scan[0]['notes'], array( 'price' => 'Prices differ (9.99, 10.99; 10% apart).' ), 'price note' );
 
 // Members pair with the member they share the most with; a lone one is not a collection.
 $scan = varconv_scan( array(
@@ -84,12 +84,12 @@ expect( varconv_scan( array( $p( 1, 'X1000-01', 'Alpha One' ), $p( 2, 'X1000-02'
 expect( varconv_scan( array( $p( 1, 'X1000-01', 'Alpha One' ), $p( 2, '', 'Alpha Two' ) ) ), array(), 'no SKU' );
 $two = array( $p( 1, 'X1000-01', 'Alpha Red' ), $p( 2, 'X1000-02', 'Alpha Blue', '9.99', array( 6 ) ) );
 $scan = varconv_scan( $two );
-expect( $scan[0]['notes'], array( 'Categories differ; the new product takes the first member\'s.' ), 'category note' );
+expect( $scan[0]['notes'], array( 'cats' => 'Categories differ; the new product takes the first member\'s.' ), 'category note' );
 expect( varconv_scan( $two, array( $scan[0]['key'] ) ), array(), 'dismissed' );
-// A name that is all base gets an empty label and a note.
+// A name that is all base is labeled with its SKU, with a note.
 $scan = varconv_scan( array( $p( 1, 'X1000-01', 'Alpha' ), $p( 2, 'X1000-02', 'Alpha Blue' ) ) );
-expect( array_column( $scan[0]['members'], 'label' ), array( '', 'Blue' ), 'empty label' );
-expect( $scan[0]['notes'][0], 'A member has no variant words in its name; give it a label.', 'empty label note' );
+expect( array_column( $scan[0]['members'], 'label' ), array( 'X1000-01', 'Blue' ), 'SKU as label' );
+expect( $scan[0]['notes']['label'], 'A member has no variant words in its name, so its label is its SKU; change it if you like.', 'SKU label note' );
 // Long differences are different products.
 expect( varconv_scan( array( $p( 1, 'X1000-01', 'Alpha one two three four five six' ), $p( 2, 'X1000-02', 'Alpha Blue' ) ) ), array(), 'label too long' );
 
@@ -110,5 +110,43 @@ expect( varconv_attribute( array( 'Green Velvet', 'Purple', 'Rose' ) ), 'Color',
 expect( varconv_validate( 'Tri-Rings', 'Color', array( 1 => 'Red', 2 => 'Blue' ) ), array(), 'valid' );
 expect( varconv_validate( '', ' ', array( 1 => 'Red' ) ), array( 'The product needs a name.', 'The attribute needs a name (Color, Size, ...).', 'Choose at least 2 products.' ), 'missing fields' );
 expect( varconv_validate( 'X', 'Color', array( 1 => 'Red', 2 => 'red', 3 => '', 4 => 'A|B' ) ), array( 'Label "red" is used twice.', 'Product 3 needs a variant label.', 'Labels cannot contain "|" (product 4).' ), 'bad labels' );
+
+// A shared brand is not a shared name: different products of one brand stay apart, variants still group.
+$brand = array(
+	$p( 1, 'DJ100-01', 'Doc Johnson Butt Plug' ),
+	$p( 2, 'DJ100-02', 'Doc Johnson Kink Wand' ),
+	$p( 3, 'DJ100-03', 'Doc Johnson Vibe Black' ),
+	$p( 4, 'DJ100-04', 'Doc Johnson Vibe Pink' ),
+);
+expect( count( varconv_scan( array_slice( $brand, 0, 2 ) ) ), 1, 'without brands, a brand looks like a name' );
+expect( varconv_scan( array_slice( $brand, 0, 2 ), array(), array( 'Doc Johnson' ) ), array(), 'brand alone is not shared' );
+$scan = varconv_scan( $brand, array(), array( 'Doc Johnson®' ) );
+expect( count( $scan ), 1, 'variants of a brand still group' );
+expect( $scan[0]['name'], 'Doc Johnson Vibe', 'brand kept in the name' );
+expect( $scan[0]['brand'], 'Doc Johnson', 'brand from the name' );
+expect( array_column( $scan[0]['members'], 'id' ), array( 3, 4 ), 'brand group members' );
+$scan = varconv_scan( array( $p( 1, 'Z100-1', 'Vibe Red' ) + array( 'brands' => array( 'Acme' ) ), $p( 2, 'Z100-2', 'Vibe Blue' ) + array( 'brands' => array( 'acme' ) ) ) );
+expect( $scan[0]['brand'], 'Acme', 'brand from brand terms' );
+
+// Name starts found in 5 or more SKU families are treated as brands even without brand terms.
+$lines = array();
+foreach ( array( 'Plug', 'Wand', 'Ring', 'Bead', 'Egg' ) as $i => $thing ) {
+	$lines[] = $p( 10 + $i, 'L' . $i . '00-01', 'Pocket Exotics ' . $thing . ' Black' );
+	$lines[] = $p( 20 + $i, 'L' . $i . '00-02', 'Pocket Exotics Other ' . $thing );
+}
+expect( varconv_lines( array( 'A' => array( $p( 1, 'A-1', 'Pocket Exotics X' ) ) ) ), array(), 'one family is not a line' );
+expect( in_array( 'pocket exotics', varconv_lines( array_map( static fn( $x ) => array( $x ), array_combine( array_column( $lines, 'sku' ), $lines ) ) ), true ), true, 'line found' );
+expect( varconv_scan( $lines ), array(), 'line alone is not shared' );
+
+// Products sharing one SKU are copies: the lowest ID is kept, the rest noted.
+$scan = varconv_scan( array( $p( 7, 'X2000-01', 'Gamma Red' ), $p( 3, 'X2000-01 ', 'Gamma Red' ), $p( 5, 'X2000-02', 'Gamma Blue' ) ) );
+expect( array_column( $scan[0]['members'], 'id' ), array( 3, 5 ), 'duplicate SKU left out' );
+expect( $scan[0]['notes']['dupes'], 'Duplicate products left out: X2000-01  (also on 7).', 'duplicate note' );
+expect( varconv_duplicate_skus( array( $p( 2, 'a 1', 'x' ), $p( 1, 'A  1', 'y' ), $p( 3, 'B', 'z' ) ) ), array( 'A 1' => array( 1, 2 ) ), 'duplicate SKUs' );
+
+// Members in SKU order, then name.
+expect( varconv_member_order( array( 'sku' => 'A-2' ), array( 'sku' => 'A-10' ) ) < 0, true, 'natural SKU order' );
+expect( varconv_member_order( array( 'sku' => 'A', 'name' => 'b' ), array( 'sku' => 'A', 'name' => 'a' ) ) > 0, true, 'then name' );
+expect( varconv_spread( array( array( 'price' => '10' ), array( 'price' => '15' ), array( 'price' => '' ) ) ), 50, 'spread' );
 
 echo "Variant collection scan tests passed.\n";
