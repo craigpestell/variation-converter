@@ -37,7 +37,10 @@ function varconv_words( string $name ): array {
 
 /** A word compared for brand names: lowercase, without trademark signs or punctuation at its ends. */
 function varconv_norm( string $word ): string {
-	return trim( mb_strtolower( str_replace( array( '™', '®', '©' ), '', $word ) ), " \t.,:;!'\"()" );
+	$word = str_replace( array( '™', '®', '©' ), '', $word );
+	// mbstring is optional in PHP and WordPress has no polyfill for mb_strtolower(); without it, ASCII lowercase.
+	$word = function_exists( 'mb_strtolower' ) ? mb_strtolower( $word, 'UTF-8' ) : strtolower( $word );
+	return trim( $word, " \t.,:;!'\"()" );
 }
 
 /**
