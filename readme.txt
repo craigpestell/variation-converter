@@ -1,15 +1,15 @@
 === Variation Converter for WooCommerce ===
 Contributors: craigpestell
 Tags: woocommerce, variable products, variations, merge products, simple to variable
-Requires at least: 6.2
-Tested up to: 6.8
+Requires at least: 6.5
+Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
 Stable tag: 0.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Merge near-duplicate simple products into variable products, or split a variable product into simple products. Previews each one and undoes in one click.
+Merge near-duplicate simple products into a variable product, or split a variable product into simple ones. Preview first, undo in one click.
 
 == Description ==
 

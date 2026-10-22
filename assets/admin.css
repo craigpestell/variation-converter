@@ -1,0 +1,16 @@
+.varconv .nav-tab-wrapper { margin-bottom: 12px; }
+.varconv-toolbar { display: inline-flex; gap: 6px; align-items: center; margin: 0 12px 8px 0; }
+.varconv-candidate { background: #fff; border: 1px solid #c3c4c7; padding: 12px 16px; margin: 12px 0; max-width: 1100px; }
+.varconv-candidate.is-error { border-color: #d63638; }
+.varconv-fields { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 8px; }
+.varconv-fields label { display: flex; flex-direction: column; font-weight: 600; gap: 2px; }
+.varconv-fields .name input { width: 360px; max-width: 100%; }
+.varconv-candidate table input[type=text] { width: 100%; }
+.varconv-candidate th.check { width: 2em; }
+.varconv-candidate th.label { width: 18%; }
+.varconv-candidate th.thumb { width: 48px; }
+.varconv-candidate td.title { color: #50575e; }
+.varconv-candidate td.thumb img { width: 40px; height: 40px; object-fit: cover; display: block; }
+.varconv-notes { color: #996800; margin: 6px 0; }
+.varconv-actions { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
+.varconv-list { max-width: 1100px; }
