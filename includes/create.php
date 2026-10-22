@@ -3,27 +3,27 @@
  * Reading the catalog for the scan, and making (or undoing) a variable product from an approved collection.
  *
  * Markers:
- *   _vcol_collection         on the new variable product: JSON list of the source simple product IDs
- *   _vcol_collection_parent  on each source: the variable product made from it
- *   _vcol_collection_hidden  on each source: its catalog visibility before it was hidden
+ *   _varconv_collection         on the new variable product: JSON list of the source simple product IDs
+ *   _varconv_collection_parent  on each source: the variable product made from it
+ *   _varconv_collection_hidden  on each source: its catalog visibility before it was hidden
  * The variations reuse the sources' SKUs, prices, stock and images (same attachments), so each SKU exists twice
  * (the hidden simple product and the variation) while the sources are kept for Undo.
  */
 
-const VCOL_META = '_vcol_collection';
-const VCOL_PARENT_META = '_vcol_collection_parent';
-const VCOL_HIDDEN_META = '_vcol_collection_hidden';
-const VCOL_DISMISSED_OPTION = 'vcol_dismissed';
-const VCOL_SCAN_TRANSIENT = 'vcol_scan';
+const VARCONV_META = '_varconv_collection';
+const VARCONV_PARENT_META = '_varconv_collection_parent';
+const VARCONV_HIDDEN_META = '_varconv_collection_hidden';
+const VARCONV_DISMISSED_OPTION = 'varconv_dismissed';
+const VARCONV_SCAN_TRANSIENT = 'varconv_scan';
 // Product meta the new product takes from its first member, besides the WooCommerce fields set below.
-const VCOL_COPY_META = array();
+const VARCONV_COPY_META = array();
 
 /**
  * Published simple products with a SKU, shown in the catalog, not already in a collection or the dev preview.
  *
  * @return array<int,array{id:int,sku:string,name:string,title:string,price:string,stock:string,cats:int[]}>
  */
-function vcol_products(): array {
+function varconv_products(): array {
 	global $wpdb;
 	$rows = $wpdb->get_results( $wpdb->prepare(
 		"SELECT p.ID, p.post_title, sku.meta_value AS sku, price.meta_value AS price, stock.meta_value AS stock
@@ -39,7 +39,7 @@ function vcol_products(): array {
 		AND p.ID NOT IN ( SELECT vr.object_id FROM {$wpdb->term_relationships} vr
 			JOIN {$wpdb->term_taxonomy} vt ON vt.term_taxonomy_id = vr.term_taxonomy_id AND vt.taxonomy = 'product_visibility'
 			JOIN {$wpdb->terms} v ON v.term_id = vt.term_id AND v.slug = 'exclude-from-catalog' )",
-		VCOL_PARENT_META
+		VARCONV_PARENT_META
 	) );
 	$cats = array();
 	foreach ( $wpdb->get_results(
@@ -55,7 +55,7 @@ function vcol_products(): array {
 			'id'    => $id,
 			'sku'   => (string) $row->sku,
 			// Without the SKU line and retailer notices, as feeds' cleaned name.
-			'name'  => vcol_clean_name( (string) $row->post_title, (string) $row->sku ),
+			'name'  => varconv_clean_name( (string) $row->post_title, (string) $row->sku ),
 			'title' => (string) $row->post_title,
 			'price' => (string) $row->price,
 			'stock' => (string) $row->stock,
@@ -66,26 +66,26 @@ function vcol_products(): array {
 }
 
 /** The scan, kept for 30 minutes; creating, undoing or dismissing clears it. */
-function vcol_candidates( bool $fresh = false ): array {
-	$cached = $fresh ? false : get_transient( VCOL_SCAN_TRANSIENT );
+function varconv_candidates( bool $fresh = false ): array {
+	$cached = $fresh ? false : get_transient( VARCONV_SCAN_TRANSIENT );
 	if ( is_array( $cached ) ) {
 		return $cached;
 	}
 	$scan = array(
 		'time'        => time(),
-		'collections' => vcol_scan( vcol_products(), (array) get_option( VCOL_DISMISSED_OPTION, array() ) ),
+		'collections' => varconv_scan( varconv_products(), (array) get_option( VARCONV_DISMISSED_OPTION, array() ) ),
 	);
-	set_transient( VCOL_SCAN_TRANSIENT, $scan, 30 * MINUTE_IN_SECONDS );
+	set_transient( VARCONV_SCAN_TRANSIENT, $scan, 30 * MINUTE_IN_SECONDS );
 	return $scan;
 }
 
 /** Variable products made here, newest first. */
-function vcol_created(): array {
+function varconv_created(): array {
 	global $wpdb;
 	return array_map( 'intval', $wpdb->get_col( $wpdb->prepare(
 		"SELECT p.ID FROM {$wpdb->posts} p JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = %s
 		WHERE p.post_type = 'product' ORDER BY p.ID DESC",
-		VCOL_META
+		VARCONV_META
 	) ) );
 }
 
@@ -99,20 +99,17 @@ function vcol_created(): array {
  * @return int The new product's ID.
  * @throws RuntimeException When the collection cannot be made; nothing is left half made.
  */
-function vcol_create( string $name, string $attribute_name, string $sku, array $members ): int {
-	if ( ! in_array( wp_get_environment_type(), array( 'development', 'local' ), true ) ) {
-		throw new RuntimeException( 'Variant collections can only be created on dev.' );
-	}
+function varconv_create( string $name, string $attribute_name, string $sku, array $members ): int {
 	$name = trim( $name );
 	$attribute_name = trim( $attribute_name );
 	$sku = trim( $sku );
-	$errors = vcol_validate( $name, $attribute_name, $members );
+	$errors = varconv_validate( $name, $attribute_name, $members );
 	$sources = array();
 	foreach ( $members as $id => $label ) {
 		$simple = wc_get_product( (int) $id );
 		if ( ! $simple || ! $simple->is_type( 'simple' ) || 'publish' !== $simple->get_status() ) {
 			$errors[] = 'Product ' . $id . ' is not a published simple product.';
-		} elseif ( $simple->get_meta( VCOL_PARENT_META ) ) {
+		} elseif ( $simple->get_meta( VARCONV_PARENT_META ) ) {
 			$errors[] = 'Product ' . $id . ' is already in a variable product.';
 		} else {
 			$sources[] = array( $simple, trim( (string) $label ) );
@@ -156,8 +153,8 @@ function vcol_create( string $name, string $attribute_name, string $sku, array $
 		if ( $newest ) {
 			$parent->set_date_created( $newest + 1 );
 		}
-		$parent->update_meta_data( VCOL_META, wp_json_encode( array_map( static fn( $s ) => $s[0]->get_id(), $sources ) ) );
-		foreach ( VCOL_COPY_META as $key ) {
+		$parent->update_meta_data( VARCONV_META, wp_json_encode( array_map( static fn( $s ) => $s[0]->get_id(), $sources ) ) );
+		foreach ( VARCONV_COPY_META as $key ) {
 			$value = $first->get_meta( $key, true, 'edit' );
 			if ( '' !== $value && null !== $value ) {
 				$parent->update_meta_data( $key, $value );
@@ -204,21 +201,21 @@ function vcol_create( string $name, string $attribute_name, string $sku, array $
 	} catch ( Throwable $e ) {
 		remove_filter( 'wc_product_has_unique_sku', '__return_false', 99 );
 		if ( $parent_id ) {
-			vcol_delete( $parent_id );
+			varconv_delete( $parent_id );
 		}
 		throw new RuntimeException( 'Not created: ' . $e->getMessage(), 0, $e );
 	}
 	remove_filter( 'wc_product_has_unique_sku', '__return_false', 99 );
 
 	foreach ( $sources as [ $simple ] ) {
-		$simple->update_meta_data( VCOL_HIDDEN_META, $simple->get_catalog_visibility( 'edit' ) );
-		$simple->update_meta_data( VCOL_PARENT_META, (string) $parent_id );
+		$simple->update_meta_data( VARCONV_HIDDEN_META, $simple->get_catalog_visibility( 'edit' ) );
+		$simple->update_meta_data( VARCONV_PARENT_META, (string) $parent_id );
 		$simple->set_catalog_visibility( 'hidden' );
 		$simple->save();
 	}
-	vcol_reindex( array_merge( array( $parent_id ), array_map( static fn( $s ) => $s[0]->get_id(), $sources ) ) );
+	varconv_reindex( array_merge( array( $parent_id ), array_map( static fn( $s ) => $s[0]->get_id(), $sources ) ) );
 	wc_delete_product_transients( $parent_id );
-	delete_transient( VCOL_SCAN_TRANSIENT );
+	delete_transient( VARCONV_SCAN_TRANSIENT );
 	return $parent_id;
 }
 
@@ -227,32 +224,32 @@ function vcol_create( string $name, string $attribute_name, string $sku, array $
  *
  * @return int Members restored.
  */
-function vcol_undo( int $parent_id ): int {
-	if ( 'product' !== get_post_type( $parent_id ) || '' === (string) get_post_meta( $parent_id, VCOL_META, true ) ) {
-		throw new RuntimeException( 'Product ' . $parent_id . ' was not made from a variant collection.' );
+function varconv_undo( int $parent_id ): int {
+	if ( 'product' !== get_post_type( $parent_id ) || '' === (string) get_post_meta( $parent_id, VARCONV_META, true ) ) {
+		throw new RuntimeException( 'Product ' . $parent_id . ' was not made by Variation Converter.' );
 	}
 	global $wpdb;
 	$ids = array_map( 'intval', $wpdb->get_col( $wpdb->prepare(
 		"SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value = %s",
-		VCOL_PARENT_META,
+		VARCONV_PARENT_META,
 		(string) $parent_id
 	) ) );
 	foreach ( $ids as $id ) {
 		$simple = wc_get_product( $id );
 		if ( $simple ) {
-			$simple->set_catalog_visibility( $simple->get_meta( VCOL_HIDDEN_META ) ?: 'visible' );
-			$simple->delete_meta_data( VCOL_HIDDEN_META );
-			$simple->delete_meta_data( VCOL_PARENT_META );
+			$simple->set_catalog_visibility( $simple->get_meta( VARCONV_HIDDEN_META ) ?: 'visible' );
+			$simple->delete_meta_data( VARCONV_HIDDEN_META );
+			$simple->delete_meta_data( VARCONV_PARENT_META );
 			$simple->save();
 		}
 	}
-	vcol_delete( $parent_id );
-	vcol_reindex( $ids );
-	delete_transient( VCOL_SCAN_TRANSIENT );
+	varconv_delete( $parent_id );
+	varconv_reindex( $ids );
+	delete_transient( VARCONV_SCAN_TRANSIENT );
 	return count( $ids );
 }
 
-function vcol_delete( int $parent_id ): void {
+function varconv_delete( int $parent_id ): void {
 	$product = wc_get_product( $parent_id );
 	foreach ( $product ? $product->get_children() : array() as $child ) {
 		wp_delete_post( $child, true );
@@ -265,7 +262,7 @@ function vcol_delete( int $parent_id ): void {
  * Relevanssi indexes a variable product with its variations' SKUs only when the parent is indexed after them, and
  * drops hidden members only when they are indexed again; WooCommerce's saves above do neither reliably.
  */
-function vcol_reindex( array $ids ): void {
+function varconv_reindex( array $ids ): void {
 	if ( ! function_exists( 'relevanssi_index_doc' ) ) {
 		return;
 	}

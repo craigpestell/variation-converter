@@ -1,47 +1,47 @@
 <?php
 /**
- * Products > Variant collections: the scan as a review list. Each candidate can be edited (name, attribute, parent
+ * Products > Variation Converter: the scan as a review list. Each candidate can be edited (name, attribute, parent
  * SKU, which products, their labels) and then created, or marked "not a collection" so later scans skip it.
  */
 
-const VCOL_PAGE = 'variant-collections';
-const VCOL_CAP = 'manage_woocommerce';
-const VCOL_PER_PAGE = 25;
+const VARCONV_PAGE = 'variation-converter';
+const VARCONV_CAP = 'manage_woocommerce';
+const VARCONV_PER_PAGE = 25;
 
-add_action( 'admin_menu', 'vcol_menu', 60 );
-function vcol_menu(): void {
-	add_submenu_page( 'edit.php?post_type=product', 'Variant collections', 'Variant collections', VCOL_CAP, VCOL_PAGE, 'vcol_render' );
+add_action( 'admin_menu', 'varconv_menu', 60 );
+function varconv_menu(): void {
+	add_submenu_page( 'edit.php?post_type=product', 'Variation Converter', 'Variation Converter', VARCONV_CAP, VARCONV_PAGE, 'varconv_render' );
 }
 
-function vcol_url( array $args = array() ): string {
-	return add_query_arg( array_merge( array( 'post_type' => 'product', 'page' => VCOL_PAGE ), $args ), admin_url( 'edit.php' ) );
+function varconv_url( array $args = array() ): string {
+	return add_query_arg( array_merge( array( 'post_type' => 'product', 'page' => VARCONV_PAGE ), $args ), admin_url( 'edit.php' ) );
 }
 
 /** Back to the page, keeping the search and page number the form came from. */
-function vcol_back( array $args ): void {
+function varconv_back( array $args ): void {
 	$keep = array();
 	foreach ( array( 's', 'paged' ) as $key ) {
 		if ( isset( $_POST[ $key ] ) && '' !== $_POST[ $key ] ) {
 			$keep[ $key ] = sanitize_text_field( wp_unslash( $_POST[ $key ] ) );
 		}
 	}
-	wp_safe_redirect( vcol_url( array_merge( $keep, $args ) ) );
+	wp_safe_redirect( varconv_url( array_merge( $keep, $args ) ) );
 	exit;
 }
 
-add_action( 'admin_post_vcol_create', 'vcol_handle_create' );
-function vcol_handle_create(): void {
-	if ( ! current_user_can( VCOL_CAP ) ) {
+add_action( 'admin_post_varconv_create', 'varconv_handle_create' );
+function varconv_handle_create(): void {
+	if ( ! current_user_can( VARCONV_CAP ) ) {
 		wp_die( 'Not allowed.', 403 );
 	}
 	$key = sanitize_key( wp_unslash( $_POST['key'] ?? '' ) );
-	check_admin_referer( 'vcol_create_' . $key );
+	check_admin_referer( 'varconv_create_' . $key );
 	if ( ! empty( $_POST['dismiss'] ) ) {
-		$dismissed = (array) get_option( VCOL_DISMISSED_OPTION, array() );
+		$dismissed = (array) get_option( VARCONV_DISMISSED_OPTION, array() );
 		$dismissed[] = $key;
-		update_option( VCOL_DISMISSED_OPTION, array_values( array_unique( $dismissed ) ), false );
-		delete_transient( VCOL_SCAN_TRANSIENT );
-		vcol_back( array( 'vcol_done' => 'dismissed' ) );
+		update_option( VARCONV_DISMISSED_OPTION, array_values( array_unique( $dismissed ) ), false );
+		delete_transient( VARCONV_SCAN_TRANSIENT );
+		varconv_back( array( 'varconv_done' => 'dismissed' ) );
 	}
 	$members = array();
 	foreach ( (array) ( $_POST['members'] ?? array() ) as $id => $row ) {
@@ -50,51 +50,51 @@ function vcol_handle_create(): void {
 		}
 	}
 	try {
-		$id = vcol_create(
+		$id = varconv_create(
 			sanitize_text_field( wp_unslash( $_POST['name'] ?? '' ) ),
 			sanitize_text_field( wp_unslash( $_POST['attribute'] ?? '' ) ),
 			sanitize_text_field( wp_unslash( $_POST['sku'] ?? '' ) ),
 			$members
 		);
 	} catch ( RuntimeException $e ) {
-		vcol_back( array( 'vcol_error' => rawurlencode( $e->getMessage() ), 'vcol_key' => $key ) );
+		varconv_back( array( 'varconv_error' => rawurlencode( $e->getMessage() ), 'varconv_key' => $key ) );
 	}
-	vcol_back( array( 'vcol_done' => 'created', 'vcol_product' => $id ) );
+	varconv_back( array( 'varconv_done' => 'created', 'varconv_product' => $id ) );
 }
 
-add_action( 'admin_post_vcol_undo', 'vcol_handle_undo' );
-function vcol_handle_undo(): void {
-	if ( ! current_user_can( VCOL_CAP ) ) {
+add_action( 'admin_post_varconv_undo', 'varconv_handle_undo' );
+function varconv_handle_undo(): void {
+	if ( ! current_user_can( VARCONV_CAP ) ) {
 		wp_die( 'Not allowed.', 403 );
 	}
 	$id = (int) ( $_POST['product'] ?? 0 );
-	check_admin_referer( 'vcol_undo_' . $id );
+	check_admin_referer( 'varconv_undo_' . $id );
 	try {
-		$restored = vcol_undo( $id );
+		$restored = varconv_undo( $id );
 	} catch ( RuntimeException $e ) {
-		vcol_back( array( 'vcol_error' => rawurlencode( $e->getMessage() ) ) );
+		varconv_back( array( 'varconv_error' => rawurlencode( $e->getMessage() ) ) );
 	}
-	vcol_back( array( 'vcol_done' => 'undone', 'vcol_restored' => $restored ) );
+	varconv_back( array( 'varconv_done' => 'undone', 'varconv_restored' => $restored ) );
 }
 
-add_action( 'admin_post_vcol_rescan', 'vcol_handle_rescan' );
-function vcol_handle_rescan(): void {
-	if ( ! current_user_can( VCOL_CAP ) ) {
+add_action( 'admin_post_varconv_rescan', 'varconv_handle_rescan' );
+function varconv_handle_rescan(): void {
+	if ( ! current_user_can( VARCONV_CAP ) ) {
 		wp_die( 'Not allowed.', 403 );
 	}
-	check_admin_referer( 'vcol_rescan' );
+	check_admin_referer( 'varconv_rescan' );
 	if ( ! empty( $_POST['undismiss'] ) ) {
-		delete_option( VCOL_DISMISSED_OPTION );
+		delete_option( VARCONV_DISMISSED_OPTION );
 	}
-	delete_transient( VCOL_SCAN_TRANSIENT );
-	vcol_back( array() );
+	delete_transient( VARCONV_SCAN_TRANSIENT );
+	varconv_back( array() );
 }
 
-function vcol_render(): void {
-	if ( ! current_user_can( VCOL_CAP ) ) {
+function varconv_render(): void {
+	if ( ! current_user_can( VARCONV_CAP ) ) {
 		wp_die( 'Not allowed.', 403 );
 	}
-	$scan = vcol_candidates();
+	$scan = varconv_candidates();
 	$search = sanitize_text_field( wp_unslash( $_GET['s'] ?? '' ) );
 	$collections = $scan['collections'];
 	if ( '' !== $search ) {
@@ -104,28 +104,28 @@ function vcol_render(): void {
 		} ) );
 	}
 	$total = count( $collections );
-	$pages = max( 1, (int) ceil( $total / VCOL_PER_PAGE ) );
+	$pages = max( 1, (int) ceil( $total / VARCONV_PER_PAGE ) );
 	$paged = min( $pages, max( 1, (int) ( $_GET['paged'] ?? 1 ) ) );
-	$shown = array_slice( $collections, ( $paged - 1 ) * VCOL_PER_PAGE, VCOL_PER_PAGE );
+	$shown = array_slice( $collections, ( $paged - 1 ) * VARCONV_PER_PAGE, VARCONV_PER_PAGE );
 	$products = array_sum( array_map( static fn( $c ) => count( $c['members'] ), $scan['collections'] ) );
-	$dismissed = count( (array) get_option( VCOL_DISMISSED_OPTION, array() ) );
-	$created = vcol_created();
+	$dismissed = count( (array) get_option( VARCONV_DISMISSED_OPTION, array() ) );
+	$created = varconv_created();
 	?>
-	<div class="wrap vcol">
-		<h1>Variant collections</h1>
+	<div class="wrap varconv">
+		<h1>Variation Converter</h1>
 		<p>Groups of simple products whose names differ only by a variant (colour, size, flavour...) and whose SKUs share a family. Check each one, fix the name, attribute and labels if needed, and create it: that makes one variable product with a variation per checked product (same SKU, prices, stock and image), and hides those simple products from the catalog and search. They are not deleted, and Undo below brings them back.</p>
 		<p><strong>Dev only.</strong> Production keeps simple products until the planned migration; this page does not exist there.</p>
-		<?php vcol_notice(); ?>
+		<?php varconv_notice(); ?>
 
-		<form method="get" class="vcol-toolbar">
+		<form method="get" class="varconv-toolbar">
 			<input type="hidden" name="post_type" value="product">
-			<input type="hidden" name="page" value="<?php echo esc_attr( VCOL_PAGE ); ?>">
+			<input type="hidden" name="page" value="<?php echo esc_attr( VARCONV_PAGE ); ?>">
 			<input type="search" name="s" value="<?php echo esc_attr( $search ); ?>" placeholder="Name or SKU">
 			<button class="button">Search</button>
 		</form>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="vcol-toolbar">
-			<input type="hidden" name="action" value="vcol_rescan">
-			<?php wp_nonce_field( 'vcol_rescan' ); ?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="varconv-toolbar">
+			<input type="hidden" name="action" value="varconv_rescan">
+			<?php wp_nonce_field( 'varconv_rescan' ); ?>
 			<button class="button">Scan again</button>
 			<?php if ( $dismissed ) : ?>
 				<button class="button-link" name="undismiss" value="1"><?php echo esc_html( sprintf( 'Show %d dismissed again', $dismissed ) ); ?></button>
@@ -143,19 +143,19 @@ function vcol_render(): void {
 			?>
 		</p>
 
-		<datalist id="vcol-attributes"><option>Colour</option><option>Size</option><option>Flavour</option><option>Scent</option><option>Volume</option><option>Style</option></datalist>
+		<datalist id="varconv-attributes"><option>Colour</option><option>Size</option><option>Flavour</option><option>Scent</option><option>Volume</option><option>Style</option></datalist>
 		<?php foreach ( $shown as $c ) : ?>
-			<?php vcol_render_candidate( $c, $search, $paged ); ?>
+			<?php varconv_render_candidate( $c, $search, $paged ); ?>
 		<?php endforeach; ?>
 		<?php if ( ! $shown ) : ?>
 			<p>No collections to review.</p>
 		<?php endif; ?>
 
 		<?php if ( $pages > 1 ) : ?>
-			<p class="vcol-pages">
+			<p class="varconv-pages">
 				<?php
 				echo wp_kses_post( paginate_links( array(
-					'base'    => add_query_arg( 'paged', '%#%', vcol_url( '' !== $search ? array( 's' => $search ) : array() ) ),
+					'base'    => add_query_arg( 'paged', '%#%', varconv_url( '' !== $search ? array( 's' => $search ) : array() ) ),
 					'format'  => '',
 					'current' => $paged,
 					'total'   => $pages,
@@ -174,7 +174,7 @@ function vcol_render(): void {
 				<?php foreach ( $created as $id ) : ?>
 					<?php
 					$product = wc_get_product( $id );
-					$sources = json_decode( (string) get_post_meta( $id, VCOL_META, true ), true ) ?: array();
+					$sources = json_decode( (string) get_post_meta( $id, VARCONV_META, true ), true ) ?: array();
 					?>
 					<tr>
 						<td><a href="<?php echo esc_url( get_edit_post_link( $id ) ); ?>"><?php echo esc_html( get_post_field( 'post_title', $id, 'raw' ) ); ?></a>
@@ -192,9 +192,9 @@ function vcol_render(): void {
 						</td>
 						<td>
 							<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" onsubmit="return confirm('Delete this variable product and show its simple products again?');">
-								<input type="hidden" name="action" value="vcol_undo">
+								<input type="hidden" name="action" value="varconv_undo">
 								<input type="hidden" name="product" value="<?php echo (int) $id; ?>">
-								<?php wp_nonce_field( 'vcol_undo_' . $id ); ?>
+								<?php wp_nonce_field( 'varconv_undo_' . $id ); ?>
 								<button class="button button-link-delete">Undo</button>
 							</form>
 						</td>
@@ -205,28 +205,28 @@ function vcol_render(): void {
 		<?php endif; ?>
 	</div>
 	<style>
-		.vcol-toolbar { display: inline-flex; gap: 6px; align-items: center; margin: 0 12px 8px 0; }
-		.vcol-candidate { background: #fff; border: 1px solid #c3c4c7; padding: 12px 16px; margin: 12px 0; max-width: 1100px; }
-		.vcol-candidate.is-error { border-color: #d63638; }
-		.vcol-fields { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 8px; }
-		.vcol-fields label { display: flex; flex-direction: column; font-weight: 600; gap: 2px; }
-		.vcol-fields .name input { width: 360px; max-width: 100%; }
-		.vcol-candidate table input[type=text] { width: 100%; }
-		.vcol-candidate td.title { color: #50575e; }
-		.vcol-notes { color: #996800; margin: 6px 0; }
-		.vcol-actions { display: flex; gap: 8px; margin-top: 8px; }
+		.varconv-toolbar { display: inline-flex; gap: 6px; align-items: center; margin: 0 12px 8px 0; }
+		.varconv-candidate { background: #fff; border: 1px solid #c3c4c7; padding: 12px 16px; margin: 12px 0; max-width: 1100px; }
+		.varconv-candidate.is-error { border-color: #d63638; }
+		.varconv-fields { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 8px; }
+		.varconv-fields label { display: flex; flex-direction: column; font-weight: 600; gap: 2px; }
+		.varconv-fields .name input { width: 360px; max-width: 100%; }
+		.varconv-candidate table input[type=text] { width: 100%; }
+		.varconv-candidate td.title { color: #50575e; }
+		.varconv-notes { color: #996800; margin: 6px 0; }
+		.varconv-actions { display: flex; gap: 8px; margin-top: 8px; }
 	</style>
 	<?php
 }
 
-function vcol_notice(): void {
-	if ( isset( $_GET['vcol_error'] ) ) {
-		printf( '<div class="notice notice-error"><p>%s</p></div>', esc_html( wp_unslash( $_GET['vcol_error'] ) ) );
+function varconv_notice(): void {
+	if ( isset( $_GET['varconv_error'] ) ) {
+		printf( '<div class="notice notice-error"><p>%s</p></div>', esc_html( wp_unslash( $_GET['varconv_error'] ) ) );
 		return;
 	}
-	switch ( $_GET['vcol_done'] ?? '' ) {
+	switch ( $_GET['varconv_done'] ?? '' ) {
 		case 'created':
-			$id = (int) ( $_GET['vcol_product'] ?? 0 );
+			$id = (int) ( $_GET['varconv_product'] ?? 0 );
 			printf(
 				'<div class="notice notice-success"><p>Created <a href="%s">%s</a> (<a href="%s">view</a>). Its simple products are now hidden.</p></div>',
 				esc_url( get_edit_post_link( $id ) ),
@@ -235,7 +235,7 @@ function vcol_notice(): void {
 			);
 			break;
 		case 'undone':
-			printf( '<div class="notice notice-success"><p>Deleted the variable product; %d simple products are visible again.</p></div>', (int) ( $_GET['vcol_restored'] ?? 0 ) );
+			printf( '<div class="notice notice-success"><p>Deleted the variable product; %d simple products are visible again.</p></div>', (int) ( $_GET['varconv_restored'] ?? 0 ) );
 			break;
 		case 'dismissed':
 			echo '<div class="notice notice-info"><p>Marked as not a collection; scans will skip it.</p></div>';
@@ -243,18 +243,18 @@ function vcol_notice(): void {
 	}
 }
 
-function vcol_render_candidate( array $c, string $search, int $paged ): void {
-	$error = ( $_GET['vcol_key'] ?? '' ) === $c['key'];
+function varconv_render_candidate( array $c, string $search, int $paged ): void {
+	$error = ( $_GET['varconv_key'] ?? '' ) === $c['key'];
 	?>
-	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="vcol-candidate<?php echo $error ? ' is-error' : ''; ?>" id="vcol-<?php echo esc_attr( $c['key'] ); ?>">
-		<input type="hidden" name="action" value="vcol_create">
+	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="varconv-candidate<?php echo $error ? ' is-error' : ''; ?>" id="varconv-<?php echo esc_attr( $c['key'] ); ?>">
+		<input type="hidden" name="action" value="varconv_create">
 		<input type="hidden" name="key" value="<?php echo esc_attr( $c['key'] ); ?>">
 		<input type="hidden" name="s" value="<?php echo esc_attr( $search ); ?>">
 		<input type="hidden" name="paged" value="<?php echo (int) $paged; ?>">
-		<?php wp_nonce_field( 'vcol_create_' . $c['key'] ); ?>
-		<div class="vcol-fields">
+		<?php wp_nonce_field( 'varconv_create_' . $c['key'] ); ?>
+		<div class="varconv-fields">
 			<label class="name">Product name <input type="text" name="name" value="<?php echo esc_attr( $c['name'] ); ?>" required></label>
-			<label>Attribute <input type="text" name="attribute" value="<?php echo esc_attr( $c['attribute'] ); ?>" list="vcol-attributes" required></label>
+			<label>Attribute <input type="text" name="attribute" value="<?php echo esc_attr( $c['attribute'] ); ?>" list="varconv-attributes" required></label>
 			<label>Parent SKU <input type="text" name="sku" value="<?php echo esc_attr( $c['sku'] ); ?>"></label>
 		</div>
 		<table class="widefat striped">
@@ -265,7 +265,7 @@ function vcol_render_candidate( array $c, string $search, int $paged ): void {
 					<td><input type="checkbox" name="members[<?php echo (int) $m['id']; ?>][use]" value="1" checked aria-label="Include <?php echo esc_attr( $m['sku'] ); ?>"></td>
 					<td><input type="text" name="members[<?php echo (int) $m['id']; ?>][label]" value="<?php echo esc_attr( $m['label'] ); ?>"></td>
 					<td><a href="<?php echo esc_url( get_edit_post_link( (int) $m['id'] ) ); ?>"><?php echo esc_html( $m['sku'] ); ?></a></td>
-					<td class="title"><?php echo esc_html( vcol_plain( (string) ( $m['title'] ?? $m['name'] ) ) ); ?></td>
+					<td class="title"><?php echo esc_html( varconv_plain( (string) ( $m['title'] ?? $m['name'] ) ) ); ?></td>
 					<td><?php echo esc_html( (string) ( $m['price'] ?? '' ) ); ?></td>
 					<td><?php echo esc_html( (string) ( $m['stock'] ?? '' ) ); ?></td>
 				</tr>
@@ -273,9 +273,9 @@ function vcol_render_candidate( array $c, string $search, int $paged ): void {
 			</tbody>
 		</table>
 		<?php if ( $c['notes'] ) : ?>
-			<p class="vcol-notes"><?php echo esc_html( implode( ' ', $c['notes'] ) ); ?></p>
+			<p class="varconv-notes"><?php echo esc_html( implode( ' ', $c['notes'] ) ); ?></p>
 		<?php endif; ?>
-		<div class="vcol-actions">
+		<div class="varconv-actions">
 			<button class="button button-primary">Create variable product</button>
 			<button class="button" name="dismiss" value="1" formnovalidate>Not a collection</button>
 		</div>

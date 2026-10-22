@@ -1,20 +1,20 @@
 <?php
 /**
- * Variant collections: groups of simple products that are one product in several variants, the variant written into
+ * Variation Converter: groups of simple products that are one product in several variants, the variant written into
  * the name ("Tri-Rings Black", "Tri-Rings Blue"). Members share a SKU family (SE1421-01 CL, SE1421-03 CL) and the
  * start of their name; what follows is the variant label. Pure functions, no WordPress calls; see
- * variant-collections.php and tests/test-scan.php.
+ * variation-converter.php and tests/test-scan.php.
  */
 
 /** Longest variant label the scan proposes, in words; longer differences are more likely different products. */
-const VCOL_MAX_LABEL_WORDS = 5;
+const VARCONV_MAX_LABEL_WORDS = 5;
 
 /**
  * The SKU family: the SKU without its packaging suffix and last segment ("SE1421-01 CL" -> "SE1421",
  * "D1701-12" -> "D1701"). SKUs without a separator keep their first 5 characters ("W622001" -> "W6220"), as the
  * dev preview grouped them; the name check keeps unrelated products in such a family apart.
  */
-function vcol_family( string $sku ): string {
+function varconv_family( string $sku ): string {
 	$sku = strtoupper( trim( preg_replace( '/[\s\x{00a0}]+/u', ' ', $sku ) ) );
 	$sku = preg_replace( '/ [A-Z]{1,3}$/', '', $sku );
 	if ( '' === $sku ) {
@@ -28,12 +28,12 @@ function vcol_family( string $sku ): string {
 }
 
 /** @return string[] The name's words, as written. */
-function vcol_words( string $name ): array {
+function varconv_words( string $name ): array {
 	return preg_split( '/\s+/u', trim( $name ), -1, PREG_SPLIT_NO_EMPTY ) ?: array();
 }
 
 /** Number of leading words two names share, ignoring case. */
-function vcol_common_words( array $a, array $b ): int {
+function varconv_common_words( array $a, array $b ): int {
 	$n = 0;
 	$max = min( count( $a ), count( $b ) );
 	while ( $n < $max && 0 === strcasecmp( $a[ $n ], $b[ $n ] ) ) {
@@ -43,7 +43,7 @@ function vcol_common_words( array $a, array $b ): int {
 }
 
 /** The longest common start of strings, trimmed of separators ("SE1421-01 CL", "SE1421-03 CL" -> "SE1421"). */
-function vcol_common_prefix( array $strings ): string {
+function varconv_common_prefix( array $strings ): string {
 	$prefix = (string) array_shift( $strings );
 	foreach ( $strings as $s ) {
 		$n = 0;
@@ -57,7 +57,7 @@ function vcol_common_prefix( array $strings ): string {
 }
 
 /** Without separators left at either end where the name was split ("Zen -", "- Black"). */
-function vcol_trim( string $text ): string {
+function varconv_trim( string $text ): string {
 	return (string) preg_replace( '/^[\s\-\x{2013}\x{2014}:,\/|]+|[\s\-\x{2013}\x{2014}:,\/|]+$/u', '', $text );
 }
 
@@ -65,14 +65,14 @@ function vcol_trim( string $text ): string {
  * The variable product's SKU: the family when every member's SKU starts with it ("D0212-00 CD", "D0212-03 CD" ->
  * "D0212", not "D0212-0"), otherwise what the SKUs have in common.
  */
-function vcol_parent_sku( string $family, array $members ): string {
+function varconv_parent_sku( string $family, array $members ): string {
 	$skus = array_map( static fn( $m ) => strtoupper( trim( (string) $m['sku'] ) ), $members );
-	$common = vcol_common_prefix( $skus );
+	$common = varconv_common_prefix( $skus );
 	return '' !== $family && str_starts_with( $common . '-', $family . '-' ) ? $family : $common;
 }
 
 /** A guess at the variation attribute from the labels; the admin can change it before creating. */
-function vcol_attribute( array $labels ): string {
+function varconv_attribute( array $labels ): string {
 	$kinds = array(
 		'Colour'  => 'black|white|red|blue|pink|purple|green|yellow|orange|brown|grey|gray|silver|gold|ivory|natural|clear|nude|beige|tan|teal|aqua|turquoise|lavender|lilac|violet|magenta|fuchsia|coral|rose|burgundy|navy|mint|plum|bronze|copper|chrome|smoke|frost|glow|blush|charcoal|cream|caramel|chocolate|vanilla|mocha|champagne|leopard|zebra|rainbow|transparent|multicolou?r',
 		'Size'    => 'xs|s|m|l|xl|xxl|xxxl|2xl|3xl|4xl|xtra|x-large|small|medium|large|mini|petite|regular|plus|queen|o\/s|os|one size|[0-9.]+ ?(?:"|in|inch|inches|cm|mm)',
@@ -102,10 +102,10 @@ function vcol_attribute( array $labels ): string {
  * @param array<int,array{id:int,sku:string,name:string}> $products Same family.
  * @return array<int,array{base:string,members:array}> Collections of 2 or more, labels added to each member.
  */
-function vcol_split( array $products ): array {
+function varconv_split( array $products ): array {
 	$words = array();
 	foreach ( $products as $i => $p ) {
-		$words[ $i ] = vcol_words( $p['name'] );
+		$words[ $i ] = varconv_words( $p['name'] );
 	}
 	$by_base = array();
 	foreach ( $products as $i => $p ) {
@@ -114,9 +114,9 @@ function vcol_split( array $products ): array {
 			if ( $i === $j ) {
 				continue;
 			}
-			$n = vcol_common_words( $words[ $i ], $words[ $j ] );
+			$n = varconv_common_words( $words[ $i ], $words[ $j ] );
 			// Both labels short enough to be a variant, and something in common left as the name.
-			if ( $n > $best && count( $words[ $i ] ) - $n <= VCOL_MAX_LABEL_WORDS && count( $words[ $j ] ) - $n <= VCOL_MAX_LABEL_WORDS ) {
+			if ( $n > $best && count( $words[ $i ] ) - $n <= VARCONV_MAX_LABEL_WORDS && count( $words[ $j ] ) - $n <= VARCONV_MAX_LABEL_WORDS ) {
 				$best = $n;
 			}
 		}
@@ -132,7 +132,7 @@ function vcol_split( array $products ): array {
 		}
 		$n = count( $words[ $members[0] ] );
 		foreach ( $members as $i ) {
-			$n = min( $n, vcol_common_words( $words[ $members[0] ], $words[ $i ] ) );
+			$n = min( $n, varconv_common_words( $words[ $members[0] ], $words[ $i ] ) );
 		}
 		$labels = array();
 		foreach ( $members as $i ) {
@@ -155,10 +155,10 @@ function vcol_split( array $products ): array {
 		}
 		$out = array();
 		foreach ( $members as $i ) {
-			$out[] = $products[ $i ] + array( 'label' => vcol_trim( implode( ' ', $labels[ $i ] ) ) );
+			$out[] = $products[ $i ] + array( 'label' => varconv_trim( implode( ' ', $labels[ $i ] ) ) );
 		}
 		$collections[] = array(
-			'base'    => vcol_trim( implode( ' ', array_merge( array_slice( $words[ $members[0] ], 0, $n ), $suffix ) ) ),
+			'base'    => varconv_trim( implode( ' ', array_merge( array_slice( $words[ $members[0] ], 0, $n ), $suffix ) ) ),
 			'members' => $out,
 		);
 	}
@@ -172,10 +172,10 @@ function vcol_split( array $products ): array {
  * @param string[] $dismissed Collection keys the admin marked "not a collection".
  * @return array<int,array{key:string,name:string,attribute:string,sku:string,members:array,notes:string[]}>
  */
-function vcol_scan( array $products, array $dismissed = array() ): array {
+function varconv_scan( array $products, array $dismissed = array() ): array {
 	$families = array();
 	foreach ( $products as $p ) {
-		$family = vcol_family( (string) $p['sku'] );
+		$family = varconv_family( (string) $p['sku'] );
 		if ( '' !== $family && '' !== trim( (string) $p['name'] ) ) {
 			$families[ $family ][] = $p;
 		}
@@ -185,7 +185,7 @@ function vcol_scan( array $products, array $dismissed = array() ): array {
 		if ( count( $members ) < 2 ) {
 			continue;
 		}
-		foreach ( vcol_split( $members ) as $collection ) {
+		foreach ( varconv_split( $members ) as $collection ) {
 			$ids = array_map( static fn( $m ) => (int) $m['id'], $collection['members'] );
 			sort( $ids );
 			$key = substr( md5( $family . '|' . implode( ',', $ids ) ), 0, 12 );
@@ -198,10 +198,10 @@ function vcol_scan( array $products, array $dismissed = array() ): array {
 				'key'       => $key,
 				'family'    => $family,
 				'name'      => $collection['base'],
-				'attribute' => vcol_attribute( $labels ),
-				'sku'       => vcol_parent_sku( $family, $collection['members'] ),
+				'attribute' => varconv_attribute( $labels ),
+				'sku'       => varconv_parent_sku( $family, $collection['members'] ),
 				'members'   => $collection['members'],
-				'notes'     => vcol_notes( $collection['members'] ),
+				'notes'     => varconv_notes( $collection['members'] ),
 			);
 		}
 	}
@@ -210,7 +210,7 @@ function vcol_scan( array $products, array $dismissed = array() ): array {
 }
 
 /** Things to check before creating; none of them blocks it. */
-function vcol_notes( array $members ): array {
+function varconv_notes( array $members ): array {
 	$notes = array();
 	$labels = array_map( static fn( $m ) => strtolower( $m['label'] ), $members );
 	if ( in_array( '', $labels, true ) ) {
@@ -220,7 +220,7 @@ function vcol_notes( array $members ): array {
 		$notes[] = 'Two members have the same label.';
 	}
 	foreach ( $labels as $label ) {
-		if ( count( vcol_words( $label ) ) > 3 ) {
+		if ( count( varconv_words( $label ) ) > 3 ) {
 			$notes[] = 'Long labels; check these are variants of one product.';
 			break;
 		}
@@ -245,7 +245,7 @@ function vcol_notes( array $members ): array {
  *
  * @param array<int,string> $members
  */
-function vcol_validate( string $name, string $attribute, array $members ): array {
+function varconv_validate( string $name, string $attribute, array $members ): array {
 	$errors = array();
 	if ( '' === trim( $name ) ) {
 		$errors[] = 'The product needs a name.';
