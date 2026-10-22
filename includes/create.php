@@ -19,6 +19,10 @@ const VARCONV_PARENT_META = '_varconv_collection_parent';
 const VARCONV_HIDDEN_META = '_varconv_collection_hidden';
 const VARCONV_DISMISSED_OPTION = 'varconv_dismissed';
 const VARCONV_SCAN_TRANSIENT = 'varconv_scan';
+// Members the admin unchecked, by collection key; bulk runs leave them out too.
+const VARCONV_EXCLUDED_OPTION = 'varconv_excluded';
+// Held while a bulk run creates products; its value is the time it expires.
+const VARCONV_LOCK_OPTION = 'varconv_lock';
 
 /**
  * Published simple products with a SKU, shown in the catalog, not already in a collection or made by a split.
@@ -147,10 +151,12 @@ function varconv_created(): array {
  * members are then hidden from the catalog and search.
  *
  * @param array<int,string> $members Simple product ID => variant label.
+ * @param int[] $categories Product categories for the new product, each one of the members'; none takes the first
+ *                          member's categories.
  * @return int The new product's ID.
  * @throws RuntimeException When the collection cannot be made; nothing is left half made.
  */
-function varconv_create( string $name, string $attribute_name, string $sku, array $members ): int {
+function varconv_create( string $name, string $attribute_name, string $sku, array $members, array $categories = array() ): int {
 	$name = trim( $name );
 	$attribute_name = trim( $attribute_name );
 	$sku = trim( $sku );
@@ -167,6 +173,11 @@ function varconv_create( string $name, string $attribute_name, string $sku, arra
 		} else {
 			$sources[] = array( $simple, trim( (string) $label ) );
 		}
+	}
+	$categories = array_values( array_unique( array_filter( array_map( 'intval', $categories ) ) ) );
+	$member_cats = array_merge( array(), ...array_map( static fn( $s ) => array_map( 'intval', $s[0]->get_category_ids( 'edit' ) ), $sources ) );
+	if ( array_diff( $categories, $member_cats ) ) {
+		$errors[] = __( 'A chosen category is not one of the selected products\' categories.', 'variation-converter' );
 	}
 	$taken = '' === $sku ? 0 : (int) wc_get_product_id_by_sku( $sku );
 	if ( $taken ) {
@@ -205,7 +216,7 @@ function varconv_create( string $name, string $attribute_name, string $sku, arra
 		$parent->set_shipping_class_id( $first->get_shipping_class_id( 'edit' ) );
 		$parent->set_attributes( array( $attribute ) );
 		// Set on the product, not only as terms after saving, so WooCommerce doesn't add the default category.
-		$parent->set_category_ids( $first->get_category_ids( 'edit' ) );
+		$parent->set_category_ids( $categories ?: $first->get_category_ids( 'edit' ) );
 		$parent->set_tag_ids( $first->get_tag_ids( 'edit' ) );
 		if ( $newest ) {
 			$parent->set_date_created( $newest + 1 );
@@ -215,7 +226,8 @@ function varconv_create( string $name, string $attribute_name, string $sku, arra
 		if ( ! $parent_id ) {
 			throw new RuntimeException( esc_html__( 'WooCommerce did not save the variable product.', 'variation-converter' ) );
 		}
-		$skip = array( 'product_type', 'product_visibility', 'product_shipping_class' );
+		// Categories and tags were set on the product above.
+		$skip = array( 'product_type', 'product_visibility', 'product_shipping_class', 'product_cat', 'product_tag' );
 		foreach ( array_diff( get_object_taxonomies( 'product' ), $skip ) as $taxonomy ) {
 			$terms = wp_get_object_terms( $first->get_id(), $taxonomy, array( 'fields' => 'ids' ) );
 			if ( $terms && ! is_wp_error( $terms ) ) {
@@ -325,4 +337,106 @@ function varconv_reindex( array $ids ): void {
 	foreach ( $ids as $id ) {
 		relevanssi_index_doc( (int) $id, true, $fields, true );
 	}
+}
+
+/** @return array<string,int[]> Collection key => product IDs the admin unchecked. */
+function varconv_excluded(): array {
+	return (array) get_option( VARCONV_EXCLUDED_OPTION, array() );
+}
+
+/**
+ * Remembers that members of a collection are unchecked ($on) or checked again.
+ *
+ * @param int[] $product_ids
+ */
+function varconv_set_excluded( string $key, array $product_ids, bool $on ): void {
+	$excluded = varconv_excluded();
+	$product_ids = array_map( 'intval', $product_ids );
+	$ids = array_diff( array_map( 'intval', $excluded[ $key ] ?? array() ), $product_ids );
+	if ( $on ) {
+		$ids = array_merge( $ids, $product_ids );
+	}
+	if ( $ids ) {
+		$excluded[ $key ] = array_values( array_unique( $ids ) );
+	} else {
+		unset( $excluded[ $key ] );
+	}
+	update_option( VARCONV_EXCLUDED_OPTION, $excluded, false );
+}
+
+/**
+ * The collections a bulk run creates: the scan's, with at least $min products, without those carrying any of the
+ * notes $skip, and without unchecked members.
+ */
+function varconv_bulk_candidates( int $min = 2, array $skip = array() ): array {
+	return varconv_without_excluded(
+		varconv_without( varconv_min_size( varconv_candidates()['collections'], max( 2, $min ) ), $skip ),
+		varconv_excluded()
+	);
+}
+
+/**
+ * One collection of a bulk run, as the scan proposed it. A collection that needs review by hand (a missing or
+ * repeated label) is skipped; a parent SKU already in use is left empty.
+ *
+ * @return array{status:string,id:int,message:string} status: made, would (dry run), skip or failed.
+ */
+function varconv_convert( array $c, bool $dry = false ): array {
+	$members = array();
+	foreach ( $c['members'] as $m ) {
+		$members[ (int) $m['id'] ] = (string) $m['label'];
+	}
+	$errors = varconv_validate( $c['name'], $c['attribute'], $members );
+	if ( $errors ) {
+		return array( 'status' => 'skip', 'id' => 0, 'message' => implode( ' ', $errors ) );
+	}
+	$sku = (string) $c['sku'];
+	$note = '';
+	if ( '' !== $sku && wc_get_product_id_by_sku( $sku ) ) {
+		$sku = '';
+		$note = __( 'Parent SKU in use; left empty.', 'variation-converter' );
+	}
+	if ( $dry ) {
+		return array( 'status' => 'would', 'id' => 0, 'message' => $note );
+	}
+	try {
+		return array( 'status' => 'made', 'id' => varconv_create( $c['name'], $c['attribute'], $sku, $members ), 'message' => $note );
+	} catch ( RuntimeException $e ) {
+		return array( 'status' => 'failed', 'id' => 0, 'message' => $e->getMessage() );
+	}
+}
+
+/**
+ * Takes the lock that keeps bulk runs (command line or admin page) from running at once: two runs at once would each
+ * make every collection, giving twin products. A run that dies without unlocking loses the lock after $seconds.
+ */
+function varconv_lock( int $seconds = 600 ): bool {
+	global $wpdb;
+	$until = (string) ( time() + $seconds );
+	// INSERT IGNORE is atomic, unlike add_option(): of two runs starting together, only one inserts the row.
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	if ( $wpdb->query( $wpdb->prepare( "INSERT IGNORE INTO {$wpdb->options} (option_name, option_value, autoload) VALUES (%s, %s, 'no')", VARCONV_LOCK_OPTION, $until ) ) ) {
+		return true;
+	}
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	$held = (string) $wpdb->get_var( $wpdb->prepare( "SELECT option_value FROM {$wpdb->options} WHERE option_name = %s", VARCONV_LOCK_OPTION ) );
+	if ( (int) $held > time() ) {
+		return false;
+	}
+	// The run holding it died: take the expired lock over, unless another run just did.
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	return (bool) $wpdb->query( $wpdb->prepare( "UPDATE {$wpdb->options} SET option_value = %s WHERE option_name = %s AND option_value = %s", $until, VARCONV_LOCK_OPTION, $held ) );
+}
+
+/** Keeps a held lock for another $seconds, for a long run. */
+function varconv_lock_renew( int $seconds = 600 ): void {
+	global $wpdb;
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	$wpdb->update( $wpdb->options, array( 'option_value' => (string) ( time() + $seconds ) ), array( 'option_name' => VARCONV_LOCK_OPTION ) );
+}
+
+function varconv_unlock(): void {
+	global $wpdb;
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	$wpdb->delete( $wpdb->options, array( 'option_name' => VARCONV_LOCK_OPTION ) );
 }

@@ -48,6 +48,9 @@ add_action(
 	}
 );
 
+if ( defined( 'WP_CLI' ) && WP_CLI ) {
+	require_once __DIR__ . '/includes/cli.php';
+}
 if ( is_admin() ) {
 	require_once __DIR__ . '/includes/admin.php';
 }

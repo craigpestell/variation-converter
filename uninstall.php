@@ -9,4 +9,6 @@ if ( ! defined( 'WP_UNINSTALL_PLUGIN' ) ) {
 }
 
 delete_option( 'varconv_dismissed' );
+delete_option( 'varconv_excluded' );
+delete_option( 'varconv_lock' );
 delete_transient( 'varconv_scan' );
