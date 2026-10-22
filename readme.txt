@@ -9,7 +9,7 @@ Stable tag: 0.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Merge near-duplicate simple products into variable products. Finds the groups for you, previews each one, and undoes in one click.
+Merge near-duplicate simple products into variable products, or split a variable product into simple products. Previews each one and undoes in one click.
 
 == Description ==
 
@@ -25,7 +25,7 @@ It scans your catalog, finds the simple products that are really one product in 
 2. Each proposed group shows its members, the variant label it read from each name ("Black", "Blue", "Red"), a guessed attribute (Color, Size, Flavor, Scent or Volume) and a suggested parent SKU.
 3. Untick any product that doesn't belong, and edit the product name, attribute or labels.
 4. Click **Create variable product**. Or click **Not a collection** to dismiss the group so it stops appearing.
-5. Changed your mind? The **Created** list has an **Undo** button for every product the plugin made.
+5. Changed your mind? The **History** tab has an **Undo** button for every product the plugin made.
 
 = Features =
 
@@ -38,9 +38,11 @@ It scans your catalog, finds the simple products that are really one product in 
 * **All or nothing.** If WooCommerce fails to save any part of a new product, the partial product is removed and your catalog is untouched.
 * **Lightweight.** No settings page, no front-end code, no external services, and nothing stored beyond a few product meta fields.
 
-= Coming next =
+= Splitting a variable product =
 
-Splitting in the other direction: turning a variable product back into separate simple products. It's in development and will arrive in a future version.
+Going the other way works too. On the **Split** tab, or from the **Split into simple products** link under any variable product in Products > All Products, pick a variable product. You get one row per variation with a suggested name ("Tri-Rings Black"), which you can edit. Click **Split** and each checked variation becomes a simple product with its SKU, prices, stock, weight, dimensions and image, plus the variable product's descriptions, categories, tags and other attributes. The variable product is hidden, not deleted, and Undo in **History** brings it back and removes the simple products.
+
+A variable product the plugin made by merging offers Undo instead of a split, so you get your original products back rather than new copies.
 
 = Who it's for =
 
@@ -102,18 +104,23 @@ It reindexes changed products in Relevanssi automatically. Other search plugins 
 
 = Does it convert variable products into simple products? =
 
-Not yet. That's the next feature in development.
+Yes. Use the Split tab, or the "Split into simple products" link under a variable product in your product list. Undo deletes the new simple products and shows the variable product again; as with merging, any orders already placed for those simple products keep their line items but lose the product link.
+
+= Why are there two products with the same SKU after a conversion? =
+
+The originals are kept, hidden, so Undo can bring them back. Each SKU exists on the hidden original and on the new product until you delete the hidden one yourself.
 
 == Screenshots ==
 
 1. Proposed groups, each with its members, labels, attribute and notes.
 2. Editing a group before creating the variable product.
-3. The Created list with one-click Undo.
+3. Splitting a variable product into simple products.
+4. The History tab with one-click Undo.
 
 == Changelog ==
 
 = 0.1.0 =
-* First public version: detect groups of simple products, review them, merge each into a variable product, and undo.
+* First public version: detect groups of simple products, review them, merge each into a variable product, split variable products into simple products, and undo either.
 
 == Upgrade Notice ==
 

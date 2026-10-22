@@ -19,7 +19,7 @@ const VARCONV_SCAN_TRANSIENT = 'varconv_scan';
 const VARCONV_COPY_META = array();
 
 /**
- * Published simple products with a SKU, shown in the catalog, not already in a collection or the dev preview.
+ * Published simple products with a SKU, shown in the catalog, not already in a collection or made by a split.
  *
  * @return array<int,array{id:int,sku:string,name:string,title:string,price:string,stock:string,cats:int[]}>
  */
@@ -35,11 +35,12 @@ function varconv_products(): array {
 		LEFT JOIN {$wpdb->postmeta} price ON price.post_id = p.ID AND price.meta_key = '_regular_price'
 		LEFT JOIN {$wpdb->postmeta} stock ON stock.post_id = p.ID AND stock.meta_key = '_stock_status'
 		WHERE p.post_type = 'product' AND p.post_status = 'publish'
-		AND p.ID NOT IN ( SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key IN ( %s) )
+		AND p.ID NOT IN ( SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key IN ( %s, %s ) )
 		AND p.ID NOT IN ( SELECT vr.object_id FROM {$wpdb->term_relationships} vr
 			JOIN {$wpdb->term_taxonomy} vt ON vt.term_taxonomy_id = vr.term_taxonomy_id AND vt.taxonomy = 'product_visibility'
 			JOIN {$wpdb->terms} v ON v.term_id = vt.term_id AND v.slug = 'exclude-from-catalog' )",
-		VARCONV_PARENT_META
+		VARCONV_PARENT_META,
+		VARCONV_SPLIT_FROM_META
 	) );
 	$cats = array();
 	foreach ( $wpdb->get_results(
