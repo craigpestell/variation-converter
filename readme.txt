@@ -1,6 +1,6 @@
 === Variation Converter for WooCommerce ===
 Contributors: craigpestell
-Tags: woocommerce, variable products, variations, merge products, simple to variable
+Tags: woocommerce, variable products, merge products, simple to variable, variable to simple
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
@@ -19,6 +19,8 @@ Fixing that by hand means building a variable product, re-entering every SKU, pr
 
 It scans your catalog, finds the simple products that are really one product in several variants, and shows you each group. You check it, adjust anything you like, and click once. You get one variable product with a variation for each original. The originals are hidden, not deleted, and Undo puts everything back the way it was.
 
+It works the other way too. If a variable product would sell better as separate listings, or you're moving to a setup that needs one product per variant, Variation Converter splits it into simple products the same way: preview, one click, and Undo.
+
 = How it works =
 
 1. Go to **Products > Variation Converter**. The plugin scans your published simple products.
@@ -29,12 +31,13 @@ It scans your catalog, finds the simple products that are really one product in 
 
 = Features =
 
+* **Both directions.** Merge simple products into a variable product, or split a variable product into simple products.
 * **Finds the groups for you.** Products are grouped when their SKUs share a family (SE1421-01, SE1421-03) and their names share a beginning. You don't have to pick products one by one.
 * **Review before anything changes.** Nothing is created until you approve a group. You can rename it, change the attribute, fix labels and leave products out.
 * **Flags the things worth a second look:** different prices, different categories, duplicate labels, or labels long enough to suggest these aren't really variants.
 * **Keeps your data.** Each variation takes its original's SKU, regular and sale price, sale dates, stock settings, weight, dimensions and image. The variable product takes the first member's description, images, categories, tags, tax and shipping class, plus every member's image in its gallery.
-* **Non-destructive.** The original simple products are hidden from your shop and search, never deleted. Their orders, reviews and links stay as they were.
-* **One-click Undo.** Undo removes the variable product and brings the originals back with the visibility they had before.
+* **Non-destructive.** The products you convert from are hidden from your shop and search, never deleted. Their orders, reviews and links stay as they were.
+* **One-click Undo.** Undo removes what the plugin made and brings the originals back with the visibility they had before.
 * **All or nothing.** If WooCommerce fails to save any part of a new product, the partial product is removed and your catalog is untouched.
 * **Lightweight.** No settings page, no front-end code, no external services, and nothing stored beyond a few product meta fields.
 
@@ -54,7 +57,7 @@ A variable product the plugin made by merging offers Undo instead of a split, so
 
 1. Make sure WooCommerce is installed and active.
 2. In your WordPress admin, go to **Plugins > Add New**, search for "Variation Converter", then install and activate it. Or upload the plugin folder to `/wp-content/plugins/` and activate it on the **Plugins** screen.
-3. Go to **Products > Variation Converter** to see the proposed groups.
+3. Go to **Products > Variation Converter** to see the proposed groups, or open the **Split** tab to split a variable product.
 
 You need a user role that can manage WooCommerce products (Shop Manager or Administrator).
 
@@ -78,9 +81,9 @@ Two things must match: the SKUs share a family (for example SE1421-01 CL and SE1
 
 Not yet. Grouping relies on SKUs, so products without one are never proposed. Only published, visible simple products are scanned. Name-only matching is being considered for a future version.
 
-= Why does each SKU now appear twice? =
+= Why are there two products with the same SKU after a conversion? =
 
-Each variation reuses its original's SKU, and the hidden original keeps it too, so Undo can restore everything exactly. If you're sure you'll keep the variable product, you can clear the SKUs on the hidden originals or delete them yourself.
+The originals are kept, hidden, so Undo can restore everything exactly. Each SKU exists on the hidden original and on the new product. Once you're sure you'll keep the new product, you can delete the hidden one yourself.
 
 = I just changed some products and the list didn't update. =
 
@@ -106,9 +109,9 @@ It reindexes changed products in Relevanssi automatically. Other search plugins 
 
 Yes. Use the Split tab, or the "Split into simple products" link under a variable product in your product list. Undo deletes the new simple products and shows the variable product again; as with merging, any orders already placed for those simple products keep their line items but lose the product link.
 
-= Why are there two products with the same SKU after a conversion? =
+= Why can't I split some variations? =
 
-The originals are kept, hidden, so Undo can bring them back. Each SKU exists on the hidden original and on the new product until you delete the hidden one yourself.
+A variation set to "Any" for an attribute (for example "Any Size") isn't one specific product, so there's nothing to turn into a simple product. Give it a specific value first.
 
 == Screenshots ==
 
