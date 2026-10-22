@@ -113,7 +113,7 @@ function varconv_render(): void {
 	?>
 	<div class="wrap varconv">
 		<h1>Variation Converter</h1>
-		<p>Groups of simple products whose names differ only by a variant (colour, size, flavour...) and whose SKUs share a family. Check each one, fix the name, attribute and labels if needed, and create it: that makes one variable product with a variation per checked product (same SKU, prices, stock and image), and hides those simple products from the catalog and search. They are not deleted, and Undo below brings them back.</p>
+		<p>Groups of simple products whose names differ only by a variant (color, size, flavor...) and whose SKUs share a family. Check each one, fix the name, attribute and labels if needed, and create it: that makes one variable product with a variation per checked product (same SKU, prices, stock and image), and hides those simple products from the catalog and search. They are not deleted, and Undo below brings them back.</p>
 		<p><strong>Dev only.</strong> Production keeps simple products until the planned migration; this page does not exist there.</p>
 		<?php varconv_notice(); ?>
 
@@ -143,7 +143,7 @@ function varconv_render(): void {
 			?>
 		</p>
 
-		<datalist id="varconv-attributes"><option>Colour</option><option>Size</option><option>Flavour</option><option>Scent</option><option>Volume</option><option>Style</option></datalist>
+		<datalist id="varconv-attributes"><option>Color</option><option>Size</option><option>Flavor</option><option>Scent</option><option>Volume</option><option>Style</option></datalist>
 		<?php foreach ( $shown as $c ) : ?>
 			<?php varconv_render_candidate( $c, $search, $paged ); ?>
 		<?php endforeach; ?>

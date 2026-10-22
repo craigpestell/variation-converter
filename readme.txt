@@ -13,7 +13,7 @@ Merge near-duplicate simple products into variable products. Finds the groups fo
 
 == Description ==
 
-Lots of WooCommerce stores start out with one simple product per colour or size: "Tri-Rings Black", "Tri-Rings Blue", "Tri-Rings Red". Shoppers see three listings where there should be one, and you have three products to keep in sync.
+Lots of WooCommerce stores start out with one simple product per color or size: "Tri-Rings Black", "Tri-Rings Blue", "Tri-Rings Red". Shoppers see three listings where there should be one, and you have three products to keep in sync.
 
 Fixing that by hand means building a variable product, re-entering every SKU, price, stock level and image, and then hiding the old products. Variation Converter does it for you.
 
@@ -22,7 +22,7 @@ It scans your catalog, finds the simple products that are really one product in 
 = How it works =
 
 1. Go to **Products > Variation Converter**. The plugin scans your published simple products.
-2. Each proposed group shows its members, the variant label it read from each name ("Black", "Blue", "Red"), a guessed attribute (Colour, Size, Flavour, Scent or Volume) and a suggested parent SKU.
+2. Each proposed group shows its members, the variant label it read from each name ("Black", "Blue", "Red"), a guessed attribute (Color, Size, Flavor, Scent or Volume) and a suggested parent SKU.
 3. Untick any product that doesn't belong, and edit the product name, attribute or labels.
 4. Click **Create variable product**. Or click **Not a collection** to dismiss the group so it stops appearing.
 5. Changed your mind? The **Created** list has an **Undo** button for every product the plugin made.
@@ -84,9 +84,9 @@ Each variation reuses its original's SKU, and the hidden original keeps it too, 
 
 Scan results are cached for 30 minutes. Click **Scan again** to refresh them.
 
-= Can a product have more than one attribute, like colour and size? =
+= Can a product have more than one attribute, like color and size? =
 
-Not in this version. Each variable product gets one attribute. You can change its name before creating, for example from "Colour" to "Finish".
+Not in this version. Each variable product gets one attribute. You can change its name before creating, for example from "Color" to "Finish".
 
 = It guessed the wrong attribute. Can I change it? =
 

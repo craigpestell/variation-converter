@@ -74,9 +74,9 @@ function varconv_parent_sku( string $family, array $members ): string {
 /** A guess at the variation attribute from the labels; the admin can change it before creating. */
 function varconv_attribute( array $labels ): string {
 	$kinds = array(
-		'Colour'  => 'black|white|red|blue|pink|purple|green|yellow|orange|brown|grey|gray|silver|gold|ivory|natural|clear|nude|beige|tan|teal|aqua|turquoise|lavender|lilac|violet|magenta|fuchsia|coral|rose|burgundy|navy|mint|plum|bronze|copper|chrome|smoke|frost|glow|blush|charcoal|cream|caramel|chocolate|vanilla|mocha|champagne|leopard|zebra|rainbow|transparent|multicolou?r',
+		'Color'  => 'black|white|red|blue|pink|purple|green|yellow|orange|brown|grey|gray|silver|gold|ivory|natural|clear|nude|beige|tan|teal|aqua|turquoise|lavender|lilac|violet|magenta|fuchsia|coral|rose|burgundy|navy|mint|plum|bronze|copper|chrome|smoke|frost|glow|blush|charcoal|cream|caramel|chocolate|vanilla|mocha|champagne|leopard|zebra|rainbow|transparent|multicolou?r',
 		'Size'    => 'xs|s|m|l|xl|xxl|xxxl|2xl|3xl|4xl|xtra|x-large|small|medium|large|mini|petite|regular|plus|queen|o\/s|os|one size|[0-9.]+ ?(?:"|in|inch|inches|cm|mm)',
-		'Flavour' => 'banana|watermelon|strawberry|cherry|mango|raspberry|peach|apple|grape|lemon|lime|mint|peppermint|cinnamon|coconut|pineapple|blueberry|kiwi|passion fruit|cotton candy|bubble gum|unflavou?red',
+		'Flavor' => 'banana|watermelon|strawberry|cherry|mango|raspberry|peach|apple|grape|lemon|lime|mint|peppermint|cinnamon|coconut|pineapple|blueberry|kiwi|passion fruit|cotton candy|bubble gum|unflavou?red',
 		'Scent'   => 'lavender|rose petals|jasmine|sandalwood|unscented|fragrance free',
 		'Volume'  => '[0-9.]+ ?(?:ml|oz|fl oz|g|l)',
 	);
@@ -90,7 +90,7 @@ function varconv_attribute( array $labels ): string {
 	}
 	arsort( $counts );
 	$best = array_key_first( $counts );
-	// Most labels must say it; a stray "Pink" among sizes is not a colour attribute.
+	// Most labels must say it; a stray "Pink" among sizes is not a color attribute.
 	return $counts[ $best ] * 2 > count( $labels ) ? $best : 'Option';
 }
 
@@ -251,7 +251,7 @@ function varconv_validate( string $name, string $attribute, array $members ): ar
 		$errors[] = 'The product needs a name.';
 	}
 	if ( '' === trim( $attribute ) ) {
-		$errors[] = 'The attribute needs a name (Colour, Size, ...).';
+		$errors[] = 'The attribute needs a name (Color, Size, ...).';
 	}
 	if ( count( $members ) < 2 ) {
 		$errors[] = 'Choose at least 2 products.';
