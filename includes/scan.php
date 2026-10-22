@@ -342,6 +342,39 @@ function varconv_scan( array $products, array $dismissed = array(), array $brand
 	return $out;
 }
 
+/** Collections of at least $min products. */
+function varconv_min_size( array $collections, int $min ): array {
+	return array_values( array_filter( $collections, static fn( $c ) => count( $c['members'] ) >= $min ) );
+}
+
+/** Collections without any of the notes $kinds (see varconv_notes()); label also covers repeat. */
+function varconv_without( array $collections, array $kinds ): array {
+	if ( in_array( 'label', $kinds, true ) ) {
+		$kinds[] = 'repeat';
+	}
+	return array_values( array_filter( $collections, static fn( $c ) => ! array_intersect( array_keys( $c['notes'] ), $kinds ) ) );
+}
+
+/**
+ * Collections without the members the admin unchecked (collection key => product IDs); a collection left with fewer
+ * than 2 members is dropped.
+ *
+ * @param array<string,int[]> $excluded
+ */
+function varconv_without_excluded( array $collections, array $excluded ): array {
+	$out = array();
+	foreach ( $collections as $c ) {
+		$ids = array_map( 'intval', (array) ( $excluded[ $c['key'] ?? '' ] ?? array() ) );
+		if ( $ids ) {
+			$c['members'] = array_values( array_filter( $c['members'], static fn( $m ) => ! in_array( (int) $m['id'], $ids, true ) ) );
+		}
+		if ( count( $c['members'] ) >= 2 ) {
+			$out[] = $c;
+		}
+	}
+	return $out;
+}
+
 /** How far apart the members' regular prices are, in percent of the lowest (0 when they agree or are unknown). */
 function varconv_spread( array $members ): int {
 	$prices = array_filter( array_map( static fn( $m ) => (float) ( $m['price'] ?? 0 ), $members ), static fn( $p ) => $p > 0 );

@@ -149,4 +149,17 @@ expect( varconv_member_order( array( 'sku' => 'A-2' ), array( 'sku' => 'A-10' ) 
 expect( varconv_member_order( array( 'sku' => 'A', 'name' => 'b' ), array( 'sku' => 'A', 'name' => 'a' ) ) > 0, true, 'then name' );
 expect( varconv_spread( array( array( 'price' => '10' ), array( 'price' => '15' ), array( 'price' => '' ) ) ), 50, 'spread' );
 
+// Bulk filters: group size, warnings, unchecked members.
+$groups = array(
+	array( 'key' => 'a', 'members' => array( array( 'id' => 1 ), array( 'id' => 2 ), array( 'id' => 3 ) ), 'notes' => array() ),
+	array( 'key' => 'b', 'members' => array( array( 'id' => 4 ), array( 'id' => 5 ) ), 'notes' => array( 'price' => 'x' ) ),
+	array( 'key' => 'c', 'members' => array( array( 'id' => 6 ), array( 'id' => 7 ) ), 'notes' => array( 'repeat' => 'x' ) ),
+);
+expect( array_column( varconv_min_size( $groups, 3 ), 'key' ), array( 'a' ), 'min size' );
+expect( array_column( varconv_without( $groups, array( 'price' ) ), 'key' ), array( 'a', 'c' ), 'without price' );
+expect( array_column( varconv_without( $groups, array( 'label' ) ), 'key' ), array( 'a', 'b' ), 'label covers repeat' );
+$left = varconv_without_excluded( $groups, array( 'a' => array( 2 ), 'b' => array( 4 ) ) );
+expect( array_column( $left, 'key' ), array( 'a', 'c' ), 'group left with one member dropped' );
+expect( array_column( $left[0]['members'], 'id' ), array( 1, 3 ), 'unchecked member left out' );
+
 echo "Variant collection scan tests passed.\n";

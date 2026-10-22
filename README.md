@@ -26,6 +26,8 @@ This is the development repo. The user-facing docs are in [`readme.txt`](readme.
 | `includes/admin.php` | The **Products > Variation Converter** screen and its form handlers |
 | `assets/admin.css`, `assets/admin.js` | Screen styles, and the confirm before Undo |
 | `uninstall.php` | Removes the dismissed list and cached scan on delete; products are left alone |
+| `includes/cli.php` | WP-CLI commands `wp variation-converter combine` and `undo` |
+| `tests/integration-bulk.php` | Bulk pieces against a real site: run lock, remembered unchecked members, chosen categories, `varconv_convert()` (`wp eval-file`, test site only) |
 | `tests/test-scan.php` | Offline tests for `scan.php` |
 | `tests/test-split.php` | Offline tests for the pure helpers in `split.php` |
 | `tests/integration-split.php` | Split, Undo and the merge interplay against a real site: `wp eval-file tests/integration-split.php` (makes and deletes its own products; use a test site) |
@@ -41,6 +43,17 @@ This is the development repo. The user-facing docs are in [`readme.txt`](readme.
 If Relevanssi is active, changed products are reindexed (parent after variations, so variation SKUs are searchable).
 
 There are no settings. The attribute word lists are hardcoded in `varconv_attribute()`.
+
+## WP-CLI
+
+```
+wp variation-converter combine --all --dry-run          # list what the scan would create, with each group's key
+wp variation-converter combine --all [--min-size=3] [--skip=price,cats] [--limit=50]
+wp variation-converter combine <key>...                  # just these groups
+wp variation-converter undo <id>... | --all [--yes]      # combined or split products
+```
+
+`combine` uses the proposed name, attribute, SKU and labels, leaves out members unchecked on the admin page, skips groups that need a label, and leaves a parent SKU empty when it is already in use. Only one bulk run can create products at a time (an option row taken with `INSERT IGNORE`, which also works on SQLite); a run that dies loses the lock after 10 minutes.
 
 ## Hooks
 
