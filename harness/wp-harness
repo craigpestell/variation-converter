@@ -1,0 +1,495 @@
+#!/usr/bin/env bash
+# wp-harness: a throwaway WordPress + WooCommerce site for testing a plugin.
+# Runs on PHP + SQLite directly (cloud containers), or inside Docker when there is no PHP (a Mac with Docker).
+# See harness/README.md. Keep the host side bash 3.2 compatible (macOS).
+set -euo pipefail
+
+HARNESS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Versions. Override with environment variables or in the plugin's .wp-harness file.
+WP_VERSION="${WP_VERSION:-7.1.3}"
+WC_VERSION="${WC_VERSION:-11.2.1}"            # "none" skips WooCommerce
+PCP_VERSION="${PCP_VERSION:-2.1.0}"           # Plugin Check
+SQLITE_VERSION="${SQLITE_VERSION:-v3.1.1}"    # tag of WordPress/sqlite-database-integration
+HARNESS_HOME="${HARNESS_HOME:-${XDG_CACHE_HOME:-$HOME/.cache}/wp-harness}"
+DOWNLOADS="$HARNESS_HOME/downloads"
+
+die() { echo "wp-harness: $*" >&2; exit 1; }
+say() { echo "==> $*" >&2; }
+
+usage() {
+	cat <<'EOF'
+Usage: wp-harness <command> [args]
+
+  up [PLUGIN_DIR] [--port N] [--no-seed] [--fresh]
+                     Make a clean site with the plugin mounted (default: the git root of the
+                     current folder), WooCommerce active, the demo catalog seeded, and a
+                     snapshot taken. Starts the web server. --fresh deletes the site first.
+  serve | stop       Start or stop the web server (http://localhost:PORT, admin / admin)
+  seed               Add the demo catalog (idempotent)
+  reset              Restore the snapshot taken after seeding
+  snapshot           Replace the snapshot with the current database
+  wp ARGS...         Run WP-CLI on the site
+  eval FILE          wp eval-file FILE (relative paths are resolved from the plugin folder)
+  lint               php -l every PHP file in the plugin
+  test [--unit|--integration]
+                     Offline tests (php FILE) and integration tests (wp eval-file FILE), from the
+                     globs HARNESS_UNIT and HARNESS_INTEGRATION; resets the snapshot first
+  check [ARGS...]    Plugin Check on the plugin (extra args go to `wp plugin check`)
+  shot PATH [PATH...] [--out DIR] [--width N] [--full]
+                     Logged-in screenshots of admin or front-end paths
+  browse SCRIPT.mjs  Run a Playwright script logged in (see harness/README.md)
+  status             Show the site, its URL and whether the server is up
+  down               Stop the server and delete the site
+  sites              List sites
+
+Environment: HARNESS_SITE (site name, default the plugin slug), HARNESS_HOME, WP_VERSION,
+WC_VERSION, PCP_VERSION, HARNESS_DOCKER=1 to force Docker, HARNESS_DOCKER=0 to forbid it.
+EOF
+}
+
+# ---------- plugin and site resolution ----------
+
+has_main_file() {
+	local f
+	for f in "$1"/*.php; do
+		[ -f "$f" ] && head -c 8192 "$f" | grep -q 'Plugin Name:' && return 0
+	done
+	return 1
+}
+
+# The plugin folder: the one given, or the nearest folder up from here with a main plugin file.
+plugin_root() {
+	if [ -n "${1:-}" ]; then (cd "$1" && pwd); return; fi
+	local dir="$PWD"
+	while [ "$dir" != / ]; do
+		has_main_file "$dir" && { echo "$dir"; return; }
+		dir="$(dirname "$dir")"
+	done
+	pwd
+}
+
+# Slug from the main plugin file (the PHP file at the root with a Plugin Name header).
+plugin_slug() {
+	local f
+	for f in "$1"/*.php; do
+		[ -f "$f" ] || continue
+		if head -c 8192 "$f" | grep -q 'Plugin Name:'; then
+			basename "$f" .php
+			return
+		fi
+	done
+	die "no main plugin file (a PHP file with a 'Plugin Name:' header) in $1"
+}
+
+load_config() {
+	# Optional per-plugin settings, sourced as bash: HARNESS_UNIT, HARNESS_INTEGRATION, EXTRA_PLUGINS, ...
+	if [ -n "${PLUGIN_DIR:-}" ] && [ -f "$PLUGIN_DIR/.wp-harness" ]; then
+		# shellcheck disable=SC1091
+		. "$PLUGIN_DIR/.wp-harness"
+	fi
+	HARNESS_UNIT="${HARNESS_UNIT:-tests/test-*.php}"
+	HARNESS_INTEGRATION="${HARNESS_INTEGRATION:-tests/integration-*.php}"
+	EXTRA_PLUGINS="${EXTRA_PLUGINS:-}"
+	SEED="${SEED:-$HARNESS/lib/seed-catalog.php}"
+}
+
+pick_site() {
+	if [ -n "${HARNESS_SITE:-}" ]; then
+		SITE="$HARNESS_SITE"
+	elif [ -n "${PLUGIN_DIR:-}" ]; then
+		SITE="$PLUGIN_SLUG"
+	else
+		local here slug
+		here="$(plugin_root)"
+		slug="$(plugin_slug "$here" 2>/dev/null)" || slug=""
+		if [ -n "$slug" ] && [ -d "$HARNESS_HOME/sites/$slug" ]; then
+			SITE="$slug"
+		else
+			local count
+			count="$(ls "$HARNESS_HOME/sites" 2>/dev/null | wc -l | tr -d ' ')"
+			[ "$count" = 1 ] || die "can't tell which site to use; set HARNESS_SITE (see: wp-harness sites)"
+			SITE="$(ls "$HARNESS_HOME/sites")"
+		fi
+	fi
+	SITE_DIR="$HARNESS_HOME/sites/$SITE"
+	WP_DIR="$SITE_DIR/wordpress"
+}
+
+load_site() {
+	pick_site
+	[ -f "$SITE_DIR/site.env" ] || die "no site '$SITE'; run: wp-harness up"
+	# shellcheck disable=SC1091
+	. "$SITE_DIR/site.env"
+	load_config
+}
+
+wp_cli() {
+	php -d memory_limit=1G "$DOWNLOADS/wp-cli.phar" --allow-root --path="$WP_DIR" "$@"
+}
+
+db_file() { echo "$SITE_DIR/db/wp.sqlite"; }
+
+# ---------- downloads (all from GitHub: the cloud proxy blocks wordpress.org) ----------
+
+fetch() { # url dest
+	[ -s "$2" ] && return
+	say "Downloading $(basename "$2")"
+	curl -fsSL --retry 3 -o "$2.part" "$1" && mv "$2.part" "$2"
+}
+
+fetch_all() {
+	mkdir -p "$DOWNLOADS"
+	fetch https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar "$DOWNLOADS/wp-cli.phar"
+	if [ ! -d "$DOWNLOADS/wordpress-$WP_VERSION" ]; then
+		say "Downloading WordPress $WP_VERSION"
+		git -c advice.detachedHead=false clone -q --depth 1 --branch "$WP_VERSION" https://github.com/WordPress/WordPress.git "$DOWNLOADS/wordpress-$WP_VERSION.part"
+		rm -rf "$DOWNLOADS/wordpress-$WP_VERSION.part/.git"
+		mv "$DOWNLOADS/wordpress-$WP_VERSION.part" "$DOWNLOADS/wordpress-$WP_VERSION"
+	fi
+	if [ ! -d "$DOWNLOADS/sqlite-$SQLITE_VERSION" ]; then
+		say "Downloading SQLite Database Integration $SQLITE_VERSION"
+		local tmp="$DOWNLOADS/sqlite-src.part"
+		rm -rf "$tmp"
+		git -c advice.detachedHead=false clone -q --depth 1 --branch "$SQLITE_VERSION" https://github.com/WordPress/sqlite-database-integration.git "$tmp"
+		# The plugin links its database code from a sibling package; -L copies the real files.
+		cp -RL "$tmp/packages/plugin-sqlite-database-integration" "$DOWNLOADS/sqlite-$SQLITE_VERSION"
+		rm -rf "$tmp"
+	fi
+	if [ "$WC_VERSION" != none ]; then
+		fetch "https://github.com/woocommerce/woocommerce/releases/download/$WC_VERSION/woocommerce.zip" "$DOWNLOADS/woocommerce-$WC_VERSION.zip"
+	fi
+	fetch "https://github.com/WordPress/plugin-check/releases/download/$PCP_VERSION/plugin-check.zip" "$DOWNLOADS/plugin-check-$PCP_VERSION.zip"
+}
+
+# ---------- server ----------
+
+server_pid() {
+	local pid
+	pid="$(cat "$SITE_DIR/server.pid" 2>/dev/null || true)"
+	if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then echo "$pid"; fi
+}
+
+cmd_serve() {
+	load_site
+	if [ -n "$(server_pid)" ]; then say "Already serving http://localhost:$PORT"; return; fi
+	if curl -s -o /dev/null --noproxy '*' "http://localhost:$PORT/"; then
+		die "port $PORT is in use by something else; stop it, or remake the site with: wp-harness up --fresh --port N"
+	fi
+	local host=127.0.0.1
+	[ -n "${HARNESS_IN_DOCKER:-}" ] && host=0.0.0.0
+	# NO_PROXY so WordPress's own loopback requests skip any HTTP proxy.
+	NO_PROXY='*' no_proxy='*' nohup php -d memory_limit=512M -S "$host:$PORT" -t "$WP_DIR" "$HARNESS/lib/router.php" >"$SITE_DIR/server.log" 2>&1 &
+	echo $! >"$SITE_DIR/server.pid"
+	local i
+	for i in 1 2 3 4 5 6 7 8 9 10; do
+		curl -s -o /dev/null --noproxy '*' "http://localhost:$PORT/wp-login.php" && break
+		sleep 0.5
+	done
+	say "Serving http://localhost:$PORT (admin / admin). Log: $SITE_DIR/server.log"
+}
+
+cmd_stop() {
+	load_site
+	local pid
+	pid="$(server_pid)"
+	if [ -n "$pid" ]; then kill "$pid" && say "Stopped the server"; fi
+	rm -f "$SITE_DIR/server.pid"
+}
+
+# ---------- commands ----------
+
+cmd_up() {
+	local dir="" port="" seed=1 fresh=""
+	while [ $# -gt 0 ]; do
+		case "$1" in
+			--port) port="$2"; shift 2 ;;
+			--no-seed) seed=""; shift ;;
+			--fresh) fresh=1; shift ;;
+			-*) die "unknown option $1" ;;
+			*) dir="$1"; shift ;;
+		esac
+	done
+	PLUGIN_DIR="$(plugin_root "$dir")"
+	PLUGIN_SLUG="$(plugin_slug "$PLUGIN_DIR")"
+	load_config
+	pick_site
+	if [ -n "$fresh" ] && [ -d "$SITE_DIR" ]; then cmd_down; fi
+	PORT="${port:-${PORT:-8080}}"
+
+	command -v php >/dev/null || die "PHP is needed (or Docker: see harness/README.md)"
+	php -r 'exit(extension_loaded("pdo_sqlite") ? 0 : 1);' || die "PHP needs the pdo_sqlite extension"
+	fetch_all
+
+	mkdir -p "$SITE_DIR"
+	printf 'PLUGIN_DIR=%q\nPLUGIN_SLUG=%q\nPORT=%q\nWP_VERSION=%q\nWC_VERSION=%q\n' \
+		"$PLUGIN_DIR" "$PLUGIN_SLUG" "$PORT" "$WP_VERSION" "$WC_VERSION" >"$SITE_DIR/site.env"
+
+	if [ ! -f "$WP_DIR/wp-load.php" ]; then
+		say "Making the site in $SITE_DIR"
+		cp -R "$DOWNLOADS/wordpress-$WP_VERSION" "$WP_DIR"
+	fi
+	local plugins="$WP_DIR/wp-content/plugins"
+	[ -d "$plugins/sqlite-database-integration" ] || cp -R "$DOWNLOADS/sqlite-$SQLITE_VERSION" "$plugins/sqlite-database-integration"
+	sed "s#{SQLITE_IMPLEMENTATION_FOLDER_PATH}#$plugins/sqlite-database-integration#; s#{SQLITE_PLUGIN}#sqlite-database-integration/load.php#" \
+		"$plugins/sqlite-database-integration/db.copy" >"$WP_DIR/wp-content/db.php"
+	if [ "$WC_VERSION" != none ] && [ ! -d "$plugins/woocommerce" ]; then
+		(cd "$plugins" && unzip -q "$DOWNLOADS/woocommerce-$WC_VERSION.zip")
+	fi
+	[ -d "$plugins/plugin-check" ] || (cd "$plugins" && unzip -q "$DOWNLOADS/plugin-check-$PCP_VERSION.zip")
+	# The plugin under test is linked, so edits show up without copying.
+	if [ ! -e "$plugins/$PLUGIN_SLUG" ]; then ln -s "$PLUGIN_DIR" "$plugins/$PLUGIN_SLUG"; fi
+
+	if [ ! -f "$WP_DIR/wp-config.php" ]; then
+		wp_cli config create --dbname=wp --dbuser=wp --dbpass=wp --skip-check --quiet
+		mkdir -p "$SITE_DIR/db"
+		wp_cli config set DB_PATH "$(db_file)" --quiet
+		wp_cli config set WP_DEBUG true --raw --quiet
+		wp_cli config set WP_DEBUG_LOG true --raw --quiet
+		wp_cli config set WP_DEBUG_DISPLAY false --raw --quiet
+		wp_cli config set WP_ENVIRONMENT_TYPE local --quiet
+		wp_cli config set DISABLE_WP_CRON true --raw --quiet
+		wp_cli config set AUTOMATIC_UPDATER_DISABLED true --raw --quiet
+	fi
+	local new=""
+	if ! wp_cli core is-installed 2>/dev/null; then
+		new=1
+		say "Installing WordPress $WP_VERSION"
+		wp_cli core install --url="http://localhost:$PORT" --title="Harness Store" --admin_user=admin \
+			--admin_password=admin --admin_email=admin@example.com --skip-email --quiet
+		wp_cli rewrite structure '/%postname%/' --quiet
+	fi
+	wp_cli option update home "http://localhost:$PORT" --quiet
+	wp_cli option update siteurl "http://localhost:$PORT" --quiet
+
+	if [ "$WC_VERSION" != none ]; then
+		say "Activating WooCommerce $WC_VERSION"
+		wp_cli plugin activate woocommerce --quiet
+		wp_cli eval-file "$HARNESS/lib/setup-store.php"
+	fi
+	local p
+	for p in $EXTRA_PLUGINS; do
+		wp_cli plugin is-installed "$p" || die "EXTRA_PLUGINS: '$p' is not in wp-content/plugins (only bundled plugins can be named)"
+		wp_cli plugin activate "$p" --quiet
+	done
+	say "Activating $PLUGIN_SLUG"
+	wp_cli plugin activate "$PLUGIN_SLUG" --quiet
+
+	if [ -n "$new" ]; then
+		if [ -n "$seed" ] && [ "$WC_VERSION" != none ]; then
+			say "Seeding the demo catalog"
+			wp_cli eval-file "$SEED"
+		fi
+		cp "$(db_file)" "$SITE_DIR/snapshot.sqlite"
+	else
+		say "The site already existed, so it was kept as it is (--fresh remakes it)"
+	fi
+	cmd_serve
+}
+
+cmd_seed() { load_site; wp_cli eval-file "$SEED"; }
+
+cmd_snapshot() { load_site; cp "$(db_file)" "$SITE_DIR/snapshot.sqlite"; say "Snapshot saved"; }
+
+cmd_reset() {
+	load_site
+	[ -f "$SITE_DIR/snapshot.sqlite" ] || die "no snapshot; run: wp-harness up"
+	cp "$SITE_DIR/snapshot.sqlite" "$(db_file)"
+	rm -f "$(db_file)-wal" "$(db_file)-shm"
+	say "Database restored from the snapshot"
+}
+
+cmd_wp() { load_site; wp_cli "$@"; }
+
+cmd_eval() {
+	load_site
+	local f="$1"
+	case "$f" in /*) ;; *) [ -f "$f" ] || f="$PLUGIN_DIR/$f" ;; esac
+	wp_cli eval-file "$f"
+}
+
+cmd_lint() {
+	load_site
+	local bad=0 f
+	while IFS= read -r f; do
+		php -l "$f" >/dev/null 2>"$SITE_DIR/lint.err" || { cat "$SITE_DIR/lint.err" >&2; bad=1; }
+	done < <(find "$PLUGIN_DIR" -name '*.php' -not -path '*/vendor/*' -not -path '*/node_modules/*' -not -path '*/.git/*')
+	[ "$bad" = 0 ] && say "php -l: no syntax errors"
+	return "$bad"
+}
+
+cmd_test() {
+	load_site
+	local unit=1 integration=1 failed="" passed=0 f
+	case "${1:-}" in --unit) integration="" ;; --integration) unit="" ;; esac
+	cd "$PLUGIN_DIR"
+	if [ -n "$unit" ]; then
+		for f in $HARNESS_UNIT; do
+			[ -f "$f" ] || continue
+			say "php $f"
+			if php "$f"; then passed=$((passed + 1)); else failed="$failed $f"; fi
+		done
+	fi
+	if [ -n "$integration" ]; then
+		cmd_reset
+		for f in $HARNESS_INTEGRATION; do
+			[ -f "$f" ] || continue
+			say "wp eval-file $f"
+			if wp_cli eval-file "$PLUGIN_DIR/$f"; then passed=$((passed + 1)); else failed="$failed $f"; fi
+		done
+	fi
+	if [ -n "$failed" ]; then
+		echo "FAILED:$failed ($passed passed)" >&2
+		return 1
+	fi
+	say "All $passed test files passed"
+}
+
+cmd_check() {
+	load_site
+	wp_cli plugin activate plugin-check --quiet
+	# cli.php registers the runtime checks, which need the plugin active in a real request.
+	# Leave out what .distignore keeps out of the release zip (tests, dev tools, this harness).
+	local dirs="" files="" line name
+	if [ -f "$PLUGIN_DIR/.distignore" ]; then
+		while IFS= read -r line || [ -n "$line" ]; do
+			name="${line#/}"; name="${name%/}"
+			case "$name" in ''|'#'*|*'*'*|*/*) continue ;; esac
+			if [ -d "$PLUGIN_DIR/$name" ]; then dirs="${dirs:+$dirs,}$name"
+			elif [ -f "$PLUGIN_DIR/$name" ]; then files="${files:+$files,}$name"; fi
+		done <"$PLUGIN_DIR/.distignore"
+	fi
+	local status=0
+	wp_cli --require="$WP_DIR/wp-content/plugins/plugin-check/cli.php" plugin check "$PLUGIN_SLUG" \
+		${dirs:+--exclude-directories="$dirs"} ${files:+--exclude-files="$files"} "$@" || status=$?
+	wp_cli plugin deactivate plugin-check --quiet
+	return $status
+}
+
+node_env() {
+	# Find Playwright: the cloud image's tool folder, the harness folder, or a global install.
+	local paths="${NODE_PATH:-}"
+	local d
+	for d in /opt/node-tools/node_modules "$HARNESS/node_modules" "$(npm root -g 2>/dev/null || true)"; do
+		[ -d "$d" ] && paths="${paths:+$paths:}$d"
+	done
+	export NODE_PATH="$paths" NO_PROXY='*' no_proxy='*' HARNESS_URL="http://localhost:$PORT"
+}
+
+cmd_shot() {
+	load_site
+	[ -n "$(server_pid)" ] || [ -n "${HARNESS_IN_DOCKER_HOST:-}" ] || cmd_serve
+	node_env
+	node "$HARNESS/lib/browser.mjs" shot "$@"
+}
+
+cmd_browse() {
+	load_site
+	[ -n "$(server_pid)" ] || [ -n "${HARNESS_IN_DOCKER_HOST:-}" ] || cmd_serve
+	node_env
+	local f="$1"; shift
+	case "$f" in /*) ;; *) f="$PWD/$f" ;; esac
+	node "$HARNESS/lib/browser.mjs" run "$f" "$@"
+}
+
+cmd_status() {
+	load_site
+	echo "site:    $SITE ($SITE_DIR)"
+	echo "plugin:  $PLUGIN_SLUG -> $PLUGIN_DIR"
+	echo "versions: WordPress $WP_VERSION, WooCommerce $WC_VERSION"
+	if [ -n "$(server_pid)" ]; then echo "server:  http://localhost:$PORT (admin / admin)"; else echo "server:  stopped (wp-harness serve)"; fi
+}
+
+cmd_down() {
+	pick_site
+	[ -d "$SITE_DIR" ] || { say "No site '$SITE'"; return 0; }
+	local pid
+	pid="$(server_pid)"
+	if [ -n "$pid" ]; then kill "$pid" 2>/dev/null || true; fi
+	rm -rf "$SITE_DIR"
+	say "Deleted site '$SITE'"
+}
+
+cmd_sites() { ls "$HARNESS_HOME/sites" 2>/dev/null || true; }
+
+# ---------- Docker mode (no local PHP) ----------
+
+use_docker() {
+	[ -z "${HARNESS_IN_DOCKER:-}" ] || return 1
+	case "${HARNESS_DOCKER:-}" in 1) return 0 ;; 0) return 1 ;; esac
+	! command -v php >/dev/null && command -v docker >/dev/null
+}
+
+docker_main() {
+	local cmd="$1"; shift
+	local image="wp-harness:php8.3"
+	local dir=""
+	if [ "$cmd" = up ]; then
+		local a
+		for a in "$@"; do case "$a" in -*) ;; *) [ -z "$dir" ] && [ -d "$a" ] && dir="$a" ;; esac; done
+	fi
+	local root slug
+	root="$(plugin_root "$dir")"
+	slug="$(plugin_slug "$root")"
+	local site="${HARNESS_SITE:-$slug}"
+	local name="wp-harness-$site"
+	local port=8080 prev=""
+	for a in "$@"; do [ "$prev" = --port ] && port="$a"; prev="$a"; done
+
+	case "$cmd" in
+		shot|browse)
+			# The browser runs on this computer, against the container's published port.
+			PLUGIN_DIR="$root" PLUGIN_SLUG="$slug"
+			PORT="$(docker exec "$name" sh -c '. "$HOME/.cache/wp-harness/sites/'"$site"'/site.env"; echo $PORT')"
+			HARNESS_IN_DOCKER_HOST=1 HARNESS_DOCKER=0 SITE="$site"
+			load_config
+			node_env
+			if [ "$cmd" = shot ]; then exec node "$HARNESS/lib/browser.mjs" shot "$@"; fi
+			local f="$1"; shift
+			case "$f" in /*) ;; *) f="$PWD/$f" ;; esac
+			exec node "$HARNESS/lib/browser.mjs" run "$f" "$@"
+			;;
+		down)
+			docker rm -f "$name" >/dev/null 2>&1 || true
+			docker volume rm "$name" >/dev/null 2>&1 || true
+			say "Deleted site '$site'"
+			return
+			;;
+		up)
+			docker image inspect "$image" >/dev/null 2>&1 || docker build -t "$image" "$HARNESS/docker"
+			case " $* " in *" --fresh "*) docker rm -f "$name" >/dev/null 2>&1 || true; docker volume rm "$name" >/dev/null 2>&1 || true ;; esac
+			if ! docker container inspect "$name" >/dev/null 2>&1; then
+				docker run -d --init --name "$name" -p "127.0.0.1:$port:$port" \
+					-v "$name:/root/.cache/wp-harness" -v "$root:/plugin" -v "$HARNESS:/harness:ro" \
+					-e HARNESS_IN_DOCKER=1 -e HARNESS_SITE="$site" \
+					"$image" sleep infinity >/dev/null
+			fi
+			docker start "$name" >/dev/null
+			local args=() a2
+			for a2 in "$@"; do [ "$a2" = "$dir" ] && [ -n "$dir" ] && continue; args+=("$a2"); done
+			exec docker exec -i "$name" /harness/wp-harness up /plugin ${args[@]+"${args[@]}"}
+			;;
+	esac
+	docker container inspect "$name" >/dev/null 2>&1 || die "no site '$site'; run: wp-harness up"
+	docker start "$name" >/dev/null
+	# After a restart of Docker the container is back but its web server is not.
+	[ "$cmd" = stop ] || docker exec "$name" /harness/wp-harness serve >/dev/null 2>&1 || true
+	local t=""
+	[ -t 0 ] && [ -t 1 ] && t="-t"
+	exec docker exec -i $t -w /plugin "$name" /harness/wp-harness "$cmd" "$@"
+}
+
+# ---------- main ----------
+
+main() {
+	local cmd="${1:-help}"
+	[ $# -gt 0 ] && shift
+	case "$cmd" in help|-h|--help) usage; return ;; esac
+	if use_docker; then docker_main "$cmd" "$@"; return; fi
+	case "$cmd" in
+		up|serve|stop|seed|reset|snapshot|wp|eval|lint|test|check|shot|browse|status|down|sites) "cmd_$cmd" "$@" ;;
+		*) usage >&2; exit 2 ;;
+	esac
+}
+
+main "$@"

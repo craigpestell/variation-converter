@@ -76,7 +76,16 @@ php tests/test-scan.php       # scan tests, no WordPress needed
 find . -name '*.php' -exec php -l {} \;
 ```
 
-To try it in WordPress, symlink or copy the folder into `wp-content/plugins/` on a site with WooCommerce and some simple products whose SKUs share a family.
+To try it in WordPress, `harness/wp-harness up` makes a throwaway WordPress + WooCommerce site on SQLite with this plugin active and a messy demo catalog, at http://localhost:8080 (admin / admin). Then:
+
+```sh
+harness/wp-harness test     # all of tests/, the integration ones with wp eval-file
+harness/wp-harness check    # Plugin Check
+harness/wp-harness shot 'edit.php?post_type=product&page=variation-converter' --out shots
+harness/wp-harness down
+```
+
+It needs PHP with pdo_sqlite, or Docker when there's no PHP. See [harness/README.md](harness/README.md).
 
 All functions, constants and CSS classes use the `varconv_` / `VARCONV_` / `varconv-` prefix.
 

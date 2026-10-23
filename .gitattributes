@@ -4,3 +4,5 @@
 .gitattributes export-ignore
 .gitignore export-ignore
 /README.md export-ignore
+/harness export-ignore
+/.wp-harness export-ignore
