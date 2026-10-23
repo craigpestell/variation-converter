@@ -11,6 +11,27 @@ if ( ! defined( 'ABSPATH' ) ) {
 // The GET values read here only choose what is displayed; every change goes through a handler that checks its nonce.
 // phpcs:disable WordPress.Security.NonceVerification.Recommended
 
+/**
+ * A product thumbnail that shows a larger image on hover or keyboard focus (assets/admin.css). The larger image loads
+ * only when shown. Empty box when there is no image.
+ */
+function varconv_thumb_html( int $image, int $size, string $name ): string {
+	if ( ! $image ) {
+		return '<span class="varconv-no-image"></span>';
+	}
+	$large = wp_get_attachment_image( $image, 'medium', false, array( 'loading' => 'lazy', 'alt' => '' ) );
+	if ( '' === $large ) {
+		return wp_get_attachment_image( $image, array( $size, $size ) );
+	}
+	return sprintf(
+		'<span class="varconv-thumb" tabindex="0" role="img" aria-label="%s">%s<span class="varconv-thumb-large" aria-hidden="true">%s</span></span>',
+		/* translators: %s: product name. */
+		esc_attr( sprintf( __( 'Image of %s', 'variation-converter' ), $name ) ),
+		wp_get_attachment_image( $image, array( $size, $size ), false, array( 'alt' => '' ) ),
+		$large
+	);
+}
+
 /** A stock status as WooCommerce names it, colored as WooCommerce colors it. */
 function varconv_stock_html( string $status ): string {
 	return sprintf( '<span class="varconv-stock varconv-stock-%s">%s</span>', esc_attr( $status ), esc_html( varconv_stock_text( $status ) ) );
@@ -195,7 +216,7 @@ function varconv_render_split_card( WC_Product_Variable $product, array $args ):
 							<?php /* translators: %s: new product name. */ ?>
 							<input type="checkbox" name="rows[<?php echo (int) $r['id']; ?>][use]" value="1" <?php checked( '' === $r['problem'] ); ?> <?php disabled( '' !== $r['problem'] ); ?> aria-label="<?php echo esc_attr( sprintf( __( 'Include %s', 'variation-converter' ), $r['name'] ) ); ?>">
 						</th>
-						<td class="thumb"><?php echo $r['image'] ? wp_get_attachment_image( $r['image'], array( 40, 40 ) ) : ''; ?></td>
+						<td class="thumb"><?php echo varconv_thumb_html( (int) $r['image'], 40, (string) $r['name'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped where it is built. ?></td>
 						<td>
 							<?php /* translators: %d: variation ID. */ ?>
 							<input type="text" name="rows[<?php echo (int) $r['id']; ?>][name]" value="<?php echo esc_attr( $r['name'] ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'New product name for variation %d', 'variation-converter' ), $r['id'] ) ); ?>">
