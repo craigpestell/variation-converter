@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 0.2.3
+Stable tag: 0.2.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -121,6 +121,9 @@ A variation set to "Any" for an attribute (for example "Any Size") isn't one spe
 4. The History tab with one-click Undo.
 
 == Changelog ==
+
+= 0.2.4 =
+* Undo brings back current prices and stock: sales made while products were combined or split now carry over to the restored products.
 
 = 0.2.3 =
 * The plugin's slug and text domain are now variation-converter-for-woocommerce, to match its wordpress.org address.

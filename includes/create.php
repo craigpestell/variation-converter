@@ -17,6 +17,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 const VARCONV_META = '_varconv_collection';
 const VARCONV_PARENT_META = '_varconv_collection_parent';
 const VARCONV_HIDDEN_META = '_varconv_collection_hidden';
+// On the product an Undo deletes (a combine's variation, a split's simple product): the ID of its twin on the other side.
+const VARCONV_TWIN_META = '_varconv_twin';
 // When a product was combined or split here, for History.
 const VARCONV_TIME_META = '_varconv_time';
 const VARCONV_DISMISSED_OPTION = 'varconv_dismissed';
@@ -307,6 +309,7 @@ function varconv_create( string $name, string $attribute_name, string $sku, arra
 			$variation->set_width( $simple->get_width( 'edit' ) );
 			$variation->set_height( $simple->get_height( 'edit' ) );
 			$variation->set_image_id( $simple->get_image_id( 'edit' ) );
+			$variation->update_meta_data( VARCONV_TWIN_META, (string) $simple->get_id() );
 			if ( ! $variation->save() ) {
 				/* translators: %d: product ID. */
 				throw new RuntimeException( esc_html( sprintf( __( 'WooCommerce did not save the variation for product %d.', 'variation-converter-for-woocommerce' ), $simple->get_id() ) ) );
@@ -352,8 +355,14 @@ function varconv_undo( int $parent_id ): int {
 		VARCONV_PARENT_META,
 		(string) $parent_id
 	) ) );
+	// The variations sold while the simple products were hidden; give those their current prices and stock.
+	$twins = array_flip( varconv_twins( $parent_id, $ids ) );
 	foreach ( $ids as $id ) {
 		$simple = wc_get_product( $id );
+		$variation = isset( $twins[ $id ] ) ? wc_get_product( $twins[ $id ] ) : null;
+		if ( $simple && $variation ) {
+			varconv_copy_current( $variation, $simple );
+		}
 		if ( $simple ) {
 			$simple->set_catalog_visibility( $simple->get_meta( VARCONV_HIDDEN_META ) ?: 'visible' );
 			$simple->delete_meta_data( VARCONV_HIDDEN_META );
@@ -365,6 +374,63 @@ function varconv_undo( int $parent_id ): int {
 	varconv_reindex( $ids );
 	delete_transient( VARCONV_SCAN_TRANSIENT );
 	return count( $ids );
+}
+
+/**
+ * Each variation of a variable product with its simple product among $simple_ids: by the twin ID a combine or split
+ * records, then by SKU for conversions made before it did. Products neither of those pairs are left out.
+ *
+ * @param int[] $simple_ids
+ * @return array<int, int> Variation ID => simple product ID.
+ */
+function varconv_twins( int $parent_id, array $simple_ids ): array {
+	$parent = wc_get_product( $parent_id );
+	$variations = $parent instanceof WC_Product_Variable ? array_map( 'intval', $parent->get_children() ) : array();
+	$simples = array_map( 'intval', $simple_ids );
+	$pairs = array();
+	foreach ( $variations as $v ) {
+		$twin = (int) get_post_meta( $v, VARCONV_TWIN_META, true );
+		if ( in_array( $twin, $simples, true ) ) {
+			$pairs[ $v ] = $twin;
+		}
+	}
+	foreach ( $simples as $id ) {
+		$twin = (int) get_post_meta( $id, VARCONV_TWIN_META, true );
+		if ( in_array( $twin, $variations, true ) && ! isset( $pairs[ $twin ] ) && ! in_array( $id, $pairs, true ) ) {
+			$pairs[ $twin ] = $id;
+		}
+	}
+	$sku = static fn( int $id ): string => strtoupper( trim( (string) get_post_meta( $id, '_sku', true ) ) );
+	$by_sku = array();
+	foreach ( array_diff( $simples, $pairs ) as $id ) {
+		if ( '' !== $sku( $id ) ) {
+			$by_sku[ $sku( $id ) ] ??= $id;
+		}
+	}
+	foreach ( array_diff( $variations, array_keys( $pairs ) ) as $v ) {
+		if ( '' !== $sku( $v ) && isset( $by_sku[ $sku( $v ) ] ) ) {
+			$pairs[ $v ] = $by_sku[ $sku( $v ) ];
+			unset( $by_sku[ $sku( $v ) ] );
+		}
+	}
+	return $pairs;
+}
+
+/**
+ * Copies what changes while a product is on sale, prices and stock, onto its twin, so an Undo after some sales
+ * brings back current numbers. A variation that leaves its stock to the variable product passes on only its status.
+ */
+function varconv_copy_current( WC_Product $from, WC_Product $to ): void {
+	$to->set_regular_price( $from->get_regular_price( 'edit' ) );
+	$to->set_sale_price( $from->get_sale_price( 'edit' ) );
+	$to->set_date_on_sale_from( $from->get_date_on_sale_from( 'edit' ) );
+	$to->set_date_on_sale_to( $from->get_date_on_sale_to( 'edit' ) );
+	if ( true === $from->get_manage_stock( 'edit' ) ) {
+		$to->set_manage_stock( true );
+		$to->set_stock_quantity( $from->get_stock_quantity( 'edit' ) );
+		$to->set_backorders( $from->get_backorders( 'edit' ) );
+	}
+	$to->set_stock_status( $from->get_stock_status( 'edit' ) );
 }
 
 function varconv_delete( int $parent_id ): void {

@@ -272,6 +272,7 @@ function varconv_split_product( int $parent_id, array $names ): array {
 				$simple->set_date_created( $parent->get_date_created( 'edit' )->getTimestamp() );
 			}
 			$simple->update_meta_data( VARCONV_SPLIT_FROM_META, (string) $parent_id );
+			$simple->update_meta_data( VARCONV_TWIN_META, (string) $variation->get_id() );
 			$id = $simple->save();
 			if ( ! $id ) {
 				/* translators: %d: variation ID. */
@@ -320,6 +321,16 @@ function varconv_split_undo( int $parent_id ): int {
 		VARCONV_SPLIT_FROM_META,
 		(string) $parent_id
 	) ) );
+	// The simple products sold while the variable product was hidden; give its variations their current prices and stock.
+	foreach ( varconv_twins( $parent_id, $ids ) as $variation_id => $simple_id ) {
+		$variation = wc_get_product( $variation_id );
+		$simple = wc_get_product( $simple_id );
+		if ( $variation && $simple ) {
+			varconv_copy_current( $simple, $variation );
+			$variation->save();
+		}
+	}
+	WC_Product_Variable::sync( $parent_id );
 	foreach ( $ids as $id ) {
 		wp_delete_post( $id, true );
 		wc_delete_product_transients( $id );
