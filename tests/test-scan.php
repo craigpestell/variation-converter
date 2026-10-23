@@ -177,4 +177,19 @@ expect( array_column( varconv_sorted( $list, 'size' ), 'key' ), array( 'y', 'x',
 expect( array_column( varconv_sorted( $list, 'name' ), 'key' ), array( 'y', 'x', 'z' ), 'sort by name' );
 expect( array_column( varconv_sorted( $list, 'brand' ), 'key' ), array( 'x', 'z', 'y' ), 'sort by brand, none last' );
 
+// A collection from picked products, whatever their SKU families.
+$manual = varconv_manual( array(
+	$p( 30, 'ZZ-9', 'Velvet Wand Purple', '20' ),
+	$p( 31, 'AB-1', 'Velvet Wand Pink', '20' ),
+	$p( 32, 'AB-2', 'Velvet Wand', '25' ),
+) );
+expect( $manual['name'], 'Velvet Wand', 'manual name' );
+expect( array_column( $manual['members'], 'label' ), array( 'Pink', 'AB-2', 'Purple' ), 'manual labels, SKU order, SKU when no label' );
+expect( $manual['attribute'], 'Color', 'manual attribute' );
+expect( $manual['sku'], '', 'manual parent SKU empty when SKUs share nothing' );
+expect( 1 === preg_match( '/^m[0-9a-f]{11}$/', $manual['key'] ), true, 'manual key' );
+expect( varconv_manual( array( $p( 32, 'AB-2', 'B' ), $p( 31, 'AB-1', 'A' ) ) )['key'], varconv_manual( array( $p( 31, 'AB-1', 'A' ), $p( 32, 'AB-2', 'B' ) ) )['key'], 'manual key ignores order' );
+expect( varconv_manual( array( $p( 31, 'AB-1', 'Red Cup' ), $p( 32, 'AB-2', 'Blue Mug' ) ) )['name'], 'Red Cup', 'manual name falls back to the first name' );
+expect( varconv_manual( array( $p( 31, 'AB-1', 'Cup' ), $p( 32, 'AB-2', 'Cup' ) ) )['sku'], 'AB', 'manual parent SKU' );
+
 echo "Variant collection scan tests passed.\n";

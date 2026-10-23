@@ -88,6 +88,21 @@ function varconv_products(): array {
 	return $products;
 }
 
+/**
+ * The products among $ids that can go into a variable product (as varconv_products() picks them), and the rest.
+ *
+ * @param int[] $ids
+ * @return array{products:array,refused:int[]}
+ */
+function varconv_products_by_id( array $ids ): array {
+	$ids = array_values( array_unique( array_filter( array_map( 'intval', $ids ) ) ) );
+	$products = array_values( array_filter( varconv_products(), static fn( $p ) => in_array( (int) $p['id'], $ids, true ) ) );
+	return array(
+		'products' => $products,
+		'refused'  => array_values( array_diff( $ids, array_map( static fn( $p ) => (int) $p['id'], $products ) ) ),
+	);
+}
+
 /** Every brand's name (WooCommerce Brands); titles often start with one, which is not a shared product name. */
 function varconv_brand_names(): array {
 	if ( ! taxonomy_exists( 'product_brand' ) ) {

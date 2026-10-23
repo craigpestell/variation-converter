@@ -16,6 +16,7 @@ const VARCONV_PER_PAGE = 25;
 
 require_once __DIR__ . '/admin-combine.php';
 require_once __DIR__ . '/ajax.php';
+require_once __DIR__ . '/admin-products.php';
 
 add_action( 'admin_menu', 'varconv_menu', 60 );
 function varconv_menu(): void {
@@ -127,7 +128,9 @@ function varconv_handle_create(): void {
 	} catch ( RuntimeException $e ) {
 		// Shown in the group's card, refilled with what was submitted.
 		set_transient( 'varconv_posted_' . get_current_user_id(), array_merge( $group, array( 'key' => $key, 'error' => $e->getMessage() ) ), 5 * MINUTE_IN_SECONDS );
-		varconv_back( array(), 'varconv-' . $key );
+		// Products picked in Products > All Products come back to their card.
+		$combine = isset( $_POST['combine'] ) ? implode( ',', array_map( 'absint', explode( ',', sanitize_text_field( wp_unslash( $_POST['combine'] ) ) ) ) ) : '';
+		varconv_back( '' !== $combine ? array( 'combine' => $combine ) : array(), 'varconv-' . $key );
 	}
 	delete_transient( 'varconv_posted_' . get_current_user_id() );
 	varconv_back( array( 'varconv_done' => 'created', 'varconv_product' => $id ) );
@@ -291,6 +294,8 @@ function varconv_render(): void {
 			varconv_render_split();
 		} elseif ( 'history' === $tab ) {
 			varconv_render_history();
+		} elseif ( varconv_combine_ids() ) {
+			varconv_render_manual( varconv_combine_ids() );
 		} else {
 			varconv_render_combine();
 		}

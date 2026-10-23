@@ -345,6 +345,43 @@ function varconv_scan( array $products, array $dismissed = array(), array $brand
 	return $out;
 }
 
+/**
+ * A collection from products the admin picked (Products > All Products > "Combine into variable product"), whatever
+ * their SKUs: the words every name starts with are its name, the rest of each name is its label (its SKU when nothing
+ * is left), and the SKUs' common start is its parent SKU.
+ *
+ * @param array<int,array{id:int,sku:string,name:string,price?:string,cats?:int[],brands?:string[]}> $products
+ * @return array{key:string,family:string,name:string,brand:string,attribute:string,sku:string,members:array,notes:array<string,string>,manual:bool}
+ */
+function varconv_manual( array $products ): array {
+	$products = array_values( $products );
+	usort( $products, 'varconv_member_order' );
+	$words = array_map( static fn( $p ) => varconv_words( (string) $p['name'] ), $products );
+	$n = $words ? count( $words[0] ) : 0;
+	foreach ( $words as $w ) {
+		$n = min( $n, varconv_common_words( $words[0], $w ) );
+	}
+	$members = array();
+	foreach ( $products as $i => $p ) {
+		$label = varconv_trim( implode( ' ', array_slice( $words[ $i ], $n ) ) );
+		$members[] = $p + array( 'label' => '' === $label ? trim( (string) $p['sku'] ) : $label );
+	}
+	$ids = array_map( static fn( $m ) => (int) $m['id'], $members );
+	sort( $ids );
+	$name = varconv_trim( implode( ' ', array_slice( $words[0] ?? array(), 0, $n ) ) );
+	return array(
+		'key'       => 'm' . substr( md5( 'manual|' . implode( ',', $ids ) ), 0, 11 ),
+		'family'    => '',
+		'name'      => '' !== $name ? $name : (string) ( $products[0]['name'] ?? '' ),
+		'brand'     => varconv_brand( array( 'members' => $members ) ),
+		'attribute' => varconv_attribute( array_column( $members, 'label' ) ),
+		'sku'       => varconv_parent_sku( '', $members ),
+		'members'   => $members,
+		'notes'     => varconv_notes( $members, varconv_duplicate_skus( $products ) ),
+		'manual'    => true,
+	);
+}
+
 /** Collections of at least $min products. */
 function varconv_min_size( array $collections, int $min ): array {
 	return array_values( array_filter( $collections, static fn( $c ) => count( $c['members'] ) >= $min ) );
