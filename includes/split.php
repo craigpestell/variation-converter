@@ -44,11 +44,12 @@ function varconv_split_validate( array $names ): array {
 }
 
 /**
- * Published variable products not already split, newest first, optionally matching a name or SKU.
+ * Published variable products not already split, optionally matching a name or SKU: newest first, or by number of
+ * variations when $orderby is "variations" ($order "asc" or "desc", the default).
  *
  * @return array{ids:int[],total:int}
  */
-function varconv_variables( string $search, int $paged, int $per_page ): array {
+function varconv_variables( string $search, int $paged, int $per_page, string $orderby = '', string $order = '' ): array {
 	$args = array(
 		'post_type'      => 'product',
 		'post_status'    => 'publish',
@@ -66,7 +67,17 @@ function varconv_variables( string $search, int $paged, int $per_page ): array {
 		// The product data store matches SKUs as well as titles.
 		$args['post__in'] = array_merge( array( 0 ), array_map( 'intval', WC_Data_Store::load( 'product' )->search_products( $search, 'variable', false, false ) ) );
 	}
+	$by_count = static function ( array $clauses ) use ( $order ): array {
+		global $wpdb;
+		$direction = 'asc' === $order ? 'ASC' : 'DESC';
+		$clauses['orderby'] = "(SELECT COUNT(*) FROM {$wpdb->posts} v WHERE v.post_parent = {$wpdb->posts}.ID AND v.post_type = 'product_variation' AND v.post_status IN ('publish', 'private')) {$direction}, {$wpdb->posts}.ID DESC";
+		return $clauses;
+	};
+	if ( 'variations' === $orderby ) {
+		add_filter( 'posts_clauses', $by_count );
+	}
 	$query = new WP_Query( $args );
+	remove_filter( 'posts_clauses', $by_count );
 	return array( 'ids' => array_map( 'intval', $query->posts ), 'total' => (int) $query->found_posts );
 }
 
