@@ -23,6 +23,7 @@ define( 'VARCONV_VERSION', '0.1.0' );
 require_once __DIR__ . '/includes/scan.php';
 require_once __DIR__ . '/includes/create.php';
 require_once __DIR__ . '/includes/split.php';
+require_once __DIR__ . '/includes/redirect.php';
 
 /** Product title markup as one line of plain text. */
 function varconv_plain( string $html ): string {
