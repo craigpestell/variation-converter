@@ -443,24 +443,79 @@ function varconv_matching( array $collections, string $search ): array {
 	} ) );
 }
 
+/** The lowest regular price among a collection's members (0 without prices). */
+function varconv_low_price( array $c ): float {
+	$prices = array_filter( array_map( static fn( $m ) => (float) ( $m['price'] ?? 0 ), $c['members'] ), static fn( $p ) => $p > 0 );
+	return $prices ? min( $prices ) : 0.0;
+}
+
 /**
- * Collections in the order the list shows: size (largest first, the scan's order), name, or brand (collections
- * without a brand last); ties go by name.
+ * Collections in the order the list shows: products (largest first, the scan's order), name, price (lowest
+ * first) or brand (collections without a brand last); $order asc or desc reverses that, and ties go by name.
  */
-function varconv_sorted( array $collections, string $sort ): array {
+function varconv_sorted( array $collections, string $sort, string $order = '' ): array {
 	$by_name = static fn( $a, $b ) => strnatcasecmp( $a['name'], $b['name'] );
 	if ( 'name' === $sort ) {
-		usort( $collections, $by_name );
+		$compare = $by_name;
+		$default = 'asc';
+	} elseif ( 'price' === $sort ) {
+		$compare = static fn( $a, $b ) => varconv_low_price( $a ) <=> varconv_low_price( $b ) ?: $by_name( $a, $b );
+		$default = 'asc';
 	} elseif ( 'brand' === $sort ) {
-		usort( $collections, static function ( $a, $b ) use ( $by_name ) {
+		$compare = static function ( $a, $b ) use ( $by_name ) {
 			$x = (string) ( $a['brand'] ?? '' );
 			$y = (string) ( $b['brand'] ?? '' );
 			return array( '' === $x, strtolower( $x ) ) <=> array( '' === $y, strtolower( $y ) ) ?: $by_name( $a, $b );
-		} );
+		};
+		$default = 'asc';
 	} else {
-		usort( $collections, static fn( $a, $b ) => count( $b['members'] ) <=> count( $a['members'] ) ?: $by_name( $a, $b ) );
+		$compare = static fn( $a, $b ) => count( $b['members'] ) <=> count( $a['members'] ) ?: $by_name( $a, $b );
+		$default = 'desc';
 	}
+	$flip = in_array( $order, array( 'asc', 'desc' ), true ) && $order !== $default;
+	usort( $collections, static fn( $a, $b ) => $flip ? $compare( $b, $a ) : $compare( $a, $b ) );
 	return $collections;
+}
+
+/** Collections carrying the note $kind (see varconv_notes()); label also covers repeat; '' keeps them all. */
+function varconv_with( array $collections, string $kind ): array {
+	if ( '' === $kind ) {
+		return $collections;
+	}
+	$kinds = 'label' === $kind ? array( 'label', 'repeat' ) : array( $kind );
+	return array_values( array_filter( $collections, static fn( $c ) => (bool) array_intersect( array_keys( $c['notes'] ), $kinds ) ) );
+}
+
+/**
+ * Ways to pick part of a group by SKU: the shortest SKU start, longer than what every SKU shares, that splits the
+ * members into at least 2 runs while leaving at least one run of 2 or more ("GS3-A" x2, "GS3-B" x3, "GS3-C" x1).
+ * None when no such start exists, as when every SKU differs only in its last character.
+ *
+ * @param string[] $skus
+ * @return array<string,int> SKU start => products, in the order first seen.
+ */
+function varconv_sku_bands( array $skus ): array {
+	$skus = array_values( array_filter( array_map( static fn( $s ) => strtoupper( trim( (string) $s ) ), $skus ), 'strlen' ) );
+	if ( count( $skus ) < 3 ) {
+		return array();
+	}
+	$common = strlen( varconv_common_prefix( $skus ) );
+	// varconv_common_prefix() trims separators; step back over them.
+	while ( $common < strlen( $skus[0] ) && 1 === count( array_unique( array_map( static fn( $s ) => substr( $s, 0, $common + 1 ), $skus ) ) ) ) {
+		++$common;
+	}
+	$longest = max( array_map( 'strlen', $skus ) );
+	for ( $n = $common + 1; $n < $longest; $n++ ) {
+		$bands = array();
+		foreach ( $skus as $sku ) {
+			$prefix = rtrim( substr( $sku, 0, $n ), ' -_.' );
+			$bands[ $prefix ] = ( $bands[ $prefix ] ?? 0 ) + 1;
+		}
+		if ( count( $bands ) >= 2 && max( $bands ) >= 2 && count( $bands ) < count( $skus ) ) {
+			return $bands;
+		}
+	}
+	return array();
 }
 
 /** How far apart the members' regular prices are, in percent of the lowest (0 when they agree or are unknown). */

@@ -37,7 +37,7 @@ function varconv_combine_ids(): array {
 function varconv_render_manual( array $ids ): void {
 	$found = varconv_products_by_id( $ids );
 	echo '<p><a href="' . esc_url( varconv_url() ) . '">&larr; ' . esc_html__( 'All suggested groups', 'variation-converter' ) . '</a></p>';
-	echo '<p class="varconv-intro">' . esc_html__( 'Combine the products you selected into one variable product. Check the name, attribute and labels, then create it.', 'variation-converter' ) . '</p>';
+	echo '<p class="varconv-lead">' . esc_html__( 'Combine the products you selected into one variable product. Check the name, attribute and labels, then create it.', 'variation-converter' ) . '</p>';
 	if ( $found['refused'] ) {
 		printf(
 			'<div class="notice notice-warning inline"><p>%s %s</p></div>',
@@ -59,9 +59,12 @@ function varconv_render_manual( array $ids ): void {
 			<option><?php echo esc_html( $option ); ?></option>
 		<?php endforeach; ?>
 	</datalist>
-	<div class="varconv-groups">
-		<?php varconv_render_group( varconv_manual( $found['products'] ), array(), varconv_filters( array() ), 1, true ); ?>
-	</div>
+	<table class="wp-list-table widefat fixed striped table-view-list varconv-list-table">
+		<thead><?php varconv_list_headers( varconv_filters( array() ), false ); ?></thead>
+		<tbody>
+			<?php varconv_render_group( varconv_manual( $found['products'] ), array(), varconv_filters( array() ), 1, true ); ?>
+		</tbody>
+	</table>
 	<?php
 	delete_transient( 'varconv_posted_' . get_current_user_id() );
 }

@@ -24,11 +24,11 @@ This is the development repo. The user-facing docs are in [`readme.txt`](readme.
 | `includes/create.php` | Catalog query, scan cache, creating the variable product, Undo |
 | `includes/split.php` | Variable product list, splitting into simple products, Undo of a split |
 | `includes/admin.php` | The **Products > Variation Converter** screen, its tabs and form handlers |
-| `includes/admin-combine.php` | The Combine tab: filters, sort, group rows and cards, Screen Options (groups per page) |
+| `includes/admin-combine.php` | The Combine tab as a list table: views (Ready, Needs review, Skipped), search, filters, sortable columns, bulk and row actions, the review card that opens under its row, Screen Options (groups per page) |
 | `includes/admin-split.php` | The Split tab (variable products as a list table, card opening inline) and the History tab (one dated table with views, search and Undo) |
 | `includes/admin-products.php` | Products > All Products bulk action "Combine into variable product": opens a card for the checked products, whatever their SKUs |
 | `includes/ajax.php` | admin-ajax handlers so the Combine tab creates, undoes, skips and bulk-creates without reloading |
-| `assets/admin.css`, `assets/admin.js` | Screen styles; the in-group filter, SKU shading, row order, price preview, batched bulk create and the confirm before Undo. Every form also works without scripts |
+| `assets/admin.css`, `assets/admin.js` | Screen styles; opening review cards, Select by SKU, the row filter, drag and keyboard reorder, price preview, batched bulk create and the confirm before Undo. Every form also works without scripts |
 | `uninstall.php` | Removes the dismissed list and cached scan on delete; products are left alone |
 | `includes/cli.php` | WP-CLI commands `wp variation-converter combine` and `undo` |
 | `tests/integration-bulk.php` | Bulk pieces against a real site: run lock, remembered unchecked members, chosen categories, `varconv_convert()` (`wp eval-file`, test site only) |
@@ -65,7 +65,7 @@ wp variation-converter undo <id>... | --all [--yes]      # combined or split pro
 |---|---|---|
 | `varconv_scan_products` | `array $products` (id, sku, name, title, price, stock, cats, brands) | Leave products out of the scan, such as testers or display units |
 | `varconv_brand_names` | `string[] $names` (default: WooCommerce Brands terms) | Add or replace the brand names a product name can start with |
-| `varconv_collections` | `array $collections`, `array $products` | Change the proposed groups after the scan: add members, drop groups. Each group has key, family, name, brand, attribute, sku, members (with label) and notes (kind => text) |
+| `varconv_collections` | `array $collections`, `array $products` | Change the proposed groups after the scan: add members, drop groups. Skipped groups are kept apart for the Skipped view and are not passed in. Each group has key, family, name, brand, attribute, sku, members (with label) and notes (kind => text) |
 
 The scan result is cached for 30 minutes, so clear the `varconv_scan` transient (or click **Scan again**) after changing a filter.
 

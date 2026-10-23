@@ -141,11 +141,15 @@ function varconv_candidates( bool $fresh = false ): array {
 	 *                           notes (kind => text).
 	 * @param array $products    The products that were scanned.
 	 */
-	$collections = (array) apply_filters( 'varconv_collections', varconv_scan( $products, $dismissed, $brand_names ), $products );
+	$all = varconv_scan( $products, array(), $brand_names );
+	$skipped = array_values( array_filter( $all, static fn( $c ) => in_array( $c['key'], $dismissed, true ) ) );
+	$collections = (array) apply_filters( 'varconv_collections', array_values( array_diff_key( $all, array_filter( $all, static fn( $c ) => in_array( $c['key'], $dismissed, true ) ) ) ), $products );
 	$scan = array(
 		'time'        => time(),
 		'products'    => count( $products ),
 		'collections' => $collections,
+		// Groups the admin skipped ("not variants"), for the list's Skipped view.
+		'skipped'     => $skipped,
 	);
 	set_transient( VARCONV_SCAN_TRANSIENT, $scan, 30 * MINUTE_IN_SECONDS );
 	return $scan;
