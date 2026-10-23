@@ -137,7 +137,7 @@ A variation set to "Any" for an attribute (for example "Any Size") isn't one spe
 = 0.2.0 =
 * Combine list: a sortable, filterable table with Ready, Needs review and Skipped views, an inline card per group, and Select by SKU.
 * Combine from the Products list: select products and choose "Combine into variable product".
-* Create many groups at once, from the list or with WP-CLI (`wp variation-converter combine` and `undo`).
+* Create many groups at once, from the list or with WP-CLI (`wp varconv combine` and `undo`).
 * Split and History tabs are list tables too.
 * Better grouping: sizes in size order, "12 oz" and "12oz" treated alike, bracketed labels unwrapped, clearer notes about duplicates, prices and categories.
 * A free parent SKU is suggested when the group's SKU is taken.

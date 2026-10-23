@@ -89,11 +89,11 @@ If customers have already ordered the product that Undo deletes, their orders ke
 You can also combine and undo from the command line. There is no command for splitting.
 
 ```sh
-wp variation-converter combine --all --dry-run   # list what would be created, with each group's key
-wp variation-converter combine --all --min-size=3 --skip=price,cats
-wp variation-converter combine 3f2a9c81d0e4      # create only the groups with these keys
-wp variation-converter undo 1234                 # undo a combine or split by product ID
-wp variation-converter undo --all --yes          # undo everything, without asking
+wp varconv combine --all --dry-run   # list what would be created, with each group's key
+wp varconv combine --all --min-size=3 --skip=price,cats
+wp varconv combine 3f2a9c81d0e4      # create only the groups with these keys
+wp varconv undo 1234                 # undo a combine or split by product ID
+wp varconv undo --all --yes          # undo everything, without asking
 ```
 
 `combine` options: `--limit=<n>` creates at most n groups; `--min-size=<n>` only takes groups of at least n products (default 2); `--skip` leaves out groups with these warnings: `dupes`, `label`, `long`, `price`, `cats`.
