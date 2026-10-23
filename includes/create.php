@@ -418,7 +418,7 @@ function varconv_convert( array $c, bool $dry = false ): array {
 	try {
 		return array( 'status' => 'made', 'id' => varconv_create( $c['name'], $c['attribute'], $sku, $members ), 'message' => $note );
 	} catch ( RuntimeException $e ) {
-		return array( 'status' => 'failed', 'id' => 0, 'message' => $e->getMessage() );
+		return array( 'status' => 'failed', 'id' => 0, 'message' => varconv_message( $e ) );
 	}
 }
 
@@ -455,4 +455,12 @@ function varconv_unlock(): void {
 	global $wpdb;
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 	$wpdb->delete( $wpdb->options, array( 'option_name' => VARCONV_LOCK_OPTION ) );
+}
+
+/**
+ * An exception's message as plain text. Messages are HTML-escaped when thrown, for pages that print them; JSON
+ * responses and the command line show text, where "&quot;" would appear as written.
+ */
+function varconv_message( Throwable $e ): string {
+	return html_entity_decode( $e->getMessage(), ENT_QUOTES | ENT_HTML5, 'UTF-8' );
 }

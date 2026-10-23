@@ -9,6 +9,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+// Every handler below calls varconv_ajax_check() before it reads anything else from $_POST, which the nonce sniff
+// cannot see through.
+// phpcs:disable WordPress.Security.NonceVerification.Missing
+
 /** Stops unless the current user may convert products and the request carries the nonce for $action. */
 function varconv_ajax_check( string $action ): void {
 	if ( ! current_user_can( VARCONV_CAP ) ) {
@@ -20,7 +24,6 @@ function varconv_ajax_check( string $action ): void {
 }
 
 function varconv_ajax_key(): string {
-	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- callers check the nonce.
 	return isset( $_POST['key'] ) ? sanitize_key( wp_unslash( $_POST['key'] ) ) : '';
 }
 
@@ -36,7 +39,7 @@ function varconv_ajax_create(): void {
 	try {
 		$id = varconv_create_posted( $group );
 	} catch ( RuntimeException $e ) {
-		wp_send_json_error( array( 'message' => $e->getMessage() ) );
+		wp_send_json_error( array( 'message' => varconv_message( $e ) ) );
 	}
 	// The checked products are in the new product now; what stays unchecked is the rest of the group.
 	varconv_set_excluded( $key, array_keys( $group['members'] ), false );
@@ -49,13 +52,12 @@ function varconv_ajax_create(): void {
 
 add_action( 'wp_ajax_varconv_undo', 'varconv_ajax_undo' );
 function varconv_ajax_undo(): void {
-	// phpcs:ignore WordPress.Security.NonceVerification.Missing -- checked next.
 	$id = isset( $_POST['product'] ) ? absint( wp_unslash( $_POST['product'] ) ) : 0;
 	varconv_ajax_check( 'varconv_undo_' . $id );
 	try {
 		$restored = varconv_undo( $id );
 	} catch ( RuntimeException $e ) {
-		wp_send_json_error( array( 'message' => $e->getMessage() ) );
+		wp_send_json_error( array( 'message' => varconv_message( $e ) ) );
 	}
 	wp_send_json_success( array( 'restored' => $restored ) );
 }
@@ -96,7 +98,7 @@ function varconv_ajax_bulk(): void {
 	try {
 		$counts = varconv_bulk_create( array_slice( $keys, 0, 25 ) );
 	} catch ( RuntimeException $e ) {
-		wp_send_json_error( array( 'message' => $e->getMessage() ) );
+		wp_send_json_error( array( 'message' => varconv_message( $e ) ) );
 	}
 	wp_send_json_success( $counts );
 }
