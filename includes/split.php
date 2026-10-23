@@ -272,6 +272,7 @@ function varconv_split_product( int $parent_id, array $names ): array {
 				$simple->set_date_created( $parent->get_date_created( 'edit' )->getTimestamp() );
 			}
 			$simple->update_meta_data( VARCONV_SPLIT_FROM_META, (string) $parent_id );
+			$simple->update_meta_data( VARCONV_TWIN_META, (string) $variation->get_id() );
 			$id = $simple->save();
 			if ( ! $id ) {
 				/* translators: %d: variation ID. */

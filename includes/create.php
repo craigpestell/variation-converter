@@ -17,6 +17,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 const VARCONV_META = '_varconv_collection';
 const VARCONV_PARENT_META = '_varconv_collection_parent';
 const VARCONV_HIDDEN_META = '_varconv_collection_hidden';
+// On the product an Undo deletes (a combine's variation, a split's simple product): the ID of its twin on the other side.
+const VARCONV_TWIN_META = '_varconv_twin';
 // When a product was combined or split here, for History.
 const VARCONV_TIME_META = '_varconv_time';
 const VARCONV_DISMISSED_OPTION = 'varconv_dismissed';
@@ -307,6 +309,7 @@ function varconv_create( string $name, string $attribute_name, string $sku, arra
 			$variation->set_width( $simple->get_width( 'edit' ) );
 			$variation->set_height( $simple->get_height( 'edit' ) );
 			$variation->set_image_id( $simple->get_image_id( 'edit' ) );
+			$variation->update_meta_data( VARCONV_TWIN_META, (string) $simple->get_id() );
 			if ( ! $variation->save() ) {
 				/* translators: %d: product ID. */
 				throw new RuntimeException( esc_html( sprintf( __( 'WooCommerce did not save the variation for product %d.', 'variation-converter-for-woocommerce' ), $simple->get_id() ) ) );
@@ -374,33 +377,40 @@ function varconv_undo( int $parent_id ): int {
 }
 
 /**
- * Each variation of a variable product with its simple product among $simple_ids: matched by SKU, which a combine or
- * split copies across, and by position (variation order, $simple_ids order) for products that have no SKU.
+ * Each variation of a variable product with its simple product among $simple_ids: by the twin ID a combine or split
+ * records, then by SKU for conversions made before it did. Products neither of those pairs are left out.
  *
  * @param int[] $simple_ids
- * @return array<int,int> Variation ID => simple product ID.
+ * @return array<int, int> Variation ID => simple product ID.
  */
 function varconv_twins( int $parent_id, array $simple_ids ): array {
 	$parent = wc_get_product( $parent_id );
 	$variations = $parent instanceof WC_Product_Variable ? array_map( 'intval', $parent->get_children() ) : array();
-	$sku = static fn( int $id ): string => strtoupper( trim( (string) get_post_meta( $id, '_sku', true ) ) );
-	$by_sku = array();
-	foreach ( $simple_ids as $id ) {
-		if ( '' !== $sku( (int) $id ) ) {
-			$by_sku[ $sku( (int) $id ) ] ??= (int) $id;
-		}
-	}
+	$simples = array_map( 'intval', $simple_ids );
 	$pairs = array();
 	foreach ( $variations as $v ) {
+		$twin = (int) get_post_meta( $v, VARCONV_TWIN_META, true );
+		if ( in_array( $twin, $simples, true ) ) {
+			$pairs[ $v ] = $twin;
+		}
+	}
+	foreach ( $simples as $id ) {
+		$twin = (int) get_post_meta( $id, VARCONV_TWIN_META, true );
+		if ( in_array( $twin, $variations, true ) && ! isset( $pairs[ $twin ] ) && ! in_array( $id, $pairs, true ) ) {
+			$pairs[ $twin ] = $id;
+		}
+	}
+	$sku = static fn( int $id ): string => strtoupper( trim( (string) get_post_meta( $id, '_sku', true ) ) );
+	$by_sku = array();
+	foreach ( array_diff( $simples, $pairs ) as $id ) {
+		if ( '' !== $sku( $id ) ) {
+			$by_sku[ $sku( $id ) ] ??= $id;
+		}
+	}
+	foreach ( array_diff( $variations, array_keys( $pairs ) ) as $v ) {
 		if ( '' !== $sku( $v ) && isset( $by_sku[ $sku( $v ) ] ) ) {
 			$pairs[ $v ] = $by_sku[ $sku( $v ) ];
 			unset( $by_sku[ $sku( $v ) ] );
-		}
-	}
-	$no_sku = array_values( array_filter( array_map( 'intval', $simple_ids ), static fn( $id ) => '' === $sku( $id ) ) );
-	foreach ( array_values( array_filter( $variations, static fn( $v ) => '' === $sku( $v ) ) ) as $i => $v ) {
-		if ( isset( $no_sku[ $i ] ) ) {
-			$pairs[ $v ] = $no_sku[ $i ];
 		}
 	}
 	return $pairs;

@@ -88,6 +88,46 @@ try {
 	check( $large->get_regular_price(), '22', 'variation price comes back' );
 	check( wc_get_product( array_keys( $names )[0] )->get_stock_quantity(), 4, 'untouched variation keeps its stock' );
 	check( (float) wc_get_product( $split_id )->get_variation_regular_price( 'max' ), 22.0, 'parent price range synced' );
+
+	// No SKUs and only some variations split: pairs come from the recorded twin, not from position.
+	$attr = new WC_Product_Attribute();
+	$attr->set_name( 'Color' );
+	$attr->set_options( array( 'Red', 'Green', 'Blue' ) );
+	$attr->set_variation( true );
+	$attr->set_visible( true );
+	$variable = new WC_Product_Variable();
+	$variable->set_name( 'VC Undo Mug' );
+	$variable->set_status( 'publish' );
+	$variable->set_attributes( array( $attr ) );
+	$mug_id = $variable->save();
+	$cleanup[] = $mug_id;
+	$colors = array();
+	foreach ( array( 'Red', 'Green', 'Blue' ) as $color ) {
+		$v = new WC_Product_Variation();
+		$v->set_parent_id( $mug_id );
+		$v->set_attributes( array( 'color' => $color ) );
+		$v->set_regular_price( '12' );
+		$v->set_manage_stock( true );
+		$v->set_stock_quantity( 6 );
+		$colors[ $color ] = $v->save();
+	}
+	$cleanup = array_merge( $cleanup, array_values( $colors ) );
+	$made = varconv_split_product( $mug_id, array( $colors['Blue'] => 'VC Undo Mug Blue', $colors['Green'] => 'VC Undo Mug Green' ) );
+	$cleanup = array_merge( $cleanup, $made );
+	check( varconv_twins( $mug_id, array_reverse( $made ) ), array( $colors['Green'] => $made[1], $colors['Blue'] => $made[0] ), 'twins by recorded ID' );
+	foreach ( array( 'VC Undo Mug Blue' => 2, 'VC Undo Mug Green' => 3 ) as $name => $stock ) {
+		foreach ( $made as $id ) {
+			$p = wc_get_product( $id );
+			if ( $p->get_name() === $name ) {
+				$p->set_stock_quantity( $stock );
+				$p->save();
+			}
+		}
+	}
+	varconv_split_undo( $mug_id );
+	check( wc_get_product( $colors['Red'] )->get_stock_quantity(), 6, 'unsplit variation untouched' );
+	check( wc_get_product( $colors['Green'] )->get_stock_quantity(), 3, 'green gets its own stock' );
+	check( wc_get_product( $colors['Blue'] )->get_stock_quantity(), 2, 'blue gets its own stock' );
 	echo "Undo stock integration tests passed.\n";
 } finally {
 	if ( $parent_id ) {
