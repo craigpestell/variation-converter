@@ -33,6 +33,7 @@ This is the development repo. The user-facing docs are in [`readme.txt`](readme.
 | `includes/cli.php` | WP-CLI commands `wp variation-converter combine` and `undo` |
 | `tests/integration-bulk.php` | Bulk pieces against a real site: run lock, remembered unchecked members, chosen categories, `varconv_convert()` (`wp eval-file`, test site only) |
 | `tests/test-scan.php` | Offline tests for `scan.php` |
+| `tests/browser-combine.mjs` | Browser walkthrough of the Combine tab on the harness demo catalog; saves screenshots (`harness/wp-harness browse tests/browser-combine.mjs --out shots`) |
 | `tests/test-split.php` | Offline tests for the pure helpers in `split.php` |
 | `tests/integration-split.php` | Split, Undo and the merge interplay against a real site: `wp eval-file tests/integration-split.php` (makes and deletes its own products; use a test site) |
 

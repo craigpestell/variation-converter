@@ -52,7 +52,6 @@ function varconv_assets(): void {
 			'working'   => __( 'Working...', 'variation-converter' ),
 			'failed'    => __( 'Something went wrong. Reload the page and try again.', 'variation-converter' ),
 			/* translators: %d: number of products left in the group. */
-			'remaining' => __( 'The other %d products stay here as a group; check the ones to create next.', 'variation-converter' ),
 			'skipped'   => __( 'Skipped. Later scans leave this group out.', 'variation-converter' ),
 			'undone'    => __( 'Undone. The simple products are visible again; scan again to see them as a group.', 'variation-converter' ),
 			/* translators: 1: groups done, 2: groups selected. */
@@ -268,6 +267,8 @@ function varconv_handle_undo(): void {
 	} catch ( RuntimeException $e ) {
 		varconv_fail( $e->getMessage(), array() );
 	}
+	// Scan again now, so the page this returns to can show the Combine tab's count.
+	varconv_candidates();
 	varconv_back( array( 'varconv_done' => 'undone', 'varconv_restored' => $restored ) );
 }
 
@@ -303,6 +304,8 @@ function varconv_handle_split(): void {
 	} catch ( RuntimeException $e ) {
 		varconv_fail( $e->getMessage(), array( 'product' => $id, 'varconv_failed' => 1 ) );
 	}
+	// Scan again now, so the page this returns to can show the Combine tab's count.
+	varconv_candidates();
 	varconv_back( array( 'varconv_done' => 'split', 'varconv_product' => $id, 'varconv_count' => count( $created ) ) );
 }
 
@@ -318,6 +321,8 @@ function varconv_handle_split_undo(): void {
 	} catch ( RuntimeException $e ) {
 		varconv_fail( $e->getMessage(), array() );
 	}
+	// Scan again now, so the page this returns to can show the Combine tab's count.
+	varconv_candidates();
 	varconv_back( array( 'varconv_done' => 'split_undone', 'varconv_product' => $id, 'varconv_count' => $deleted ) );
 }
 
@@ -362,11 +367,9 @@ function varconv_render(): void {
 	?>
 	<div class="wrap varconv">
 		<h1 class="wp-heading-inline"><?php esc_html_e( 'Variation Converter', 'variation-converter' ); ?></h1>
+		<?php if ( 'combine' === $tab ) : ?>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="varconv-rescan">
 			<input type="hidden" name="action" value="varconv_rescan">
-			<?php if ( 'combine' !== $tab ) : ?>
-				<input type="hidden" name="tab" value="<?php echo esc_attr( $tab ); ?>">
-			<?php endif; ?>
 			<?php wp_nonce_field( 'varconv_rescan' ); ?>
 			<button class="page-title-action"><?php esc_html_e( 'Scan again', 'variation-converter' ); ?></button>
 			<?php if ( is_array( $scan ) ) : ?>
@@ -378,6 +381,7 @@ function varconv_render(): void {
 				</span>
 			<?php endif; ?>
 		</form>
+		<?php endif; ?>
 		<hr class="wp-header-end">
 		<nav class="nav-tab-wrapper">
 			<?php foreach ( varconv_tabs() as $key => $label ) : ?>
@@ -447,7 +451,7 @@ function varconv_notice(): void {
 				$failed ? 'warning' : 'success',
 				wp_kses_post( sprintf(
 					/* translators: 1: products made, 2: groups skipped, 3: groups that failed, 4: link to the History tab. */
-					__( 'Created %1$d variable products; %2$d groups were skipped because they need a label checked, and %3$d failed. Undo is in <a href="%4$s">History</a>.', 'variation-converter' ),
+					_n( 'Created %1$d variable product; %2$d groups were skipped because they need a label checked, and %3$d failed. Undo is in <a href="%4$s">History</a>.', 'Created %1$d variable products; %2$d groups were skipped because they need a label checked, and %3$d failed. Undo is in <a href="%4$s">History</a>.', $made, 'variation-converter' ),
 					$made,
 					$skip,
 					$failed,

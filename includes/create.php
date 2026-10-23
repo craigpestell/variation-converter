@@ -147,12 +147,40 @@ function varconv_candidates( bool $fresh = false ): array {
 	$scan = array(
 		'time'        => time(),
 		'products'    => count( $products ),
-		'collections' => $collections,
+		'collections' => array_map( 'varconv_with_free_sku', $collections ),
 		// Groups the admin skipped ("not variants"), for the list's Skipped view.
-		'skipped'     => $skipped,
+		'skipped'     => array_map( 'varconv_with_free_sku', $skipped ),
 	);
 	set_transient( VARCONV_SCAN_TRANSIENT, $scan, 30 * MINUTE_IN_SECONDS );
 	return $scan;
+}
+
+/**
+ * A parent SKU no product has: $sku, or else $sku-2, $sku-3 and so on, as when part of a group was created and took
+ * the SKU. Empty when none of the first few is free.
+ */
+function varconv_free_sku( string $sku ): string {
+	$sku = trim( $sku );
+	if ( '' === $sku || ! wc_get_product_id_by_sku( $sku ) ) {
+		return $sku;
+	}
+	for ( $n = 2; $n <= 9; $n++ ) {
+		if ( ! wc_get_product_id_by_sku( $sku . '-' . $n ) ) {
+			return $sku . '-' . $n;
+		}
+	}
+	return '';
+}
+
+/** A group with its suggested parent SKU swapped for a free one. */
+function varconv_with_free_sku( array $c ): array {
+	$c['sku'] = varconv_free_sku( (string) ( $c['sku'] ?? '' ) );
+	return $c;
+}
+
+/** A product's name for messages; a variation's parent's name, since a variation can hold the SKU. */
+function varconv_product_name( int $id ): string {
+	return (string) get_post_field( 'post_title', wp_get_post_parent_id( $id ) ?: $id, 'raw' );
 }
 
 /** Variable products made here, newest first. */
@@ -203,8 +231,8 @@ function varconv_create( string $name, string $attribute_name, string $sku, arra
 	}
 	$taken = '' === $sku ? 0 : (int) wc_get_product_id_by_sku( $sku );
 	if ( $taken ) {
-		/* translators: 1: SKU, 2: product ID. */
-		$errors[] = sprintf( __( 'SKU %1$s is already used by product %2$d; change it or leave it empty.', 'variation-converter' ), $sku, $taken );
+		/* translators: 1: SKU, 2: product name. */
+		$errors[] = sprintf( __( 'SKU %1$s is already used by "%2$s"; change it or leave it empty.', 'variation-converter' ), $sku, varconv_product_name( $taken ) );
 	}
 	if ( $errors ) {
 		throw new RuntimeException( esc_html( implode( ' ', array_unique( $errors ) ) ) );
