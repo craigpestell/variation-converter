@@ -17,6 +17,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 const VARCONV_META = '_varconv_collection';
 const VARCONV_PARENT_META = '_varconv_collection_parent';
 const VARCONV_HIDDEN_META = '_varconv_collection_hidden';
+// When a product was combined or split here, for History.
+const VARCONV_TIME_META = '_varconv_time';
 const VARCONV_DISMISSED_OPTION = 'varconv_dismissed';
 const VARCONV_SCAN_TRANSIENT = 'varconv_scan';
 // Members the admin unchecked, by collection key; bulk runs leave them out too.
@@ -238,6 +240,7 @@ function varconv_create( string $name, string $attribute_name, string $sku, arra
 			$parent->set_date_created( $newest + 1 );
 		}
 		$parent->update_meta_data( VARCONV_META, wp_json_encode( array_map( static fn( $s ) => $s[0]->get_id(), $sources ) ) );
+		$parent->update_meta_data( VARCONV_TIME_META, time() );
 		$parent_id = $parent->save();
 		if ( ! $parent_id ) {
 			throw new RuntimeException( esc_html__( 'WooCommerce did not save the variable product.', 'variation-converter' ) );

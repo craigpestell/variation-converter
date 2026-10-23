@@ -82,6 +82,32 @@ function varconv_split_list(): array {
 }
 
 /**
+ * Everything combined or split here, newest first, optionally matching a name or SKU. A conversion made before
+ * conversion times were kept is dated by its product's last change.
+ *
+ * @return array<int,array{id:int,kind:string,time:int}> kind: combined or split.
+ */
+function varconv_history( string $search = '' ): array {
+	$rows = array();
+	foreach ( array( 'combined' => varconv_created(), 'split' => varconv_split_list() ) as $kind => $ids ) {
+		foreach ( $ids as $id ) {
+			$hay = get_post_field( 'post_title', $id, 'raw' ) . ' ' . get_post_meta( $id, '_sku', true );
+			if ( '' !== $search && false === stripos( $hay, $search ) ) {
+				continue;
+			}
+			$time = (int) get_post_meta( $id, VARCONV_TIME_META, true );
+			$rows[] = array(
+				'id'   => $id,
+				'kind' => $kind,
+				'time' => $time ?: (int) get_post_modified_time( 'U', true, $id ),
+			);
+		}
+	}
+	usort( $rows, static fn( $a, $b ) => array( $b['time'], $b['id'] ) <=> array( $a['time'], $a['id'] ) );
+	return $rows;
+}
+
+/**
  * A variation's attribute values as shown to shoppers ("Black", "Large"); an empty value is one set to "Any".
  *
  * @return string[]
@@ -257,6 +283,7 @@ function varconv_split_product( int $parent_id, array $names ): array {
 
 	$parent->update_meta_data( VARCONV_HIDDEN_META, $parent->get_catalog_visibility( 'edit' ) );
 	$parent->update_meta_data( VARCONV_SPLIT_META, wp_json_encode( $created ) );
+	$parent->update_meta_data( VARCONV_TIME_META, time() );
 	$parent->set_catalog_visibility( 'hidden' );
 	$parent->save();
 	varconv_reindex( array_merge( $created, array( $parent_id ) ) );
@@ -290,6 +317,7 @@ function varconv_split_undo( int $parent_id ): int {
 	$parent->set_catalog_visibility( $parent->get_meta( VARCONV_HIDDEN_META ) ?: 'visible' );
 	$parent->delete_meta_data( VARCONV_HIDDEN_META );
 	$parent->delete_meta_data( VARCONV_SPLIT_META );
+	$parent->delete_meta_data( VARCONV_TIME_META );
 	$parent->save();
 	varconv_reindex( array( $parent_id ) );
 	wc_delete_product_transients( $parent_id );
