@@ -129,14 +129,14 @@
 			<p>Cleaning up a client's catalog? Preview with <code>--dry-run</code>, leave out groups with warnings, and undo from the command line too. Undo works the same as the admin page, in both directions.</p>
 		</div>
 <pre><code><span class="c"># See what would be created</span>
-wp variation-converter combine --all --dry-run
+wp varconv combine --all --dry-run
 
 <span class="c"># Create groups of 3+ with matching prices and categories</span>
-wp variation-converter combine --all --min-size=3 --skip=price,cats
+wp varconv combine --all --min-size=3 --skip=price,cats
 
 <span class="c"># Undo one conversion, or all of them</span>
-wp variation-converter undo 1234
-wp variation-converter undo --all --yes</code></pre>
+wp varconv undo 1234
+wp varconv undo --all --yes</code></pre>
 	</div>
 </section>
 

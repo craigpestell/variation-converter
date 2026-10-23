@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-const VARCONV_PAGE = 'variation-converter';
+const VARCONV_PAGE = 'varconv';
 const VARCONV_CAP = 'manage_woocommerce';
 const VARCONV_PER_PAGE = 25;
 
@@ -20,6 +20,21 @@ require_once __DIR__ . '/admin-products.php';
 require_once __DIR__ . '/admin-split.php';
 
 add_action( 'admin_menu', 'varconv_menu', 60 );
+
+/**
+ * Up to 0.2.x the page was page=variation-converter. Send old bookmarks and links to the new slug, keeping the rest
+ * of the query (tab, view, search). Runs on admin_menu, because WordPress turns away an unknown page right after
+ * building the menu, before admin_init.
+ */
+add_action( 'admin_menu', 'varconv_redirect_old_page' );
+function varconv_redirect_old_page(): void {
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- read-only redirect, nothing is changed.
+	if ( ! isset( $_GET['page'] ) || 'variation-converter' !== $_GET['page'] ) {
+		return;
+	}
+	wp_safe_redirect( add_query_arg( 'page', VARCONV_PAGE ) );
+	exit;
+}
 function varconv_menu(): void {
 	$hook = add_submenu_page(
 		'edit.php?post_type=product',
