@@ -378,6 +378,54 @@ function varconv_without_excluded( array $collections, array $excluded ): array 
 	return $out;
 }
 
+/** The brands a collection's display brand names ("A, B" when its members carry two). */
+function varconv_brand_list( array $c ): array {
+	return array_values( array_filter( array_map( 'trim', explode( ',', (string) ( $c['brand'] ?? '' ) ) ), 'strlen' ) );
+}
+
+/** Collections of the brand $brand (case-insensitive); '' keeps them all. */
+function varconv_of_brand( array $collections, string $brand ): array {
+	if ( '' === $brand ) {
+		return $collections;
+	}
+	return array_values( array_filter( $collections, static fn( $c ) => in_array( strtolower( $brand ), array_map( 'strtolower', varconv_brand_list( $c ) ), true ) ) );
+}
+
+/** Collections matching a search in their name, SKU, brand or members' SKUs and names (case-insensitive). */
+function varconv_matching( array $collections, string $search ): array {
+	if ( '' === trim( $search ) ) {
+		return $collections;
+	}
+	return array_values( array_filter( $collections, static function ( $c ) use ( $search ) {
+		$hay = implode( ' ', array_merge(
+			array( $c['name'], $c['sku'], (string) ( $c['brand'] ?? '' ) ),
+			array_column( $c['members'], 'sku' ),
+			array_column( $c['members'], 'name' )
+		) );
+		return false !== stripos( $hay, trim( $search ) );
+	} ) );
+}
+
+/**
+ * Collections in the order the list shows: size (largest first, the scan's order), name, or brand (collections
+ * without a brand last); ties go by name.
+ */
+function varconv_sorted( array $collections, string $sort ): array {
+	$by_name = static fn( $a, $b ) => strnatcasecmp( $a['name'], $b['name'] );
+	if ( 'name' === $sort ) {
+		usort( $collections, $by_name );
+	} elseif ( 'brand' === $sort ) {
+		usort( $collections, static function ( $a, $b ) use ( $by_name ) {
+			$x = (string) ( $a['brand'] ?? '' );
+			$y = (string) ( $b['brand'] ?? '' );
+			return array( '' === $x, strtolower( $x ) ) <=> array( '' === $y, strtolower( $y ) ) ?: $by_name( $a, $b );
+		} );
+	} else {
+		usort( $collections, static fn( $a, $b ) => count( $b['members'] ) <=> count( $a['members'] ) ?: $by_name( $a, $b ) );
+	}
+	return $collections;
+}
+
 /** How far apart the members' regular prices are, in percent of the lowest (0 when they agree or are unknown). */
 function varconv_spread( array $members ): int {
 	$prices = array_filter( array_map( static fn( $m ) => (float) ( $m['price'] ?? 0 ), $members ), static fn( $p ) => $p > 0 );

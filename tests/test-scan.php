@@ -162,4 +162,19 @@ $left = varconv_without_excluded( $groups, array( 'a' => array( 2 ), 'b' => arra
 expect( array_column( $left, 'key' ), array( 'a', 'c' ), 'group left with one member dropped' );
 expect( array_column( $left[0]['members'], 'id' ), array( 1, 3 ), 'unchecked member left out' );
 
+// The list's brand filter, search and sort.
+$list = array(
+	array( 'key' => 'x', 'name' => 'Beta', 'sku' => 'B1', 'brand' => 'Acme, Zed', 'members' => array( array( 'sku' => 'B1-1', 'name' => 'Beta Red' ), array( 'sku' => 'B1-2', 'name' => 'Beta Blue' ) ) ),
+	array( 'key' => 'y', 'name' => 'alpha', 'sku' => 'A1', 'brand' => '', 'members' => array( array( 'sku' => 'A1-1', 'name' => 'alpha Red' ), array( 'sku' => 'A1-2', 'name' => 'alpha Blue' ), array( 'sku' => 'A1-3', 'name' => 'alpha Pink' ) ) ),
+	array( 'key' => 'z', 'name' => 'Gamma', 'sku' => 'G1', 'brand' => 'Bolt', 'members' => array( array( 'sku' => 'G1-1', 'name' => 'Gamma Red' ), array( 'sku' => 'G1-2', 'name' => 'Gamma Blue' ) ) ),
+);
+expect( varconv_brand_list( $list[0] ), array( 'Acme', 'Zed' ), 'brand list' );
+expect( array_column( varconv_of_brand( $list, 'zed' ), 'key' ), array( 'x' ), 'brand filter' );
+expect( count( varconv_of_brand( $list, '' ) ), 3, 'no brand filter' );
+expect( array_column( varconv_matching( $list, 'a1-3' ), 'key' ), array( 'y' ), 'search member SKU' );
+expect( array_column( varconv_matching( $list, 'bolt' ), 'key' ), array( 'z' ), 'search brand' );
+expect( array_column( varconv_sorted( $list, 'size' ), 'key' ), array( 'y', 'x', 'z' ), 'sort by size' );
+expect( array_column( varconv_sorted( $list, 'name' ), 'key' ), array( 'y', 'x', 'z' ), 'sort by name' );
+expect( array_column( varconv_sorted( $list, 'brand' ), 'key' ), array( 'x', 'z', 'y' ), 'sort by brand, none last' );
+
 echo "Variant collection scan tests passed.\n";

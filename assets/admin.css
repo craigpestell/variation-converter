@@ -5,12 +5,67 @@
 .varconv-fields { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 8px; }
 .varconv-fields label { display: flex; flex-direction: column; font-weight: 600; gap: 2px; }
 .varconv-fields .name input { width: 360px; max-width: 100%; }
-.varconv-candidate table input[type=text] { width: 100%; }
+.varconv-candidate table input[type=text], .varconv-members input[type=text] { width: 100%; }
 .varconv-candidate th.check { width: 2em; }
-.varconv-candidate th.label { width: 18%; }
-.varconv-candidate th.thumb { width: 48px; }
-.varconv-candidate td.title { color: #50575e; }
-.varconv-candidate td.thumb img { width: 40px; height: 40px; object-fit: cover; display: block; }
+.varconv-candidate th.label, .varconv-members th.label { width: 18%; }
+.varconv-candidate th.thumb, .varconv-members th.thumb { width: 48px; }
+.varconv-candidate td.title, .varconv-members td.title { color: #50575e; }
+.varconv-candidate td.thumb img, .varconv-members td.thumb img { width: 40px; height: 40px; object-fit: cover; display: block; }
 .varconv-notes { color: #996800; margin: 6px 0; }
+.varconv-notes ul { margin: 4px 0; list-style: disc inside; }
 .varconv-actions { display: flex; gap: 8px; margin-top: 8px; align-items: center; }
 .varconv-list { max-width: 1100px; }
+
+/* Combine tab */
+.varconv-intro { font-size: 14px; margin-bottom: 4px; }
+.varconv-steps { margin: 0 0 12px 1.5em; }
+.varconv-steps li { margin: 0; }
+.varconv-filters { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: flex-end; max-width: 1100px; margin: 8px 0; }
+.varconv-filters .search-box { float: none; margin: 0; }
+.varconv-filters label > span { display: block; font-weight: 600; }
+.varconv-hide { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: center; }
+.varconv-hide legend { font-weight: 600; float: left; margin-right: 8px; }
+.varconv-summary { margin: 8px 0 4px; }
+.varconv-rescan { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+.varconv-bulk { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; max-width: 1100px; padding: 8px 0; border-bottom: 1px solid #c3c4c7; }
+.varconv-progress { flex-basis: 100%; font-weight: 600; }
+.varconv-groups { max-width: 1100px; }
+.varconv-group { display: flex; gap: 8px; align-items: flex-start; background: #fff; border: 1px solid #c3c4c7; border-top: 0; padding: 8px 12px; }
+.varconv-group:first-child { border-top: 1px solid #c3c4c7; }
+.varconv-group > .varconv-pick { margin-top: 4px; }
+.varconv-group > details, .varconv-group > .notice { flex: 1; min-width: 0; margin: 0; }
+.varconv-group.is-done { background: #f6f7f7; }
+.varconv-group summary { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; cursor: pointer; }
+.varconv-group summary { list-style: none; }
+.varconv-group summary::-webkit-details-marker { display: none; }
+.varconv-group summary::before { content: "\25B8"; color: #646970; width: 1em; }
+.varconv-group details[open] > summary::before { content: "\25BE"; }
+.varconv-group h2.varconv-title { font-size: 14px; margin: 0; display: inline; }
+.varconv-brand { color: #646970; text-transform: uppercase; font-size: 11px; letter-spacing: .04em; }
+.varconv-count, .varconv-sku, .varconv-range { color: #50575e; }
+.varconv-sku { font-family: Consolas, Monaco, monospace; }
+.varconv-badge { background: #fcf9e8; color: #6e4e00; border: 1px solid #dba617; border-radius: 9px; padding: 0 8px; font-size: 12px; }
+.varconv-card { padding: 12px 0 4px; }
+.varconv-card .notice.inline { margin: 0 0 8px; }
+.varconv-cats { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 4px 0 8px; }
+.varconv-cats legend { font-weight: 600; flex-basis: 100%; }
+.varconv-sku-note { color: #b32d2e; font-weight: 400; }
+.varconv-table-wrap { position: relative; }
+.varconv-row-tools { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin: 8px 0; }
+.varconv-sku-chars { width: 4.5em; }
+.varconv-members td.order { white-space: nowrap; width: 3.5em; }
+.varconv-members .varconv-up, .varconv-members .varconv-down { text-decoration: none; font-size: 16px; padding: 0 4px; }
+.varconv-members tr.varconv-band-a > * { background: #f0f6fc; }
+.varconv-members tr.varconv-band-b > * { background: #fff; }
+.varconv-members tr.varconv-band-a + tr.varconv-band-b > *, .varconv-members tr.varconv-band-b + tr.varconv-band-a > * { border-top: 2px solid #c3c4c7; }
+.varconv-members td.sku mark { background: #fcf0a8; padding: 0; }
+.varconv-only-band { display: block; font-size: 12px; }
+.varconv-preview { margin: 8px 0 0; }
+.varconv-created .varconv-undo, .varconv-group .notice .varconv-undo { margin: 0 0 8px; }
+.varconv-empty { background: #fff; border: 1px solid #c3c4c7; padding: 8px 16px; max-width: 1100px; }
+
+@media screen and (max-width: 782px) {
+	.varconv-table-wrap { overflow-x: auto; }
+	.varconv-members { min-width: 720px; }
+	.varconv-fields .name input { width: 100%; }
+}

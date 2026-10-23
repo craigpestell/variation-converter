@@ -1,8 +1,8 @@
 <?php
 /**
- * Products > Variation Converter, in three tabs. Combine: the scan as a review list; each candidate can be edited
- * (name, attribute, parent SKU, which products, their labels) and then created, or marked "not a collection" so later
- * scans skip it. Split: variable products, each opening a card to make one simple product per variation. History:
+ * Products > Variation Converter, in three tabs. Combine (admin-combine.php): the scan's groups, each opening into a
+ * card to edit (name, attribute, parent SKU, categories, which products, their labels and order) and create, or skip
+ * so later scans leave it out. Split: variable products, each opening a card to make one simple product per variation. History:
  * everything converted, with Undo.
  */
 
@@ -13,6 +13,9 @@ if ( ! defined( 'ABSPATH' ) ) {
 const VARCONV_PAGE = 'variation-converter';
 const VARCONV_CAP = 'manage_woocommerce';
 const VARCONV_PER_PAGE = 25;
+
+require_once __DIR__ . '/admin-combine.php';
+require_once __DIR__ . '/ajax.php';
 
 add_action( 'admin_menu', 'varconv_menu', 60 );
 function varconv_menu(): void {
@@ -26,6 +29,7 @@ function varconv_menu(): void {
 	);
 	if ( $hook ) {
 		add_action( 'admin_print_styles-' . $hook, 'varconv_assets' );
+		add_action( 'load-' . $hook, 'varconv_screen_options' );
 	}
 }
 
@@ -33,6 +37,28 @@ function varconv_assets(): void {
 	$url = plugin_dir_url( VARCONV_FILE ) . 'assets/';
 	wp_enqueue_style( 'varconv-admin', $url . 'admin.css', array(), VARCONV_VERSION );
 	wp_enqueue_script( 'varconv-admin', $url . 'admin.js', array(), VARCONV_VERSION, true );
+	wp_localize_script( 'varconv-admin', 'varconv', array(
+		'ajax'    => admin_url( 'admin-ajax.php' ),
+		'nonce'   => wp_create_nonce( 'varconv_ajax' ),
+		'price'   => varconv_price_settings(),
+		'strings' => array(
+			/* translators: 1: products checked, 2: products in the group. */
+			'count'     => __( '%1$d of %2$d products', 'variation-converter' ),
+			'working'   => __( 'Working...', 'variation-converter' ),
+			'failed'    => __( 'Something went wrong. Reload the page and try again.', 'variation-converter' ),
+			/* translators: %d: number of products left in the group. */
+			'remaining' => __( 'The other %d products stay here as a group; check the ones to create next.', 'variation-converter' ),
+			'skipped'   => __( 'Skipped. Later scans leave this group out.', 'variation-converter' ),
+			'undone'    => __( 'Undone. The simple products are visible again; scan again to see them as a group.', 'variation-converter' ),
+			/* translators: 1: groups done, 2: groups selected. */
+			'progress'  => __( 'Creating groups: %1$d of %2$d done...', 'variation-converter' ),
+			/* translators: 1: products made, 2: groups skipped, 3: groups that failed. */
+			'bulkDone'  => __( 'Done: %1$d variable products created, %2$d groups skipped, %3$d failed. Reloading...', 'variation-converter' ),
+			'onlyBand'  => __( 'Only these', 'variation-converter' ),
+			/* translators: %s: SKU prefix shared by a band of rows. */
+			'onlyLabel' => __( 'Check only the products whose SKU starts with %s', 'variation-converter' ),
+		),
+	) );
 }
 
 /** @return array<string,string> Tab key => label. */
@@ -54,18 +80,34 @@ function varconv_url( array $args = array() ): string {
 	return add_query_arg( array_merge( array( 'post_type' => 'product', 'page' => VARCONV_PAGE ), $args ), admin_url( 'edit.php' ) );
 }
 
-/** Back to the page, keeping the tab, search and page number the form came from. Callers have checked the nonce. */
-function varconv_back( array $args ): void {
+/**
+ * Back to the page, keeping the tab, search, filters and page number the form came from, and scrolled to $anchor.
+ * Callers have checked the nonce.
+ */
+function varconv_back( array $args, string $anchor = '' ): void {
 	$keep = array();
+	// phpcs:disable WordPress.Security.NonceVerification.Missing
 	foreach ( array( 'tab', 's', 'paged' ) as $key ) {
-		// phpcs:ignore WordPress.Security.NonceVerification.Missing
 		$value = isset( $_POST[ $key ] ) ? sanitize_text_field( wp_unslash( $_POST[ $key ] ) ) : '';
 		if ( '' !== $value ) {
 			$keep[ $key ] = $value;
 		}
 	}
-	wp_safe_redirect( varconv_url( array_merge( $keep, $args ) ) );
+	if ( isset( $_POST['filters'] ) ) {
+		wp_parse_str( sanitize_text_field( wp_unslash( $_POST['filters'] ) ), $filters );
+		$keep = array_merge( $keep, varconv_filter_args( varconv_filters( $filters ) ) );
+	}
+	// phpcs:enable WordPress.Security.NonceVerification.Missing
+	wp_safe_redirect( varconv_url( array_merge( $keep, $args ) ) . ( '' !== $anchor ? '#' . $anchor : '' ) );
 	exit;
+}
+
+/** Marks a group as not variants, so scans leave it out. */
+function varconv_dismiss( string $key ): void {
+	$dismissed = (array) get_option( VARCONV_DISMISSED_OPTION, array() );
+	$dismissed[] = $key;
+	update_option( VARCONV_DISMISSED_OPTION, array_values( array_unique( $dismissed ) ), false );
+	delete_transient( VARCONV_SCAN_TRANSIENT );
 }
 
 add_action( 'admin_post_varconv_create', 'varconv_handle_create' );
@@ -76,30 +118,71 @@ function varconv_handle_create(): void {
 	$key = isset( $_POST['key'] ) ? sanitize_key( wp_unslash( $_POST['key'] ) ) : '';
 	check_admin_referer( 'varconv_create_' . $key );
 	if ( ! empty( $_POST['dismiss'] ) ) {
-		$dismissed = (array) get_option( VARCONV_DISMISSED_OPTION, array() );
-		$dismissed[] = $key;
-		update_option( VARCONV_DISMISSED_OPTION, array_values( array_unique( $dismissed ) ), false );
-		delete_transient( VARCONV_SCAN_TRANSIENT );
+		varconv_dismiss( $key );
 		varconv_back( array( 'varconv_done' => 'dismissed' ) );
 	}
-	$members = array();
-	$rows    = isset( $_POST['members'] ) && is_array( $_POST['members'] ) ? map_deep( wp_unslash( $_POST['members'] ), 'sanitize_text_field' ) : array();
-	foreach ( $rows as $id => $row ) {
-		if ( is_array( $row ) && ! empty( $row['use'] ) ) {
-			$members[ absint( $id ) ] = (string) ( $row['label'] ?? '' );
-		}
+	$group = varconv_posted_group();
+	try {
+		$id = varconv_create_posted( $group );
+	} catch ( RuntimeException $e ) {
+		// Shown in the group's card, refilled with what was submitted.
+		set_transient( 'varconv_posted_' . get_current_user_id(), array_merge( $group, array( 'key' => $key, 'error' => $e->getMessage() ) ), 5 * MINUTE_IN_SECONDS );
+		varconv_back( array(), 'varconv-' . $key );
+	}
+	delete_transient( 'varconv_posted_' . get_current_user_id() );
+	varconv_back( array( 'varconv_done' => 'created', 'varconv_product' => $id ) );
+}
+
+/** "Create selected groups" without scripts: the checked groups, or all that match the filters, in one request. */
+add_action( 'admin_post_varconv_bulk', 'varconv_handle_bulk' );
+function varconv_handle_bulk(): void {
+	if ( ! current_user_can( VARCONV_CAP ) ) {
+		wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'variation-converter' ), 403 );
+	}
+	check_admin_referer( 'varconv_bulk' );
+	if ( ! empty( $_POST['all'] ) ) {
+		wp_parse_str( isset( $_POST['filters'] ) ? sanitize_text_field( wp_unslash( $_POST['filters'] ) ) : '', $filters );
+		$keys = array_column( varconv_filtered( varconv_candidates()['collections'], varconv_filters( $filters ) ), 'key' );
+	} else {
+		$keys = isset( $_POST['keys'] ) && is_array( $_POST['keys'] ) ? array_map( 'sanitize_key', wp_unslash( $_POST['keys'] ) ) : array();
 	}
 	try {
-		$id = varconv_create(
-			isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '',
-			isset( $_POST['attribute'] ) ? sanitize_text_field( wp_unslash( $_POST['attribute'] ) ) : '',
-			isset( $_POST['sku'] ) ? sanitize_text_field( wp_unslash( $_POST['sku'] ) ) : '',
-			$members
-		);
+		$counts = varconv_bulk_create( $keys );
 	} catch ( RuntimeException $e ) {
-		varconv_fail( $e->getMessage(), array( 'varconv_key' => $key ) );
+		varconv_fail( $e->getMessage(), array() );
 	}
-	varconv_back( array( 'varconv_done' => 'created', 'varconv_product' => $id ) );
+	varconv_back( array( 'varconv_done' => 'bulk', 'varconv_made' => $counts['made'], 'varconv_skip' => $counts['skip'], 'varconv_failed_count' => $counts['failed'] ) );
+}
+
+/**
+ * Creates the groups $keys as the scan proposed them, under the bulk lock.
+ *
+ * @param string[] $keys
+ * @return array{made:int,skip:int,failed:int,results:array<string,array>}
+ * @throws RuntimeException When another bulk run holds the lock.
+ */
+function varconv_bulk_create( array $keys ): array {
+	if ( ! varconv_lock() ) {
+		throw new RuntimeException( esc_html__( 'Another bulk run is in progress. Try again in a few minutes.', 'variation-converter' ) );
+	}
+	$counts = array( 'made' => 0, 'skip' => 0, 'failed' => 0, 'results' => array() );
+	try {
+		$wanted = array_flip( $keys );
+		foreach ( varconv_bulk_candidates() as $c ) {
+			if ( ! isset( $wanted[ $c['key'] ] ) ) {
+				continue;
+			}
+			$result = varconv_convert( $c );
+			$counts['made'] += 'made' === $result['status'] ? 1 : 0;
+			$counts['skip'] += 'skip' === $result['status'] ? 1 : 0;
+			$counts['failed'] += 'failed' === $result['status'] ? 1 : 0;
+			$counts['results'][ $c['key'] ] = $result;
+			varconv_lock_renew();
+		}
+	} finally {
+		varconv_unlock();
+	}
+	return $counts;
 }
 
 add_action( 'admin_post_varconv_undo', 'varconv_handle_undo' );
@@ -213,87 +296,6 @@ function varconv_render(): void {
 		}
 		?>
 	</div>
-	<?php
-}
-
-function varconv_render_combine(): void {
-	$scan = varconv_candidates();
-	$search = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '';
-	$collections = $scan['collections'];
-	if ( '' !== $search ) {
-		$collections = array_values( array_filter( $collections, static function ( $c ) use ( $search ) {
-			$hay = $c['name'] . ' ' . $c['sku'] . ' ' . implode( ' ', array_column( $c['members'], 'sku' ) ) . ' ' . implode( ' ', array_column( $c['members'], 'name' ) );
-			return false !== stripos( $hay, $search );
-		} ) );
-	}
-	$total = count( $collections );
-	$pages = max( 1, (int) ceil( $total / VARCONV_PER_PAGE ) );
-	$paged = min( $pages, max( 1, isset( $_GET['paged'] ) ? absint( wp_unslash( $_GET['paged'] ) ) : 1 ) );
-	$shown = array_slice( $collections, ( $paged - 1 ) * VARCONV_PER_PAGE, VARCONV_PER_PAGE );
-	$products = array_sum( array_map( static fn( $c ) => count( $c['members'] ), $scan['collections'] ) );
-	$dismissed = count( (array) get_option( VARCONV_DISMISSED_OPTION, array() ) );
-	?>
-		<p><?php esc_html_e( 'Groups of simple products whose names differ only by a variant (color, size, flavor...) and whose SKUs share a family. Check each one, fix the name, attribute and labels if needed, and create it: that makes one variable product with a variation per checked product (same SKU, prices, stock and image), and hides those simple products from the catalog and search. They are not deleted, and Undo in History brings them back.', 'variation-converter' ); ?></p>
-
-		<form method="get" class="varconv-toolbar">
-			<input type="hidden" name="post_type" value="product">
-			<input type="hidden" name="page" value="<?php echo esc_attr( VARCONV_PAGE ); ?>">
-			<input type="search" name="s" value="<?php echo esc_attr( $search ); ?>" placeholder="<?php esc_attr_e( 'Name or SKU', 'variation-converter' ); ?>">
-			<button class="button"><?php esc_html_e( 'Search', 'variation-converter' ); ?></button>
-		</form>
-		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="varconv-toolbar">
-			<input type="hidden" name="action" value="varconv_rescan">
-			<?php wp_nonce_field( 'varconv_rescan' ); ?>
-			<button class="button"><?php esc_html_e( 'Scan again', 'variation-converter' ); ?></button>
-			<?php if ( $dismissed ) : ?>
-				<button class="button-link" name="undismiss" value="1">
-					<?php
-					/* translators: %d: number of dismissed groups. */
-					echo esc_html( sprintf( _n( 'Show %d dismissed again', 'Show %d dismissed again', $dismissed, 'variation-converter' ), $dismissed ) );
-					?>
-				</button>
-			<?php endif; ?>
-		</form>
-		<p class="description">
-			<?php
-			echo esc_html( sprintf(
-				/* translators: 1: number of groups, 2: number of products in them, 3: time since the scan, e.g. "5 mins". */
-				__( '%1$d possible collections (%2$d products), scanned %3$s ago.', 'variation-converter' ),
-				count( $scan['collections'] ),
-				$products,
-				human_time_diff( $scan['time'] )
-			) );
-			if ( '' !== $search ) {
-				/* translators: 1: number of matching groups, 2: search text. */
-				echo ' ' . esc_html( sprintf( __( '%1$d match "%2$s".', 'variation-converter' ), $total, $search ) );
-			}
-			?>
-		</p>
-
-		<datalist id="varconv-attributes">
-			<?php foreach ( array( 'Color', 'Size', 'Flavor', 'Scent', 'Volume', 'Style' ) as $option ) : ?>
-				<option><?php echo esc_html( $option ); ?></option>
-			<?php endforeach; ?>
-		</datalist>
-		<?php foreach ( $shown as $c ) : ?>
-			<?php varconv_render_candidate( $c, $search, $paged ); ?>
-		<?php endforeach; ?>
-		<?php if ( ! $shown ) : ?>
-			<p><?php esc_html_e( 'No collections to review.', 'variation-converter' ); ?></p>
-		<?php endif; ?>
-
-		<?php if ( $pages > 1 ) : ?>
-			<p class="varconv-pages">
-				<?php
-				echo wp_kses_post( paginate_links( array(
-					'base'    => add_query_arg( 'paged', '%#%', varconv_url( '' !== $search ? array( 's' => $search ) : array() ) ),
-					'format'  => '',
-					'current' => $paged,
-					'total'   => $pages,
-				) ) );
-				?>
-			</p>
-		<?php endif; ?>
 	<?php
 }
 
@@ -437,7 +439,7 @@ function varconv_render_split_card( WC_Product_Variable $product ): void {
 }
 
 /** An Undo button for a conversion, posting to the given admin-post action; assets/admin.js asks first. */
-function varconv_undo_form( string $action, int $id ): void {
+function varconv_undo_form( string $action, int $id, string $label = '' ): void {
 	$confirm = 'varconv_undo' === $action
 		? __( 'Delete this variable product and show its simple products again?', 'variation-converter' )
 		: __( 'Delete the simple products made from this product and show it again?', 'variation-converter' );
@@ -447,7 +449,7 @@ function varconv_undo_form( string $action, int $id ): void {
 		<input type="hidden" name="tab" value="history">
 		<input type="hidden" name="product" value="<?php echo (int) $id; ?>">
 		<?php wp_nonce_field( $action . '_' . $id ); ?>
-		<button class="button button-link-delete"><?php esc_html_e( 'Undo', 'variation-converter' ); ?></button>
+		<button class="button button-link-delete"><?php echo esc_html( '' !== $label ? $label : __( 'Undo', 'variation-converter' ) ); ?></button>
 	</form>
 	<?php
 }
@@ -538,14 +540,22 @@ function varconv_notice(): void {
 	switch ( $done ) {
 		case 'created':
 			$id = isset( $_GET['varconv_product'] ) ? absint( wp_unslash( $_GET['varconv_product'] ) ) : 0;
+			echo '<div class="notice notice-success varconv-created">' . varconv_created_html( $id ) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped where it is built.
+			break;
+		case 'bulk':
+			$made   = isset( $_GET['varconv_made'] ) ? absint( wp_unslash( $_GET['varconv_made'] ) ) : 0;
+			$skip   = isset( $_GET['varconv_skip'] ) ? absint( wp_unslash( $_GET['varconv_skip'] ) ) : 0;
+			$failed = isset( $_GET['varconv_failed_count'] ) ? absint( wp_unslash( $_GET['varconv_failed_count'] ) ) : 0;
 			printf(
-				'<div class="notice notice-success"><p>%s</p></div>',
+				'<div class="notice notice-%s"><p>%s</p></div>',
+				$failed ? 'warning' : 'success',
 				wp_kses_post( sprintf(
-					/* translators: 1: edit link, 2: product name, 3: view link. */
-					__( 'Created <a href="%1$s">%2$s</a> (<a href="%3$s">view</a>). Its simple products are now hidden.', 'variation-converter' ),
-					esc_url( (string) get_edit_post_link( $id ) ),
-					esc_html( get_post_field( 'post_title', $id, 'raw' ) ),
-					esc_url( (string) get_permalink( $id ) )
+					/* translators: 1: products made, 2: groups skipped, 3: groups that failed, 4: link to the History tab. */
+					__( 'Created %1$d variable products; %2$d groups were skipped because they need a label checked, and %3$d failed. Undo is in <a href="%4$s">History</a>.', 'variation-converter' ),
+					$made,
+					$skip,
+					$failed,
+					esc_url( varconv_url( array( 'tab' => 'history' ) ) )
 				) )
 			);
 			break;
@@ -588,55 +598,7 @@ function varconv_notice(): void {
 			);
 			break;
 		case 'dismissed':
-			printf( '<div class="notice notice-info"><p>%s</p></div>', esc_html__( 'Marked as not a collection; scans will skip it.', 'variation-converter' ) );
+			printf( '<div class="notice notice-info"><p>%s</p></div>', esc_html__( 'Skipped. Later scans leave this group out.', 'variation-converter' ) );
 			break;
 	}
-}
-
-function varconv_render_candidate( array $c, string $search, int $paged ): void {
-	$error = isset( $_GET['varconv_key'] ) && sanitize_key( wp_unslash( $_GET['varconv_key'] ) ) === $c['key'];
-	?>
-	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="varconv-candidate<?php echo $error ? ' is-error' : ''; ?>" id="varconv-<?php echo esc_attr( $c['key'] ); ?>">
-		<input type="hidden" name="action" value="varconv_create">
-		<input type="hidden" name="key" value="<?php echo esc_attr( $c['key'] ); ?>">
-		<input type="hidden" name="s" value="<?php echo esc_attr( $search ); ?>">
-		<input type="hidden" name="paged" value="<?php echo (int) $paged; ?>">
-		<?php wp_nonce_field( 'varconv_create_' . $c['key'] ); ?>
-		<div class="varconv-fields">
-			<label class="name"><?php esc_html_e( 'Product name', 'variation-converter' ); ?> <input type="text" name="name" value="<?php echo esc_attr( $c['name'] ); ?>" required></label>
-			<label><?php esc_html_e( 'Attribute', 'variation-converter' ); ?> <input type="text" name="attribute" value="<?php echo esc_attr( $c['attribute'] ); ?>" list="varconv-attributes" required></label>
-			<label><?php esc_html_e( 'Parent SKU', 'variation-converter' ); ?> <input type="text" name="sku" value="<?php echo esc_attr( $c['sku'] ); ?>"></label>
-		</div>
-		<table class="widefat striped">
-			<thead><tr>
-				<th class="check"></th>
-				<th class="label"><?php esc_html_e( 'Variant label', 'variation-converter' ); ?></th>
-				<th><?php esc_html_e( 'SKU', 'variation-converter' ); ?></th>
-				<th><?php esc_html_e( 'Current title', 'variation-converter' ); ?></th>
-				<th><?php esc_html_e( 'Price', 'variation-converter' ); ?></th>
-				<th><?php esc_html_e( 'Stock', 'variation-converter' ); ?></th>
-			</tr></thead>
-			<tbody>
-			<?php foreach ( $c['members'] as $m ) : ?>
-				<tr>
-					<?php /* translators: %s: product SKU. */ ?>
-					<td><input type="checkbox" name="members[<?php echo (int) $m['id']; ?>][use]" value="1" checked aria-label="<?php echo esc_attr( sprintf( __( 'Include %s', 'variation-converter' ), $m['sku'] ) ); ?>"></td>
-					<td><input type="text" name="members[<?php echo (int) $m['id']; ?>][label]" value="<?php echo esc_attr( $m['label'] ); ?>"></td>
-					<td><a href="<?php echo esc_url( (string) get_edit_post_link( (int) $m['id'] ) ); ?>"><?php echo esc_html( $m['sku'] ); ?></a></td>
-					<td class="title"><?php echo esc_html( varconv_plain( (string) ( $m['title'] ?? $m['name'] ) ) ); ?></td>
-					<td><?php echo esc_html( (string) ( $m['price'] ?? '' ) ); ?></td>
-					<td><?php echo esc_html( (string) ( $m['stock'] ?? '' ) ); ?></td>
-				</tr>
-			<?php endforeach; ?>
-			</tbody>
-		</table>
-		<?php if ( $c['notes'] ) : ?>
-			<p class="varconv-notes"><?php echo esc_html( implode( ' ', $c['notes'] ) ); ?></p>
-		<?php endif; ?>
-		<div class="varconv-actions">
-			<button class="button button-primary"><?php esc_html_e( 'Create variable product', 'variation-converter' ); ?></button>
-			<button class="button" name="dismiss" value="1" formnovalidate><?php esc_html_e( 'Not a collection', 'variation-converter' ); ?></button>
-		</div>
-	</form>
-	<?php
 }
