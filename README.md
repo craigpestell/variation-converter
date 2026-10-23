@@ -23,6 +23,7 @@ This is the development repo. The user-facing docs are in [`readme.txt`](readme.
 | `includes/scan.php` | Pure matching functions, no WordPress calls besides translation: SKU families, shared name prefixes, attribute guess, notes, validation |
 | `includes/create.php` | Catalog query, scan cache, creating the variable product, Undo |
 | `includes/split.php` | Variable product list, splitting into simple products, Undo of a split |
+| `includes/redirect.php` | 301 from a combined simple product's page to its variable product, with its option chosen; Undo ends it |
 | `includes/admin.php` | The **Products > Variation Converter** screen, its tabs and form handlers |
 | `includes/admin-combine.php` | The Combine tab as a list table: views (Ready, Needs review, Skipped), search, filters, sortable columns, bulk and row actions, the review card that opens under its row, Screen Options (groups per page) |
 | `includes/admin-split.php` | The Split tab (variable products as a list table, card opening inline) and the History tab (one dated table with views, search and Undo) |
@@ -35,6 +36,7 @@ This is the development repo. The user-facing docs are in [`readme.txt`](readme.
 | `tests/test-scan.php` | Offline tests for `scan.php` |
 | `tests/browser-combine.mjs` | Browser walkthrough of the Combine tab on the harness demo catalog; saves screenshots (`harness/wp-harness browse tests/browser-combine.mjs --out shots`) |
 | `tests/test-split.php` | Offline tests for the pure helpers in `split.php` |
+| `tests/integration-redirect.php` | Old product URLs after a combine, the filter, and Undo (`wp eval-file`, test site only) |
 | `tests/integration-split.php` | Split, Undo and the merge interplay against a real site: `wp eval-file tests/integration-split.php` (makes and deletes its own products; use a test site) |
 
 **Grouping.** Only published, visible simple products with a SKU are scanned. Products are grouped by SKU family (the SKU minus its last `-` segment and any short packaging suffix, so `SE1421-01 CL` gives `SE1421`), then split within a family by the longest run of leading name words two members share. A brand at the start of a name doesn't count as shared, so "Acme Plug" and "Acme Wand" stay apart: brands are the WooCommerce Brands terms plus any 1 to 3 word name start found in 5 or more SKU families. The rest of each name becomes the variant label, or the SKU when nothing is left. Products sharing one SKU are copies, not variants: the lowest ID is scanned and the rest are noted. The attribute (Color, Size, Flavor, Scent, Volume, else Option) is guessed from built-in word lists when most labels match. Results are cached in a transient for 30 minutes.
@@ -67,6 +69,7 @@ wp variation-converter undo <id>... | --all [--yes]      # combined or split pro
 | `varconv_scan_products` | `array $products` (id, sku, name, title, price, stock, cats, brands) | Leave products out of the scan, such as testers or display units |
 | `varconv_brand_names` | `string[] $names` (default: WooCommerce Brands terms) | Add or replace the brand names a product name can start with |
 | `varconv_collections` | `array $collections`, `array $products` | Change the proposed groups after the scan: add members, drop groups. Skipped groups are kept apart for the Skipped view and are not passed in. Each group has key, family, name, brand, attribute, sku, members (with label) and notes (kind => text) |
+| `varconv_redirect_url` | `string $url`, `int $id`, `int $parent_id` | Change where a combined simple product's page redirects (the variable product with its option chosen); return `''` to show the old page instead |
 
 The scan result is cached for 30 minutes, so clear the `varconv_scan` transient (or click **Scan again**) after changing a filter.
 
