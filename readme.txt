@@ -56,7 +56,7 @@ A variable product the plugin made by merging offers Undo instead of a split, so
 == Installation ==
 
 1. Make sure WooCommerce is installed and active.
-2. In your WordPress admin, go to **Plugins > Add New**, search for "Variation Converter", then install and activate it. Or upload the plugin folder to `/wp-content/plugins/` and activate it on the **Plugins** screen.
+2. In your WordPress admin, go to **Plugins > Add New**, search for "Variation Converter", then install and activate it. Or upload the `variation-converter-for-woocommerce` folder to `/wp-content/plugins/` and activate it on the **Plugins** screen.
 3. Go to **Products > Variation Converter** to see the proposed groups, or open the **Split** tab to split a variable product.
 
 You need a user role that can manage WooCommerce products (Shop Manager or Administrator).
