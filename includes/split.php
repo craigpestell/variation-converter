@@ -32,12 +32,12 @@ function varconv_split_name( string $parent, array $values ): string {
 function varconv_split_validate( array $names ): array {
 	$errors = array();
 	if ( ! $names ) {
-		$errors[] = __( 'Choose at least 1 variation.', 'variation-converter' );
+		$errors[] = __( 'Choose at least 1 variation.', 'variation-converter-for-woocommerce' );
 	}
 	foreach ( $names as $id => $name ) {
 		if ( '' === trim( (string) $name ) ) {
 			/* translators: %d: variation ID. */
-			$errors[] = sprintf( __( 'Variation %d needs a product name.', 'variation-converter' ), $id );
+			$errors[] = sprintf( __( 'Variation %d needs a product name.', 'variation-converter-for-woocommerce' ), $id );
 		}
 	}
 	return $errors;
@@ -166,7 +166,7 @@ function varconv_split_rows( WC_Product_Variable $parent ): array {
 			'price'   => $variation->get_regular_price( 'edit' ),
 			'stock'   => $variation->get_stock_status( 'edit' ),
 			'image'   => (int) ( $variation->get_image_id( 'edit' ) ?: $parent->get_image_id( 'edit' ) ),
-			'problem' => in_array( '', $values, true ) ? __( 'Set to "Any" for an attribute, so it is not one product; give it a value first.', 'variation-converter' ) : '',
+			'problem' => in_array( '', $values, true ) ? __( 'Set to "Any" for an attribute, so it is not one product; give it a value first.', 'variation-converter-for-woocommerce' ) : '',
 		);
 	}
 	return $rows;
@@ -186,15 +186,15 @@ function varconv_split_product( int $parent_id, array $names ): array {
 	$parent = wc_get_product( $parent_id );
 	if ( ! $parent instanceof WC_Product_Variable || 'publish' !== $parent->get_status() ) {
 		/* translators: %d: product ID. */
-		throw new RuntimeException( esc_html( sprintf( __( 'Product %d is not a published variable product.', 'variation-converter' ), $parent_id ) ) );
+		throw new RuntimeException( esc_html( sprintf( __( 'Product %d is not a published variable product.', 'variation-converter-for-woocommerce' ), $parent_id ) ) );
 	}
 	if ( '' !== (string) $parent->get_meta( VARCONV_META ) ) {
 		/* translators: %d: product ID. */
-		throw new RuntimeException( esc_html( sprintf( __( 'Product %d was combined by Variation Converter; Undo it instead.', 'variation-converter' ), $parent_id ) ) );
+		throw new RuntimeException( esc_html( sprintf( __( 'Product %d was combined by Variation Converter; Undo it instead.', 'variation-converter-for-woocommerce' ), $parent_id ) ) );
 	}
 	if ( '' !== (string) $parent->get_meta( VARCONV_SPLIT_META ) ) {
 		/* translators: %d: product ID. */
-		throw new RuntimeException( esc_html( sprintf( __( 'Product %d is already split.', 'variation-converter' ), $parent_id ) ) );
+		throw new RuntimeException( esc_html( sprintf( __( 'Product %d is already split.', 'variation-converter-for-woocommerce' ), $parent_id ) ) );
 	}
 	$names = array_map( static fn( $n ) => trim( (string) $n ), $names );
 	$errors = varconv_split_validate( $names );
@@ -204,10 +204,10 @@ function varconv_split_product( int $parent_id, array $names ): array {
 		$variation = wc_get_product( (int) $id );
 		if ( ! $variation instanceof WC_Product_Variation || ! in_array( (int) $id, $children, true ) ) {
 			/* translators: 1: product ID, 2: variable product ID. */
-			$errors[] = sprintf( __( 'Product %1$d is not a variation of product %2$d.', 'variation-converter' ), $id, $parent_id );
+			$errors[] = sprintf( __( 'Product %1$d is not a variation of product %2$d.', 'variation-converter-for-woocommerce' ), $id, $parent_id );
 		} elseif ( in_array( '', varconv_variation_values( $parent, $variation ), true ) ) {
 			/* translators: %d: variation ID. */
-			$errors[] = sprintf( __( 'Variation %d is set to "Any" for an attribute; give it a value first.', 'variation-converter' ), $id );
+			$errors[] = sprintf( __( 'Variation %d is set to "Any" for an attribute; give it a value first.', 'variation-converter-for-woocommerce' ), $id );
 		} else {
 			$sources[] = array( $variation, $name );
 		}
@@ -275,7 +275,7 @@ function varconv_split_product( int $parent_id, array $names ): array {
 			$id = $simple->save();
 			if ( ! $id ) {
 				/* translators: %d: variation ID. */
-				throw new RuntimeException( esc_html( sprintf( __( 'WooCommerce did not save the simple product for variation %d.', 'variation-converter' ), $variation->get_id() ) ) );
+				throw new RuntimeException( esc_html( sprintf( __( 'WooCommerce did not save the simple product for variation %d.', 'variation-converter-for-woocommerce' ), $variation->get_id() ) ) );
 			}
 			$created[] = $id;
 			foreach ( $terms as $taxonomy => $ids ) {
@@ -288,7 +288,7 @@ function varconv_split_product( int $parent_id, array $names ): array {
 			wp_delete_post( $id, true );
 		}
 		/* translators: %s: the reason. */
-		throw new RuntimeException( esc_html( sprintf( __( 'Not split: %s', 'variation-converter' ), $e->getMessage() ) ), 0, $e ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- $e is the previous exception, not output.
+		throw new RuntimeException( esc_html( sprintf( __( 'Not split: %s', 'variation-converter-for-woocommerce' ), $e->getMessage() ) ), 0, $e ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- $e is the previous exception, not output.
 	}
 	remove_filter( 'wc_product_has_unique_sku', '__return_false', 99 );
 
@@ -311,7 +311,7 @@ function varconv_split_product( int $parent_id, array $names ): array {
 function varconv_split_undo( int $parent_id ): int {
 	if ( 'product' !== get_post_type( $parent_id ) || '' === (string) get_post_meta( $parent_id, VARCONV_SPLIT_META, true ) ) {
 		/* translators: %d: product ID. */
-		throw new RuntimeException( esc_html( sprintf( __( 'Product %d was not split by Variation Converter.', 'variation-converter' ), $parent_id ) ) );
+		throw new RuntimeException( esc_html( sprintf( __( 'Product %d was not split by Variation Converter.', 'variation-converter-for-woocommerce' ), $parent_id ) ) );
 	}
 	global $wpdb;
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching

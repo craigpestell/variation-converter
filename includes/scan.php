@@ -3,7 +3,7 @@
  * Variation Converter: groups of simple products that are one product in several variants, the variant written into
  * the name ("Tri-Rings Black", "Tri-Rings Blue"). Members share a SKU family (SE1421-01 CL, SE1421-03 CL) and the
  * start of their name; what follows is the variant label. Pure functions, no WordPress calls besides translation; see
- * variation-converter.php and tests/test-scan.php.
+ * variation-converter-for-woocommerce.php and tests/test-scan.php.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -593,27 +593,27 @@ function varconv_notes( array $members, array $duplicates = array(), array $name
 		foreach ( array_diff( $duplicates[ varconv_sku_key( (string) $m['sku'] ) ] ?? array(), array( (int) $m['id'] ) ) as $other ) {
 			$dupes[] = isset( $names[ $other ] )
 				/* translators: 1: product name, 2: product ID, 3: SKU. */
-				? sprintf( __( '"%1$s" (#%2$d) has the same SKU, %3$s, as a product here', 'variation-converter' ), $names[ $other ], $other, trim( (string) $m['sku'] ) )
+				? sprintf( __( '"%1$s" (#%2$d) has the same SKU, %3$s, as a product here', 'variation-converter-for-woocommerce' ), $names[ $other ], $other, trim( (string) $m['sku'] ) )
 				/* translators: 1: product ID, 2: SKU. */
-				: sprintf( __( 'product #%1$d has the same SKU, %2$s, as a product here', 'variation-converter' ), $other, trim( (string) $m['sku'] ) );
+				: sprintf( __( 'product #%1$d has the same SKU, %2$s, as a product here', 'variation-converter-for-woocommerce' ), $other, trim( (string) $m['sku'] ) );
 		}
 	}
 	if ( $dupes ) {
 		/* translators: %s: the products left out and why, semicolon separated. */
-		$notes['dupes'] = sprintf( _n( 'Left out as a duplicate: %s.', 'Left out as duplicates: %s.', count( $dupes ), 'variation-converter' ), implode( '; ', $dupes ) );
+		$notes['dupes'] = sprintf( _n( 'Left out as a duplicate: %s.', 'Left out as duplicates: %s.', count( $dupes ), 'variation-converter-for-woocommerce' ), implode( '; ', $dupes ) );
 	}
 	$labels = array_map( static fn( $m ) => strtolower( $m['label'] ), $members );
 	if ( in_array( '', $labels, true ) ) {
-		$notes['label'] = __( 'A member has no variant words in its name; give it a label.', 'variation-converter' );
+		$notes['label'] = __( 'A member has no variant words in its name; give it a label.', 'variation-converter-for-woocommerce' );
 	} elseif ( array_filter( $members, static fn( $m ) => 0 === strcasecmp( (string) $m['label'], trim( (string) $m['sku'] ) ) ) ) {
-		$notes['label'] = __( 'A member has no variant words in its name, so its label is its SKU; change it if you like.', 'variation-converter' );
+		$notes['label'] = __( 'A member has no variant words in its name, so its label is its SKU; change it if you like.', 'variation-converter-for-woocommerce' );
 	}
 	if ( count( array_unique( $labels ) ) < count( $labels ) ) {
-		$notes['repeat'] = __( 'Two members have the same label.', 'variation-converter' );
+		$notes['repeat'] = __( 'Two members have the same label.', 'variation-converter-for-woocommerce' );
 	}
 	foreach ( $labels as $label ) {
 		if ( count( varconv_words( $label ) ) > 3 ) {
-			$notes['long'] = __( 'Long labels; check these are variants of one product.', 'variation-converter' );
+			$notes['long'] = __( 'Long labels; check these are variants of one product.', 'variation-converter-for-woocommerce' );
 			break;
 		}
 	}
@@ -622,9 +622,9 @@ function varconv_notes( array $members, array $duplicates = array(), array $name
 		$spread = varconv_spread( $members );
 		$notes['price'] = $spread
 			/* translators: 1: the members' prices, comma separated, 2: how far apart they are, in percent. */
-			? sprintf( __( 'Prices differ (%1$s; %2$d%% apart).', 'variation-converter' ), implode( ', ', $prices ), $spread )
+			? sprintf( __( 'Prices differ (%1$s; %2$d%% apart).', 'variation-converter-for-woocommerce' ), implode( ', ', $prices ), $spread )
 			/* translators: %s: the members' prices, comma separated. */
-			: sprintf( __( 'Prices differ (%s).', 'variation-converter' ), implode( ', ', $prices ) );
+			: sprintf( __( 'Prices differ (%s).', 'variation-converter-for-woocommerce' ), implode( ', ', $prices ) );
 	}
 	$cats = array_unique( array_map( static function ( $m ) {
 		$c = array_map( 'intval', $m['cats'] ?? array() );
@@ -632,7 +632,7 @@ function varconv_notes( array $members, array $duplicates = array(), array $name
 		return implode( ',', $c );
 	}, $members ) );
 	if ( count( $cats ) > 1 ) {
-		$notes['cats'] = __( 'Categories differ. Choose the new product\'s categories in its card; Create from the list gives it the first product\'s.', 'variation-converter' );
+		$notes['cats'] = __( 'Categories differ. Choose the new product\'s categories in its card; Create from the list gives it the first product\'s.', 'variation-converter-for-woocommerce' );
 	}
 	return $notes;
 }
@@ -645,26 +645,26 @@ function varconv_notes( array $members, array $duplicates = array(), array $name
 function varconv_validate( string $name, string $attribute, array $members ): array {
 	$errors = array();
 	if ( '' === trim( $name ) ) {
-		$errors[] = __( 'The product needs a name.', 'variation-converter' );
+		$errors[] = __( 'The product needs a name.', 'variation-converter-for-woocommerce' );
 	}
 	if ( '' === trim( $attribute ) ) {
-		$errors[] = __( 'The attribute needs a name (Color, Size, ...).', 'variation-converter' );
+		$errors[] = __( 'The attribute needs a name (Color, Size, ...).', 'variation-converter-for-woocommerce' );
 	}
 	if ( count( $members ) < 2 ) {
-		$errors[] = __( 'Choose at least 2 products.', 'variation-converter' );
+		$errors[] = __( 'Choose at least 2 products.', 'variation-converter-for-woocommerce' );
 	}
 	$seen = array();
 	foreach ( $members as $id => $label ) {
 		$label = trim( (string) $label );
 		if ( '' === $label ) {
 			/* translators: %d: product ID. */
-			$errors[] = sprintf( __( 'Product %d needs a variant label.', 'variation-converter' ), $id );
+			$errors[] = sprintf( __( 'Product %d needs a variant label.', 'variation-converter-for-woocommerce' ), $id );
 		} elseif ( str_contains( $label, '|' ) ) {
 			/* translators: %d: product ID. */
-			$errors[] = sprintf( __( 'Labels cannot contain "|" (product %d).', 'variation-converter' ), $id );
+			$errors[] = sprintf( __( 'Labels cannot contain "|" (product %d).', 'variation-converter-for-woocommerce' ), $id );
 		} elseif ( isset( $seen[ strtolower( $label ) ] ) ) {
 			/* translators: %s: variant label. */
-			$errors[] = sprintf( __( 'Label "%s" is used twice.', 'variation-converter' ), $label );
+			$errors[] = sprintf( __( 'Label "%s" is used twice.', 'variation-converter-for-woocommerce' ), $label );
 		}
 		$seen[ strtolower( $label ) ] = true;
 	}

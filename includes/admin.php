@@ -23,8 +23,8 @@ add_action( 'admin_menu', 'varconv_menu', 60 );
 function varconv_menu(): void {
 	$hook = add_submenu_page(
 		'edit.php?post_type=product',
-		__( 'Variation Converter', 'variation-converter' ),
-		__( 'Variation Converter', 'variation-converter' ),
+		__( 'Variation Converter', 'variation-converter-for-woocommerce' ),
+		__( 'Variation Converter', 'variation-converter-for-woocommerce' ),
 		VARCONV_CAP,
 		VARCONV_PAGE,
 		'varconv_render'
@@ -46,20 +46,20 @@ function varconv_assets(): void {
 		'price'   => varconv_price_settings(),
 		'strings' => array(
 			/* translators: 1: products checked, 2: products in the group. */
-			'count'     => __( '%1$d of %2$d', 'variation-converter' ),
-			'created'   => __( 'Created', 'variation-converter' ),
-			'skippedBadge' => __( 'Skipped', 'variation-converter' ),
-			'working'   => __( 'Working...', 'variation-converter' ),
-			'failed'    => __( 'Something went wrong. Reload the page and try again.', 'variation-converter' ),
+			'count'     => __( '%1$d of %2$d', 'variation-converter-for-woocommerce' ),
+			'created'   => __( 'Created', 'variation-converter-for-woocommerce' ),
+			'skippedBadge' => __( 'Skipped', 'variation-converter-for-woocommerce' ),
+			'working'   => __( 'Working...', 'variation-converter-for-woocommerce' ),
+			'failed'    => __( 'Something went wrong. Reload the page and try again.', 'variation-converter-for-woocommerce' ),
 			/* translators: %d: number of products left in the group. */
-			'skipped'   => __( 'Skipped. Later scans leave this group out.', 'variation-converter' ),
-			'undone'    => __( 'Undone. The simple products are visible again; scan again to see them as a group.', 'variation-converter' ),
+			'skipped'   => __( 'Skipped. Later scans leave this group out.', 'variation-converter-for-woocommerce' ),
+			'undone'    => __( 'Undone. The simple products are visible again; scan again to see them as a group.', 'variation-converter-for-woocommerce' ),
 			/* translators: 1: groups done, 2: groups selected. */
-			'progress'  => __( 'Creating groups: %1$d of %2$d done...', 'variation-converter' ),
+			'progress'  => __( 'Creating groups: %1$d of %2$d done...', 'variation-converter-for-woocommerce' ),
 			/* translators: 1: products made, 2: groups skipped, 3: groups that failed. */
-			'bulkDone'  => __( 'Done: %1$d variable products created, %2$d groups skipped, %3$d failed. Reloading...', 'variation-converter' ),
-			'noAction'  => __( 'Choose a bulk action first.', 'variation-converter' ),
-			'noGroups'  => __( 'Select at least one group first.', 'variation-converter' ),
+			'bulkDone'  => __( 'Done: %1$d variable products created, %2$d groups skipped, %3$d failed. Reloading...', 'variation-converter-for-woocommerce' ),
+			'noAction'  => __( 'Choose a bulk action first.', 'variation-converter-for-woocommerce' ),
+			'noGroups'  => __( 'Select at least one group first.', 'variation-converter-for-woocommerce' ),
 		),
 	) );
 }
@@ -67,9 +67,9 @@ function varconv_assets(): void {
 /** @return array<string,string> Tab key => label. */
 function varconv_tabs(): array {
 	return array(
-		'combine' => __( 'Combine', 'variation-converter' ),
-		'split'   => __( 'Split', 'variation-converter' ),
-		'history' => __( 'History', 'variation-converter' ),
+		'combine' => __( 'Combine', 'variation-converter-for-woocommerce' ),
+		'split'   => __( 'Split', 'variation-converter-for-woocommerce' ),
+		'history' => __( 'History', 'variation-converter-for-woocommerce' ),
 	);
 }
 
@@ -125,7 +125,7 @@ function varconv_restore( array $keys ): void {
 /** Checks the capability and the nonce of a row action's link for one group, and returns the group's key. */
 function varconv_group_action_key( string $action ): string {
 	if ( ! current_user_can( VARCONV_CAP ) ) {
-		wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'variation-converter' ), 403 );
+		wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'variation-converter-for-woocommerce' ), 403 );
 	}
 	$key = isset( $_GET['key'] ) ? sanitize_key( wp_unslash( $_GET['key'] ) ) : '';
 	check_admin_referer( $action . '_' . $key );
@@ -144,7 +144,7 @@ function varconv_handle_create_one(): void {
 	$result = $counts['results'][ $key ] ?? null;
 	if ( ! $result || 'made' !== $result['status'] ) {
 		// Needs a label checked, or the products changed since the scan: review it in its card.
-		varconv_fail( $result ? $result['message'] : __( 'This group is no longer in the scan. Scan again to see the current groups.', 'variation-converter' ), $result ? array( 'open' => $key ) : array() );
+		varconv_fail( $result ? $result['message'] : __( 'This group is no longer in the scan. Scan again to see the current groups.', 'variation-converter-for-woocommerce' ), $result ? array( 'open' => $key ) : array() );
 	}
 	varconv_back( array( 'varconv_done' => 'created', 'varconv_product' => $result['id'] ) );
 }
@@ -166,7 +166,7 @@ function varconv_handle_restore(): void {
 add_action( 'admin_post_varconv_create', 'varconv_handle_create' );
 function varconv_handle_create(): void {
 	if ( ! current_user_can( VARCONV_CAP ) ) {
-		wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'variation-converter' ), 403 );
+		wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'variation-converter-for-woocommerce' ), 403 );
 	}
 	$key = isset( $_POST['key'] ) ? sanitize_key( wp_unslash( $_POST['key'] ) ) : '';
 	check_admin_referer( 'varconv_create_' . $key );
@@ -192,7 +192,7 @@ function varconv_handle_create(): void {
 add_action( 'admin_post_varconv_bulk', 'varconv_handle_bulk' );
 function varconv_handle_bulk(): void {
 	if ( ! current_user_can( VARCONV_CAP ) ) {
-		wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'variation-converter' ), 403 );
+		wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'variation-converter-for-woocommerce' ), 403 );
 	}
 	check_admin_referer( 'varconv_bulk' );
 	$which = isset( $_POST['which'] ) && 'bottom' === $_POST['which'] ? 'bulk_action2' : 'bulk_action';
@@ -233,7 +233,7 @@ function varconv_handle_bulk(): void {
  */
 function varconv_bulk_create( array $keys ): array {
 	if ( ! varconv_lock() ) {
-		throw new RuntimeException( esc_html__( 'Another bulk run is in progress. Try again in a few minutes.', 'variation-converter' ) );
+		throw new RuntimeException( esc_html__( 'Another bulk run is in progress. Try again in a few minutes.', 'variation-converter-for-woocommerce' ) );
 	}
 	$counts = array( 'made' => 0, 'skip' => 0, 'failed' => 0, 'results' => array() );
 	try {
@@ -258,7 +258,7 @@ function varconv_bulk_create( array $keys ): array {
 add_action( 'admin_post_varconv_undo', 'varconv_handle_undo' );
 function varconv_handle_undo(): void {
 	if ( ! current_user_can( VARCONV_CAP ) ) {
-		wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'variation-converter' ), 403 );
+		wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'variation-converter-for-woocommerce' ), 403 );
 	}
 	$id = isset( $_POST['product'] ) ? absint( wp_unslash( $_POST['product'] ) ) : 0;
 	check_admin_referer( 'varconv_undo_' . $id );
@@ -275,7 +275,7 @@ function varconv_handle_undo(): void {
 add_action( 'admin_post_varconv_rescan', 'varconv_handle_rescan' );
 function varconv_handle_rescan(): void {
 	if ( ! current_user_can( VARCONV_CAP ) ) {
-		wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'variation-converter' ), 403 );
+		wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'variation-converter-for-woocommerce' ), 403 );
 	}
 	check_admin_referer( 'varconv_rescan' );
 	if ( ! empty( $_POST['undismiss'] ) ) {
@@ -288,7 +288,7 @@ function varconv_handle_rescan(): void {
 add_action( 'admin_post_varconv_split', 'varconv_handle_split' );
 function varconv_handle_split(): void {
 	if ( ! current_user_can( VARCONV_CAP ) ) {
-		wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'variation-converter' ), 403 );
+		wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'variation-converter-for-woocommerce' ), 403 );
 	}
 	$id = isset( $_POST['product'] ) ? absint( wp_unslash( $_POST['product'] ) ) : 0;
 	check_admin_referer( 'varconv_split_' . $id );
@@ -312,7 +312,7 @@ function varconv_handle_split(): void {
 add_action( 'admin_post_varconv_split_undo', 'varconv_handle_split_undo' );
 function varconv_handle_split_undo(): void {
 	if ( ! current_user_can( VARCONV_CAP ) ) {
-		wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'variation-converter' ), 403 );
+		wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'variation-converter-for-woocommerce' ), 403 );
 	}
 	$id = isset( $_POST['product'] ) ? absint( wp_unslash( $_POST['product'] ) ) : 0;
 	check_admin_referer( 'varconv_split_undo_' . $id );
@@ -334,7 +334,7 @@ function varconv_row_action( array $actions, WP_Post $post ): array {
 	}
 	$product = wc_get_product( $post->ID );
 	if ( $product && $product->is_type( 'variable' ) && '' === (string) $product->get_meta( VARCONV_SPLIT_META ) ) {
-		$actions['varconv_split'] = sprintf( '<a href="%s">%s</a>', esc_url( varconv_url( array( 'tab' => 'split', 'product' => $post->ID ) ) ), esc_html__( 'Split into simple products', 'variation-converter' ) );
+		$actions['varconv_split'] = sprintf( '<a href="%s">%s</a>', esc_url( varconv_url( array( 'tab' => 'split', 'product' => $post->ID ) ) ), esc_html__( 'Split into simple products', 'variation-converter-for-woocommerce' ) );
 	}
 	return $actions;
 }
@@ -350,7 +350,7 @@ function varconv_tab(): string {
 
 function varconv_render(): void {
 	if ( ! current_user_can( VARCONV_CAP ) ) {
-		wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'variation-converter' ), 403 );
+		wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'variation-converter-for-woocommerce' ), 403 );
 	}
 	$tab = varconv_tab();
 	// Counts only from a scan already made: opening Split or History should not start one.
@@ -366,17 +366,17 @@ function varconv_render(): void {
 	}
 	?>
 	<div class="wrap varconv">
-		<h1 class="wp-heading-inline"><?php esc_html_e( 'Variation Converter', 'variation-converter' ); ?></h1>
+		<h1 class="wp-heading-inline"><?php esc_html_e( 'Variation Converter', 'variation-converter-for-woocommerce' ); ?></h1>
 		<?php if ( 'combine' === $tab ) : ?>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="varconv-rescan">
 			<input type="hidden" name="action" value="varconv_rescan">
 			<?php wp_nonce_field( 'varconv_rescan' ); ?>
-			<button class="page-title-action"><?php esc_html_e( 'Scan again', 'variation-converter' ); ?></button>
+			<button class="page-title-action"><?php esc_html_e( 'Scan again', 'variation-converter-for-woocommerce' ); ?></button>
 			<?php if ( is_array( $scan ) ) : ?>
 				<span class="varconv-scanned">
 					<?php
 					/* translators: %s: time since the scan, e.g. "5 mins". */
-					echo esc_html( sprintf( __( 'Scanned %s ago', 'variation-converter' ), human_time_diff( (int) $scan['time'] ) ) );
+					echo esc_html( sprintf( __( 'Scanned %s ago', 'variation-converter-for-woocommerce' ), human_time_diff( (int) $scan['time'] ) ) );
 					?>
 				</span>
 			<?php endif; ?>
@@ -407,15 +407,15 @@ function varconv_render(): void {
 /** An Undo button for a conversion, posting to the given admin-post action; assets/admin.js asks first. */
 function varconv_undo_form( string $action, int $id, string $label = '' ): void {
 	$confirm = 'varconv_undo' === $action
-		? __( 'Delete this variable product and show its simple products again?', 'variation-converter' )
-		: __( 'Delete the simple products made from this product and show it again?', 'variation-converter' );
+		? __( 'Delete this variable product and show its simple products again?', 'variation-converter-for-woocommerce' )
+		: __( 'Delete the simple products made from this product and show it again?', 'variation-converter-for-woocommerce' );
 	?>
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="varconv-undo" data-confirm="<?php echo esc_attr( $confirm ); ?>">
 		<input type="hidden" name="action" value="<?php echo esc_attr( $action ); ?>">
 		<input type="hidden" name="tab" value="history">
 		<input type="hidden" name="product" value="<?php echo (int) $id; ?>">
 		<?php wp_nonce_field( $action . '_' . $id ); ?>
-		<button class="button"><?php echo esc_html( '' !== $label ? $label : __( 'Undo', 'variation-converter' ) ); ?></button>
+		<button class="button"><?php echo esc_html( '' !== $label ? $label : __( 'Undo', 'variation-converter-for-woocommerce' ) ); ?></button>
 	</form>
 	<?php
 }
@@ -451,7 +451,7 @@ function varconv_notice(): void {
 				$failed ? 'warning' : 'success',
 				wp_kses_post( sprintf(
 					/* translators: 1: products made, 2: groups skipped, 3: groups that failed, 4: link to the History tab. */
-					_n( 'Created %1$d variable product; %2$d groups were skipped because they need a label checked, and %3$d failed. Undo is in <a href="%4$s">History</a>.', 'Created %1$d variable products; %2$d groups were skipped because they need a label checked, and %3$d failed. Undo is in <a href="%4$s">History</a>.', $made, 'variation-converter' ),
+					_n( 'Created %1$d variable product; %2$d groups were skipped because they need a label checked, and %3$d failed. Undo is in <a href="%4$s">History</a>.', 'Created %1$d variable products; %2$d groups were skipped because they need a label checked, and %3$d failed. Undo is in <a href="%4$s">History</a>.', $made, 'variation-converter-for-woocommerce' ),
 					$made,
 					$skip,
 					$failed,
@@ -465,7 +465,7 @@ function varconv_notice(): void {
 				'<div class="notice notice-success"><p>%s</p></div>',
 				esc_html( sprintf(
 					/* translators: %d: number of simple products shown again. */
-					_n( 'Deleted the variable product; %d simple product is visible again.', 'Deleted the variable product; %d simple products are visible again.', $restored, 'variation-converter' ),
+					_n( 'Deleted the variable product; %d simple product is visible again.', 'Deleted the variable product; %d simple products are visible again.', $restored, 'variation-converter-for-woocommerce' ),
 					$restored
 				) )
 			);
@@ -477,7 +477,7 @@ function varconv_notice(): void {
 				'<div class="notice notice-success"><p>%s</p></div>',
 				wp_kses_post( sprintf(
 					/* translators: 1: product name, 2: number of simple products, 3: link to the History tab. */
-					_n( 'Split %1$s into %2$d simple product. The variable product is now hidden; Undo is in <a href="%3$s">History</a>.', 'Split %1$s into %2$d simple products. The variable product is now hidden; Undo is in <a href="%3$s">History</a>.', $count, 'variation-converter' ),
+					_n( 'Split %1$s into %2$d simple product. The variable product is now hidden; Undo is in <a href="%3$s">History</a>.', 'Split %1$s into %2$d simple products. The variable product is now hidden; Undo is in <a href="%3$s">History</a>.', $count, 'variation-converter-for-woocommerce' ),
 					esc_html( get_post_field( 'post_title', $id, 'raw' ) ),
 					$count,
 					esc_url( varconv_url( array( 'tab' => 'history' ) ) )
@@ -491,7 +491,7 @@ function varconv_notice(): void {
 				'<div class="notice notice-success"><p>%s</p></div>',
 				esc_html( sprintf(
 					/* translators: 1: number of simple products deleted, 2: product name. */
-					_n( 'Deleted %1$d simple product; %2$s is visible again.', 'Deleted %1$d simple products; %2$s is visible again.', $count, 'variation-converter' ),
+					_n( 'Deleted %1$d simple product; %2$s is visible again.', 'Deleted %1$d simple products; %2$s is visible again.', $count, 'variation-converter-for-woocommerce' ),
 					$count,
 					get_post_field( 'post_title', $id, 'raw' )
 				) )
@@ -503,7 +503,7 @@ function varconv_notice(): void {
 				'<div class="notice notice-info is-dismissible"><p>%s</p></div>',
 				esc_html( sprintf(
 					/* translators: %d: number of groups skipped. */
-					_n( 'Skipped %d group. Later scans leave it out; the Skipped view lists it.', 'Skipped %d groups. Later scans leave them out; the Skipped view lists them.', $count, 'variation-converter' ),
+					_n( 'Skipped %d group. Later scans leave it out; the Skipped view lists it.', 'Skipped %d groups. Later scans leave them out; the Skipped view lists them.', $count, 'variation-converter-for-woocommerce' ),
 					$count
 				) )
 			);
@@ -514,7 +514,7 @@ function varconv_notice(): void {
 				'<div class="notice notice-success is-dismissible"><p>%s</p></div>',
 				esc_html( sprintf(
 					/* translators: %d: number of groups restored. */
-					_n( 'Restored %d group to the list.', 'Restored %d groups to the list.', $count, 'variation-converter' ),
+					_n( 'Restored %d group to the list.', 'Restored %d groups to the list.', $count, 'variation-converter-for-woocommerce' ),
 					$count
 				) )
 			);

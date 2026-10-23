@@ -216,10 +216,10 @@ function varconv_create( string $name, string $attribute_name, string $sku, arra
 		$simple = wc_get_product( (int) $id );
 		if ( ! $simple || ! $simple->is_type( 'simple' ) || 'publish' !== $simple->get_status() ) {
 			/* translators: %d: product ID. */
-			$errors[] = sprintf( __( 'Product %d is not a published simple product.', 'variation-converter' ), $id );
+			$errors[] = sprintf( __( 'Product %d is not a published simple product.', 'variation-converter-for-woocommerce' ), $id );
 		} elseif ( $simple->get_meta( VARCONV_PARENT_META ) ) {
 			/* translators: %d: product ID. */
-			$errors[] = sprintf( __( 'Product %d is already in a variable product.', 'variation-converter' ), $id );
+			$errors[] = sprintf( __( 'Product %d is already in a variable product.', 'variation-converter-for-woocommerce' ), $id );
 		} else {
 			$sources[] = array( $simple, trim( (string) $label ) );
 		}
@@ -227,12 +227,12 @@ function varconv_create( string $name, string $attribute_name, string $sku, arra
 	$categories = array_values( array_unique( array_filter( array_map( 'intval', $categories ) ) ) );
 	$member_cats = array_merge( array(), ...array_map( static fn( $s ) => array_map( 'intval', $s[0]->get_category_ids( 'edit' ) ), $sources ) );
 	if ( array_diff( $categories, $member_cats ) ) {
-		$errors[] = __( 'A chosen category is not one of the selected products\' categories.', 'variation-converter' );
+		$errors[] = __( 'A chosen category is not one of the selected products\' categories.', 'variation-converter-for-woocommerce' );
 	}
 	$taken = '' === $sku ? 0 : (int) wc_get_product_id_by_sku( $sku );
 	if ( $taken ) {
 		/* translators: 1: SKU, 2: product name. */
-		$errors[] = sprintf( __( 'SKU %1$s is already used by "%2$s"; change it or leave it empty.', 'variation-converter' ), $sku, varconv_product_name( $taken ) );
+		$errors[] = sprintf( __( 'SKU %1$s is already used by "%2$s"; change it or leave it empty.', 'variation-converter-for-woocommerce' ), $sku, varconv_product_name( $taken ) );
 	}
 	if ( $errors ) {
 		throw new RuntimeException( esc_html( implode( ' ', array_unique( $errors ) ) ) );
@@ -275,7 +275,7 @@ function varconv_create( string $name, string $attribute_name, string $sku, arra
 		$parent->update_meta_data( VARCONV_TIME_META, time() );
 		$parent_id = $parent->save();
 		if ( ! $parent_id ) {
-			throw new RuntimeException( esc_html__( 'WooCommerce did not save the variable product.', 'variation-converter' ) );
+			throw new RuntimeException( esc_html__( 'WooCommerce did not save the variable product.', 'variation-converter-for-woocommerce' ) );
 		}
 		// Categories and tags were set on the product above.
 		$skip = array( 'product_type', 'product_visibility', 'product_shipping_class', 'product_cat', 'product_tag' );
@@ -309,7 +309,7 @@ function varconv_create( string $name, string $attribute_name, string $sku, arra
 			$variation->set_image_id( $simple->get_image_id( 'edit' ) );
 			if ( ! $variation->save() ) {
 				/* translators: %d: product ID. */
-				throw new RuntimeException( esc_html( sprintf( __( 'WooCommerce did not save the variation for product %d.', 'variation-converter' ), $simple->get_id() ) ) );
+				throw new RuntimeException( esc_html( sprintf( __( 'WooCommerce did not save the variation for product %d.', 'variation-converter-for-woocommerce' ), $simple->get_id() ) ) );
 			}
 		}
 		WC_Product_Variable::sync( $parent_id );
@@ -319,7 +319,7 @@ function varconv_create( string $name, string $attribute_name, string $sku, arra
 			varconv_delete( $parent_id );
 		}
 		/* translators: %s: the reason. */
-		throw new RuntimeException( esc_html( sprintf( __( 'Not created: %s', 'variation-converter' ), $e->getMessage() ) ), 0, $e ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- $e is the previous exception, not output.
+		throw new RuntimeException( esc_html( sprintf( __( 'Not created: %s', 'variation-converter-for-woocommerce' ), $e->getMessage() ) ), 0, $e ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- $e is the previous exception, not output.
 	}
 	remove_filter( 'wc_product_has_unique_sku', '__return_false', 99 );
 
@@ -343,7 +343,7 @@ function varconv_create( string $name, string $attribute_name, string $sku, arra
 function varconv_undo( int $parent_id ): int {
 	if ( 'product' !== get_post_type( $parent_id ) || '' === (string) get_post_meta( $parent_id, VARCONV_META, true ) ) {
 		/* translators: %d: product ID. */
-		throw new RuntimeException( esc_html( sprintf( __( 'Product %d was not made by Variation Converter.', 'variation-converter' ), $parent_id ) ) );
+		throw new RuntimeException( esc_html( sprintf( __( 'Product %d was not made by Variation Converter.', 'variation-converter-for-woocommerce' ), $parent_id ) ) );
 	}
 	global $wpdb;
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -445,7 +445,7 @@ function varconv_convert( array $c, bool $dry = false ): array {
 	$note = '';
 	if ( '' !== $sku && wc_get_product_id_by_sku( $sku ) ) {
 		$sku = '';
-		$note = __( 'Parent SKU in use; left empty.', 'variation-converter' );
+		$note = __( 'Parent SKU in use; left empty.', 'variation-converter-for-woocommerce' );
 	}
 	if ( $dry ) {
 		return array( 'status' => 'would', 'id' => 0, 'message' => $note );
