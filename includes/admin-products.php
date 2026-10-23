@@ -11,7 +11,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 add_filter( 'bulk_actions-edit-product', 'varconv_bulk_action' );
 function varconv_bulk_action( array $actions ): array {
 	if ( current_user_can( VARCONV_CAP ) ) {
-		$actions['varconv_combine'] = __( 'Combine into variable product', 'variation-converter' );
+		$actions['varconv_combine'] = __( 'Combine into variable product', 'variation-converter-for-woocommerce' );
 	}
 	return $actions;
 }
@@ -36,21 +36,21 @@ function varconv_combine_ids(): array {
 /** The card for the products picked in Products > All Products. */
 function varconv_render_manual( array $ids ): void {
 	$found = varconv_products_by_id( $ids );
-	echo '<p><a href="' . esc_url( varconv_url() ) . '">&larr; ' . esc_html__( 'All suggested groups', 'variation-converter' ) . '</a></p>';
-	echo '<p class="varconv-lead">' . esc_html__( 'Combine the products you selected into one variable product. Check the name, attribute and labels, then create it.', 'variation-converter' ) . '</p>';
+	echo '<p><a href="' . esc_url( varconv_url() ) . '">&larr; ' . esc_html__( 'All suggested groups', 'variation-converter-for-woocommerce' ) . '</a></p>';
+	echo '<p class="varconv-lead">' . esc_html__( 'Combine the products you selected into one variable product. Check the name, attribute and labels, then create it.', 'variation-converter-for-woocommerce' ) . '</p>';
 	if ( $found['refused'] ) {
 		printf(
 			'<div class="notice notice-warning inline"><p>%s %s</p></div>',
 			esc_html( sprintf(
 				/* translators: %d: number of selected products left out. */
-				_n( '%d selected product is left out: only published simple products with a SKU, shown in the catalog and not already combined, can be combined.', '%d selected products are left out: only published simple products with a SKU, shown in the catalog and not already combined, can be combined.', count( $found['refused'] ), 'variation-converter' ),
+				_n( '%d selected product is left out: only published simple products with a SKU, shown in the catalog and not already combined, can be combined.', '%d selected products are left out: only published simple products with a SKU, shown in the catalog and not already combined, can be combined.', count( $found['refused'] ), 'variation-converter-for-woocommerce' ),
 				count( $found['refused'] )
 			) ),
 			wp_kses_post( varconv_product_links( $found['refused'] ) )
 		);
 	}
 	if ( count( $found['products'] ) < 2 ) {
-		echo '<div class="varconv-empty"><p>' . esc_html__( 'Select at least two products that can be combined.', 'variation-converter' ) . '</p></div>';
+		echo '<div class="varconv-empty"><p>' . esc_html__( 'Select at least two products that can be combined.', 'variation-converter-for-woocommerce' ) . '</p></div>';
 		return;
 	}
 	?>

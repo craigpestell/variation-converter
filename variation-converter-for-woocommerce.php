@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Variation Converter for WooCommerce
  * Description:       Finds groups of simple WooCommerce products that are really one product in several variants ("Tri-Rings Black", "Tri-Rings Blue") and, for each group you approve, makes one variable product, or splits a variable product into one simple product per variation. The originals are hidden, not deleted, and Undo brings them back.
- * Version:           0.2.2
+ * Version:           0.2.3
  * Requires at least: 6.5
  * Requires PHP:      7.4
  * Requires Plugins:  woocommerce
@@ -11,14 +11,14 @@
  * WC tested up to:     11.2
  * License:           GPL-2.0-or-later
  * License URI:       https://www.gnu.org/licenses/gpl-2.0.html
- * Text Domain:       variation-converter
+ * Text Domain:       variation-converter-for-woocommerce
  */
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
 define( 'VARCONV_FILE', __FILE__ );
-define( 'VARCONV_VERSION', '0.2.2' );
+define( 'VARCONV_VERSION', '0.2.3' );
 
 require_once __DIR__ . '/includes/scan.php';
 require_once __DIR__ . '/includes/create.php';

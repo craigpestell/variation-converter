@@ -19,7 +19,7 @@ This is the development repo. The user-facing docs are in [`readme.txt`](readme.
 
 | File | What it does |
 |---|---|
-| `variation-converter.php` | Plugin header, loads the includes, name-cleaning helpers |
+| `variation-converter-for-woocommerce.php` | Plugin header, loads the includes, name-cleaning helpers |
 | `includes/scan.php` | Pure matching functions, no WordPress calls besides translation: SKU families, shared name prefixes, attribute guess, notes, validation |
 | `includes/create.php` | Catalog query, scan cache, creating the variable product, Undo |
 | `includes/split.php` | Variable product list, splitting into simple products, Undo of a split |

@@ -16,10 +16,10 @@ if ( ! defined( 'ABSPATH' ) ) {
 /** Stops unless the current user may convert products and the request carries the nonce for $action. */
 function varconv_ajax_check( string $action ): void {
 	if ( ! current_user_can( VARCONV_CAP ) ) {
-		wp_send_json_error( array( 'message' => __( 'Sorry, you are not allowed to do that.', 'variation-converter' ) ), 403 );
+		wp_send_json_error( array( 'message' => __( 'Sorry, you are not allowed to do that.', 'variation-converter-for-woocommerce' ) ), 403 );
 	}
 	if ( ! check_ajax_referer( $action, '_wpnonce', false ) ) {
-		wp_send_json_error( array( 'message' => __( 'This page has expired. Reload it and try again.', 'variation-converter' ) ), 403 );
+		wp_send_json_error( array( 'message' => __( 'This page has expired. Reload it and try again.', 'variation-converter-for-woocommerce' ) ), 403 );
 	}
 }
 
@@ -102,7 +102,7 @@ function varconv_ajax_sku(): void {
 	wp_send_json_success( array(
 		'message' => sprintf(
 			/* translators: 1: SKU, 2: product name. */
-			__( '%1$s is already used by "%2$s". Change it or leave it empty.', 'variation-converter' ),
+			__( '%1$s is already used by "%2$s". Change it or leave it empty.', 'variation-converter-for-woocommerce' ),
 			$sku,
 			varconv_product_name( $id )
 		),
