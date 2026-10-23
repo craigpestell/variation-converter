@@ -1,0 +1,34 @@
+# Publishes site/ to GitHub Pages, with a plugin zip built the same way as the wordpress.org submission.
+name: Site
+
+on:
+  push:
+    branches: [main]
+    paths: ['site/**', 'includes/**', 'assets/**', '*.php', 'readme.txt', '.github/workflows/site.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the plugin zip
+        run: git archive --format=zip --prefix=variation-converter-for-woocommerce/ -o site/variation-converter-for-woocommerce.zip HEAD
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deployment
+        uses: actions/deploy-pages@v4
