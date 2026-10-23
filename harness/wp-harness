@@ -186,7 +186,9 @@ cmd_serve() {
 		curl -s -o /dev/null --noproxy '*' "http://localhost:$PORT/wp-login.php" && break
 		sleep 0.5
 	done
-	say "Serving http://localhost:$PORT (admin / admin). Log: $SITE_DIR/server.log"
+	local log="$SITE_DIR/server.log"
+	[ -n "${HARNESS_IN_DOCKER:-}" ] && log="docker exec wp-harness-$SITE cat $log"
+	say "Serving http://localhost:$PORT (admin / admin). Log: $log"
 }
 
 cmd_stop() {
@@ -398,6 +400,11 @@ cmd_status() {
 	echo "plugin:  $PLUGIN_SLUG -> $PLUGIN_DIR"
 	echo "versions: WordPress $WP_VERSION, WooCommerce $WC_VERSION"
 	if [ -n "$(server_pid)" ]; then echo "server:  http://localhost:$PORT (admin / admin)"; else echo "server:  stopped (wp-harness serve)"; fi
+	if [ -n "${HARNESS_IN_DOCKER:-}" ]; then
+		echo "log:     docker exec wp-harness-$SITE cat $SITE_DIR/server.log"
+	else
+		echo "log:     $SITE_DIR/server.log"
+	fi
 }
 
 cmd_down() {
@@ -422,6 +429,7 @@ use_docker() {
 
 docker_main() {
 	local cmd="$1"; shift
+	docker info >/dev/null 2>&1 || die "Docker isn't running; start Docker Desktop (open -a Docker) and try again"
 	local image="wp-harness:php8.3"
 	local dir=""
 	if [ "$cmd" = up ]; then
