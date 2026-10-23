@@ -507,7 +507,7 @@ function varconv_stock_text( string $status ): string {
 function varconv_posted_group(): array {
 	// phpcs:disable WordPress.Security.NonceVerification.Missing -- callers check the nonce first.
 	$rows = isset( $_POST['members'] ) && is_array( $_POST['members'] ) ? map_deep( wp_unslash( $_POST['members'] ), 'sanitize_text_field' ) : array();
-	$order = isset( $_POST['order'] ) && is_array( $_POST['order'] ) ? array_map( 'absint', array_keys( wp_unslash( $_POST['order'] ) ) ) : array_map( 'absint', array_keys( $rows ) );
+	$order = isset( $_POST['order'] ) && is_array( $_POST['order'] ) ? array_map( 'absint', array_keys( map_deep( wp_unslash( $_POST['order'] ), 'sanitize_text_field' ) ) ) : array_map( 'absint', array_keys( $rows ) );
 	$members = array();
 	$labels = array();
 	// In the order the rows were shown, which the admin may have changed.
