@@ -627,7 +627,7 @@ function varconv_render_card( array $c, array $checked, ?array $posted, array $f
 							<?php /* translators: %s: product SKU. */ ?>
 							<button type="button" class="varconv-down varconv-move" aria-label="<?php echo esc_attr( sprintf( __( 'Move %s down', 'variation-converter' ), $m['sku'] ) ); ?>">&darr;</button>
 						</td>
-						<td class="thumb"><?php echo $image ? wp_get_attachment_image( $image, array( 32, 32 ) ) : '<span class="varconv-no-image"></span>'; ?></td>
+						<td class="thumb"><?php echo varconv_thumb_html( $image, 32, $title ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped where it is built. ?></td>
 						<?php /* translators: 1: attribute name, e.g. Color, 2: product SKU. */ ?>
 						<td class="col-label"><input type="text" name="members[<?php echo (int) $id; ?>][label]" value="<?php echo esc_attr( $label ); ?>" aria-label="<?php echo esc_attr( sprintf( __( '%1$s for SKU %2$s', 'variation-converter' ), $attribute, $m['sku'] ) ); ?>"></td>
 						<td class="col-sku"><a class="varconv-mono" href="<?php echo esc_url( (string) get_edit_post_link( $id ) ); ?>"><?php echo esc_html( $m['sku'] ); ?></a></td>

@@ -55,6 +55,14 @@
 .varconv-members .thumb { width: 36px; }
 .varconv-members .thumb img, .varconv-no-image { width: 32px; height: 32px; border-radius: 2px; object-fit: cover; display: block; }
 .varconv-no-image { background: #f0f0f1; }
+/* A larger image beside the thumbnail on hover or focus; its image loads only when shown. */
+.varconv-thumb { position: relative; display: block; width: 32px; border-radius: 2px; }
+.varconv-split-list .varconv-thumb { width: 40px; }
+.varconv-thumb:focus { outline: 2px solid #2271b1; outline-offset: 1px; }
+.varconv-thumb img { display: block; }
+.varconv-thumb-large { display: none; position: absolute; z-index: 100; left: calc(100% + 8px); top: 50%; transform: translateY(-50%); padding: 4px; background: #fff; border: 1px solid #c3c4c7; border-radius: 4px; box-shadow: 0 4px 12px rgba(0, 0, 0, .15); pointer-events: none; }
+.varconv-thumb-large img { width: 240px !important; height: auto !important; max-width: none; object-fit: contain; border-radius: 2px; }
+.varconv-thumb:hover .varconv-thumb-large, .varconv-thumb:focus .varconv-thumb-large { display: block; }
 .varconv-members input[type=text] { width: 100%; min-height: 28px; line-height: 1.6; }
 .varconv-members .col-label { width: 22%; }
 .varconv-members tr.is-off > td:not(.varconv-check) { opacity: .5; }
