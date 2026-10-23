@@ -198,41 +198,40 @@
 		updateBulk();
 	}
 
-	/* After a create: drop the products it used; two or more left stay a group to create from next. */
-	function created( card, data ) {
-		data.members.forEach( function ( id ) {
-			var row = card.querySelector( 'tr[data-id="' + id + '"]' );
-			if ( row ) {
-				row.remove();
-			}
+	/* The page again with a notice (and a group to open), so counts, prices and suggestions are fresh. */
+	function reload( params, open ) {
+		var url = new window.URL( window.location.href );
+		[ 'open', 'varconv_done', 'varconv_product', 'varconv_made', 'varconv_skip', 'varconv_failed_count', 'varconv_count' ].forEach( function ( name ) {
+			url.searchParams.delete( name );
 		} );
-		var left = rows( card );
-		var message = card.querySelector( '.varconv-card-message' );
-		message.innerHTML = '';
-		if ( left.length < 2 ) {
-			finish( card, strings.created, 'ready' );
-			card.querySelector( '.varconv-card-message' ).appendChild( notice( 'success', data.html ) );
-			Array.prototype.slice.call( card.children ).forEach( function ( child ) {
-				if ( ! child.classList.contains( 'varconv-card-message' ) ) {
-					child.hidden = true;
-				}
-			} );
+		Object.keys( params ).forEach( function ( name ) {
+			url.searchParams.set( name, params[ name ] );
+		} );
+		if ( open ) {
+			url.searchParams.set( 'open', open );
+		}
+		url.hash = open ? 'varconv-' + open : '';
+		window.location.assign( url.toString() );
+	}
+
+	/*
+	 * After a create. Part of a group: reload, opening what is left of it, since its warnings, SKU buttons and
+	 * suggested SKU have changed. The whole group: mark its row created in place.
+	 */
+	function created( card, data ) {
+		if ( data.members.length < rows( card ).length ) {
+			reload( { varconv_done: 'created', varconv_product: data.id }, data.next );
 			return;
 		}
-		message.appendChild( notice( 'success', data.html + text( format( strings.remaining, left.length ) ) ) );
-		left.forEach( function ( row ) {
-			row.querySelector( '.varconv-use' ).checked = true;
+		var message = card.querySelector( '.varconv-card-message' );
+		message.innerHTML = '';
+		finish( card, strings.created, 'ready' );
+		message.appendChild( notice( 'success', data.html ) );
+		Array.prototype.slice.call( card.children ).forEach( function ( child ) {
+			if ( ! child.classList.contains( 'varconv-card-message' ) ) {
+				child.hidden = true;
+			}
 		} );
-		remember( card, left );
-		// The parent SKU just went to the new product.
-		card.querySelector( '.varconv-parent-sku' ).value = '';
-		card.querySelector( '.varconv-sku-note' ).textContent = '';
-		var filter = card.querySelector( '.varconv-row-filter' );
-		if ( filter ) {
-			filter.value = '';
-			filterRows( card );
-		}
-		refresh( card );
 	}
 
 	function filterRows( card ) {
@@ -354,9 +353,7 @@
 		function next() {
 			if ( done >= keys.length ) {
 				progress.innerHTML = text( format( strings.bulkDone, totals.made, totals.skip, totals.failed ) );
-				window.setTimeout( function () {
-					window.location.reload();
-				}, 1500 );
+				reload( { varconv_done: 'bulk', varconv_made: totals.made, varconv_skip: totals.skip, varconv_failed_count: totals.failed } );
 				return;
 			}
 			var data = new window.FormData();

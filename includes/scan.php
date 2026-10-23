@@ -30,9 +30,24 @@ function varconv_family( string $sku ): string {
 	return strlen( $sku ) > 5 ? substr( $sku, 0, 5 ) : $sku;
 }
 
-/** @return string[] The name's words, as written. */
+/** @return string[] The name's words, as written; a number and its unit stay one word ("12 oz", "12oz"). */
 function varconv_words( string $name ): array {
-	return preg_split( '/\s+/u', trim( $name ), -1, PREG_SPLIT_NO_EMPTY ) ?: array();
+	$words = preg_split( '/\s+/u', trim( $name ), -1, PREG_SPLIT_NO_EMPTY ) ?: array();
+	$out = array();
+	foreach ( $words as $word ) {
+		$last = count( $out ) - 1;
+		if ( $last >= 0 && preg_match( '/^\d+(?:[.,]\d+)?$/', $out[ $last ] ) && preg_match( '/^(?:oz|fl\.?oz|ml|l|g|kg|lb|lbs|cm|mm|in)\b/i', $word ) ) {
+			$out[ $last ] .= ' ' . $word;
+		} else {
+			$out[] = $word;
+		}
+	}
+	return $out;
+}
+
+/** Whether two words are the same, ignoring case and the space in "12 oz". */
+function varconv_same_word( string $a, string $b ): bool {
+	return 0 === strcasecmp( str_replace( ' ', '', $a ), str_replace( ' ', '', $b ) );
 }
 
 /** A word compared for brand names: lowercase, without trademark signs or punctuation at its ends. */
@@ -101,7 +116,7 @@ function varconv_lines( array $families ): array {
 function varconv_common_words( array $a, array $b ): int {
 	$n = 0;
 	$max = min( count( $a ), count( $b ) );
-	while ( $n < $max && 0 === strcasecmp( $a[ $n ], $b[ $n ] ) ) {
+	while ( $n < $max && varconv_same_word( $a[ $n ], $b[ $n ] ) ) {
 		++$n;
 	}
 	return $n;
@@ -124,6 +139,39 @@ function varconv_common_prefix( array $strings ): string {
 /** Without separators left at either end where the name was split ("Zen -", "- Black"). */
 function varconv_trim( string $text ): string {
 	return (string) preg_replace( '/^[\s\-\x{2013}\x{2014}:,\/|]+|[\s\-\x{2013}\x{2014}:,\/|]+$/u', '', $text );
+}
+
+/** A variant label without brackets around all of it ("(Large)" -> "Large"). */
+function varconv_unwrap( string $label ): string {
+	return (string) preg_replace( '/^[(\[]\s*([^()\[\]]*?)\s*[)\]]$/u', '$1', $label );
+}
+
+/**
+ * Where a size label goes in size order (XS before S before M), or null when it is not a size this knows. Labels
+ * with a number sort by it ("8oz" before "12oz").
+ */
+function varconv_size_rank( string $label ): ?float {
+	$sizes = array( 'xxs', 'xs', 's', 'm', 'l', 'xl', 'xxl', 'xxxl' );
+	$words = array( 'extra small' => 1, 'x-small' => 1, 'small' => 2, 'medium' => 3, 'large' => 4, 'extra large' => 5, 'x-large' => 5, '2xl' => 6, '3xl' => 7, '4xl' => 8 );
+	$key = strtolower( trim( $label ) );
+	$at = array_search( $key, $sizes, true );
+	if ( false !== $at ) {
+		return (float) $at;
+	}
+	if ( isset( $words[ $key ] ) ) {
+		return (float) $words[ $key ];
+	}
+	return preg_match( '/^(\d+(?:\.\d+)?)/', $key, $m ) ? 100 + (float) $m[1] : null;
+}
+
+/** Members in size order when every label is a size varconv_size_rank() knows; otherwise as they were. */
+function varconv_size_order( array $members ): array {
+	$ranks = array_map( static fn( $m ) => varconv_size_rank( (string) $m['label'] ), $members );
+	if ( in_array( null, $ranks, true ) ) {
+		return $members;
+	}
+	array_multisort( $ranks, SORT_ASC, SORT_NUMERIC, array_keys( $members ), $members );
+	return array_values( $members );
 }
 
 /**
@@ -191,7 +239,7 @@ function varconv_split( array $products, array $brands = array() ): array {
 			}
 		}
 		if ( $best ) {
-			$key = strtolower( implode( ' ', array_slice( $words[ $i ], 0, $best ) ) );
+			$key = strtolower( str_replace( ' ', '', implode( '|', array_slice( $words[ $i ], 0, $best ) ) ) );
 			$by_base[ $key ][] = $i;
 		}
 	}
@@ -213,7 +261,7 @@ function varconv_split( array $products, array $brands = array() ): array {
 		while ( true ) {
 			$last = null;
 			foreach ( $labels as $label ) {
-				if ( count( $label ) < 2 || ( null !== $last && 0 !== strcasecmp( $last, end( $label ) ) ) ) {
+				if ( count( $label ) < 2 || ( null !== $last && ! varconv_same_word( $last, end( $label ) ) ) ) {
 					break 2;
 				}
 				$last = end( $label );
@@ -225,7 +273,7 @@ function varconv_split( array $products, array $brands = array() ): array {
 		}
 		$out = array();
 		foreach ( $members as $i ) {
-			$label = varconv_trim( implode( ' ', $labels[ $i ] ) );
+			$label = varconv_unwrap( varconv_trim( implode( ' ', $labels[ $i ] ) ) );
 			// A name with no variant words ("Alpha" beside "Alpha Blue") is labeled with its SKU, so it can still be created.
 			$out[] = $products[ $i ] + array( 'label' => '' === $label ? trim( (string) $products[ $i ]['sku'] ) : $label );
 		}
@@ -308,6 +356,7 @@ function varconv_brand( array $collection ): string {
 function varconv_scan( array $products, array $dismissed = array(), array $brand_names = array() ): array {
 	$families = array();
 	$duplicates = varconv_duplicate_skus( $products );
+	$names = array_column( $products, 'name', 'id' );
 	foreach ( varconv_unique_skus( $products ) as $p ) {
 		$family = varconv_family( (string) $p['sku'] );
 		if ( '' !== $family && '' !== trim( (string) $p['name'] ) ) {
@@ -329,15 +378,19 @@ function varconv_scan( array $products, array $dismissed = array(), array $brand
 			}
 			usort( $collection['members'], 'varconv_member_order' );
 			$labels = array_map( static fn( $m ) => $m['label'], $collection['members'] );
+			$attribute = varconv_attribute( $labels );
+			if ( 'Size' === $attribute ) {
+				$collection['members'] = varconv_size_order( $collection['members'] );
+			}
 			$out[] = array(
 				'key'       => $key,
 				'family'    => $family,
 				'name'      => $collection['base'],
 				'brand'     => varconv_brand( $collection ),
-				'attribute' => varconv_attribute( $labels ),
+				'attribute' => $attribute,
 				'sku'       => varconv_parent_sku( $family, $collection['members'] ),
 				'members'   => $collection['members'],
-				'notes'     => varconv_notes( $collection['members'], $duplicates ),
+				'notes'     => varconv_notes( $collection['members'], $duplicates, $names ),
 			);
 		}
 	}
@@ -530,21 +583,24 @@ function varconv_spread( array $members ): int {
  * differ) and cats (categories differ). None of them blocks a create.
  *
  * @param array<string,int[]> $duplicates From varconv_duplicate_skus().
+ * @param array<int,string>   $names      Product ID => name, to name the products left out.
  * @return array<string,string>
  */
-function varconv_notes( array $members, array $duplicates = array() ): array {
+function varconv_notes( array $members, array $duplicates = array(), array $names = array() ): array {
 	$notes = array();
 	$dupes = array();
 	foreach ( $members as $m ) {
-		$others = array_diff( $duplicates[ varconv_sku_key( (string) $m['sku'] ) ] ?? array(), array( (int) $m['id'] ) );
-		if ( $others ) {
-			/* translators: 1: a SKU, 2: IDs of the other products with that SKU, comma separated. */
-			$dupes[] = sprintf( __( '%1$s (also on %2$s)', 'variation-converter' ), $m['sku'], implode( ', ', $others ) );
+		foreach ( array_diff( $duplicates[ varconv_sku_key( (string) $m['sku'] ) ] ?? array(), array( (int) $m['id'] ) ) as $other ) {
+			$dupes[] = isset( $names[ $other ] )
+				/* translators: 1: product name, 2: product ID, 3: SKU. */
+				? sprintf( __( '"%1$s" (#%2$d) has the same SKU, %3$s, as a product here', 'variation-converter' ), $names[ $other ], $other, trim( (string) $m['sku'] ) )
+				/* translators: 1: product ID, 2: SKU. */
+				: sprintf( __( 'product #%1$d has the same SKU, %2$s, as a product here', 'variation-converter' ), $other, trim( (string) $m['sku'] ) );
 		}
 	}
 	if ( $dupes ) {
-		/* translators: %s: the duplicated SKUs and their products, semicolon separated. */
-		$notes['dupes'] = sprintf( __( 'Duplicate products left out: %s.', 'variation-converter' ), implode( '; ', $dupes ) );
+		/* translators: %s: the products left out and why, semicolon separated. */
+		$notes['dupes'] = sprintf( _n( 'Left out as a duplicate: %s.', 'Left out as duplicates: %s.', count( $dupes ), 'variation-converter' ), implode( '; ', $dupes ) );
 	}
 	$labels = array_map( static fn( $m ) => strtolower( $m['label'] ), $members );
 	if ( in_array( '', $labels, true ) ) {
@@ -576,7 +632,7 @@ function varconv_notes( array $members, array $duplicates = array() ): array {
 		return implode( ',', $c );
 	}, $members ) );
 	if ( count( $cats ) > 1 ) {
-		$notes['cats'] = __( 'Categories differ; the new product takes the first member\'s.', 'variation-converter' );
+		$notes['cats'] = __( 'Categories differ. Choose the new product\'s categories in its card; Create from the list gives it the first product\'s.', 'variation-converter' );
 	}
 	return $notes;
 }

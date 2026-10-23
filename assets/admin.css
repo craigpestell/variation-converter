@@ -26,6 +26,8 @@
 .wp-list-table .varconv-toggle { color: #646970; margin-right: 2px; }
 .wp-list-table tr.varconv-open > * { background: #f6f7f7 !important; border-bottom: 0; box-shadow: none; }
 .wp-list-table tr.varconv-review > td { background: #fff; padding: 0; border-top: 0; }
+/* WordPress's narrow-screen list table rules show every row; a closed card stays closed. */
+.wp-list-table tr.varconv-review[hidden] { display: none !important; }
 .varconv-review-inner { margin: 0 12px 12px; border: 1px solid #c3c4c7; border-left: 4px solid #2271b1; padding: 16px 20px; background: #fff; }
 .varconv-list-table .varconv-review-inner { margin-left: 36px; }
 .varconv-review-alone { margin: 12px 0; max-width: 1100px; }
@@ -69,7 +71,8 @@
 p.varconv-notes { color: #996800; margin: 4px 0 0; }
 
 @media screen and (max-width: 782px) {
-	.varconv-table-wrap { overflow-x: auto; }
+	/* Zero width, then the full width: the wide members table scrolls inside the card instead of widening the page. */
+	.varconv-table-wrap { overflow-x: auto; width: 0; min-width: 100%; }
 	.varconv-members { min-width: 640px; }
 	.varconv-fields { grid-template-columns: 1fr; }
 	.varconv-list-table .varconv-review-inner { margin-left: 0; }

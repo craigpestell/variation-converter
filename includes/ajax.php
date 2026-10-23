@@ -47,7 +47,26 @@ function varconv_ajax_create(): void {
 		'id'      => $id,
 		'members' => array_keys( $group['members'] ),
 		'html'    => varconv_created_html( $id ),
+		'next'    => varconv_group_of( array_diff( array_keys( $group['labels'] ), array_keys( $group['members'] ) ) ),
 	) );
+}
+
+/**
+ * The key of the group, in a new scan, that holds any of $ids: what is left of a group after part of it was created,
+ * for the page to open next. Empty when they are in no group.
+ *
+ * @param int[] $ids
+ */
+function varconv_group_of( array $ids ): string {
+	if ( ! $ids ) {
+		return '';
+	}
+	foreach ( varconv_candidates()['collections'] as $c ) {
+		if ( array_intersect( $ids, array_map( static fn( $m ) => (int) $m['id'], $c['members'] ) ) ) {
+			return (string) $c['key'];
+		}
+	}
+	return '';
 }
 
 add_action( 'wp_ajax_varconv_undo', 'varconv_ajax_undo' );
@@ -85,7 +104,7 @@ function varconv_ajax_sku(): void {
 			/* translators: 1: SKU, 2: product name. */
 			__( '%1$s is already used by "%2$s". Change it or leave it empty.', 'variation-converter' ),
 			$sku,
-			get_post_field( 'post_title', wp_get_post_parent_id( $id ) ?: $id, 'raw' )
+			varconv_product_name( $id )
 		),
 	) );
 }

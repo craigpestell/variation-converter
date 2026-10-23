@@ -84,7 +84,7 @@ expect( varconv_scan( array( $p( 1, 'X1000-01', 'Alpha One' ), $p( 2, 'X1000-02'
 expect( varconv_scan( array( $p( 1, 'X1000-01', 'Alpha One' ), $p( 2, '', 'Alpha Two' ) ) ), array(), 'no SKU' );
 $two = array( $p( 1, 'X1000-01', 'Alpha Red' ), $p( 2, 'X1000-02', 'Alpha Blue', '9.99', array( 6 ) ) );
 $scan = varconv_scan( $two );
-expect( $scan[0]['notes'], array( 'cats' => 'Categories differ; the new product takes the first member\'s.' ), 'category note' );
+expect( $scan[0]['notes'], array( 'cats' => 'Categories differ. Choose the new product\'s categories in its card; Create from the list gives it the first product\'s.' ), 'category note' );
 expect( varconv_scan( $two, array( $scan[0]['key'] ) ), array(), 'dismissed' );
 // A name that is all base is labeled with its SKU, with a note.
 $scan = varconv_scan( array( $p( 1, 'X1000-01', 'Alpha' ), $p( 2, 'X1000-02', 'Alpha Blue' ) ) );
@@ -141,7 +141,18 @@ expect( varconv_scan( $lines ), array(), 'line alone is not shared' );
 // Products sharing one SKU are copies: the lowest ID is kept, the rest noted.
 $scan = varconv_scan( array( $p( 7, 'X2000-01', 'Gamma Red' ), $p( 3, 'X2000-01 ', 'Gamma Red' ), $p( 5, 'X2000-02', 'Gamma Blue' ) ) );
 expect( array_column( $scan[0]['members'], 'id' ), array( 3, 5 ), 'duplicate SKU left out' );
-expect( $scan[0]['notes']['dupes'], 'Duplicate products left out: X2000-01  (also on 7).', 'duplicate note' );
+expect( $scan[0]['notes']['dupes'], 'Left out as a duplicate: "Gamma Red" (#7) has the same SKU, X2000-01, as a product here.', 'duplicate note' );
+// "12 oz" and "12oz" are one word, written as each name has it; bracketed labels lose their brackets; sizes go in size order.
+$scan = varconv_scan( array( $p( 1, 'MUG12-RD', 'Camp Mug 12 oz Red' ), $p( 2, 'MUG12-FG', 'Camp Mug 12oz Forest Green' ), $p( 3, 'MUG12-NV', 'Camp Mug 12oz Navy' ) ) );
+expect( array( count( $scan ), $scan[0]['name'] ?? '' ), array( 1, 'Camp Mug 12 oz' ), 'unit spacing' );
+expect( array_column( $scan[0]['members'], 'label' ), array( 'Forest Green', 'Navy', 'Red' ), 'unit spacing labels' );
+$scan = varconv_scan( array( $p( 1, 'VN220-L', 'V-Neck Tee (Large)' ), $p( 2, 'VN220-M', 'V-neck tee (Medium)' ), $p( 3, 'VN220-S', 'V-Neck Tee (Small)' ), $p( 4, 'VN220-XL', 'V-Neck Tee (XL)' ) ) );
+expect( array_column( $scan[0]['members'], 'label' ), array( 'Small', 'Medium', 'Large', 'XL' ), 'size labels in size order' );
+expect( $scan[0]['attribute'], 'Size', 'size attribute' );
+expect( varconv_unwrap( '[Blue]' ), 'Blue', 'unwrap' );
+expect( varconv_unwrap( 'Blue (Matte)' ), 'Blue (Matte)', 'unwrap keeps inner brackets' );
+expect( varconv_size_order( array( array( 'label' => '12oz' ), array( 'label' => '8oz' ) ) ), array( array( 'label' => '8oz' ), array( 'label' => '12oz' ) ), 'number order' );
+expect( varconv_size_order( array( array( 'label' => 'L' ), array( 'label' => 'Red' ) ) ), array( array( 'label' => 'L' ), array( 'label' => 'Red' ) ), 'mixed labels keep order' );
 expect( varconv_duplicate_skus( array( $p( 2, 'a 1', 'x' ), $p( 1, 'A  1', 'y' ), $p( 3, 'B', 'z' ) ) ), array( 'A 1' => array( 1, 2 ) ), 'duplicate SKUs' );
 
 // Members in SKU order, then name.
