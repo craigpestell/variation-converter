@@ -69,3 +69,44 @@
 	.varconv-members { min-width: 720px; }
 	.varconv-fields .name input { width: 100%; }
 }
+
+/* Split and History list tables */
+.varconv-lead { font-size: 13px; color: #3c434a; margin: 12px 0 0; max-width: 760px; }
+.varconv-mono { font-family: Consolas, Monaco, monospace; font-size: 12px; }
+.varconv-muted { color: #646970; }
+.varconv-split-list .column-sku { width: 120px; }
+.varconv-split-list .column-variations { width: 130px; }
+.varconv-split-list .column-price { width: 140px; }
+.varconv-split-list .column-note { width: 220px; }
+.varconv-history .column-change { width: 110px; }
+.varconv-history .column-date { width: 190px; }
+.varconv-history .column-undo { width: 80px; }
+.varconv-history .varconv-undo { margin: 0; }
+.wp-list-table .varconv-toggle { color: #646970; margin-right: 2px; }
+.wp-list-table tr.varconv-open > * { background: #f6f7f7 !important; border-bottom: 0; box-shadow: none; }
+.wp-list-table tr.varconv-review > td { background: #fff; padding: 0; border-top: 0; }
+.varconv-review-inner { margin: 0 12px 12px; border: 1px solid #c3c4c7; border-left: 4px solid #2271b1; padding: 16px 20px; background: #fff; }
+.varconv-review-alone { margin: 12px 0; max-width: 1100px; }
+.varconv-review-inner .notice.inline { margin: 0 0 14px; }
+.varconv-review-inner .varconv-members { border: 1px solid #dcdcde; box-shadow: none; }
+.varconv-review-inner .varconv-members th, .varconv-review-inner .varconv-members td { padding: 6px 8px; vertical-align: middle; }
+.varconv-review-inner .varconv-members .check-column { padding: 6px 0 6px 10px; width: 28px; }
+.varconv-review-inner .varconv-members .check-column input { margin: 0; }
+.varconv-members .col-sku { width: 110px; }
+.varconv-members .col-price, .varconv-members .col-stock { width: 90px; }
+.varconv-review-foot { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.varconv-review-foot .varconv-muted { flex: 1; min-width: 0; }
+.varconv-badge-combined, .varconv-badge-split { border: 0; border-radius: 2px; line-height: 22px; display: inline-block; }
+.varconv-badge-combined { background: #edfaef; color: #005c12; }
+.varconv-badge-split { background: #f0f0f1; color: #50575e; }
+.varconv-history td a[href*="post.php"] { white-space: nowrap; }
+.varconv-stock-instock { color: #007017; }
+.varconv-stock-outofstock { color: #b32d2e; }
+.varconv-stock-onbackorder { color: #996800; }
+
+@media screen and (max-width: 782px) {
+	.varconv-review-foot { flex-wrap: wrap; }
+	.varconv-review-foot .varconv-muted { flex-basis: 100%; }
+	.varconv-split-list .column-sku, .varconv-split-list .column-variations, .varconv-split-list .column-note, .varconv-history .column-change { display: none; }
+	.varconv-review-inner { margin: 0 0 12px; padding: 12px; }
+}

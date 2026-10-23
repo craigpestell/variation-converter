@@ -17,6 +17,7 @@ const VARCONV_PER_PAGE = 25;
 require_once __DIR__ . '/admin-combine.php';
 require_once __DIR__ . '/ajax.php';
 require_once __DIR__ . '/admin-products.php';
+require_once __DIR__ . '/admin-split.php';
 
 add_action( 'admin_menu', 'varconv_menu', 60 );
 function varconv_menu(): void {
@@ -304,145 +305,6 @@ function varconv_render(): void {
 	<?php
 }
 
-/** The Split tab: a card for one variable product, or the list to pick one from. */
-function varconv_render_split(): void {
-	$id = isset( $_GET['product'] ) ? absint( wp_unslash( $_GET['product'] ) ) : 0;
-	$product = $id ? wc_get_product( $id ) : null;
-	if ( $product instanceof WC_Product_Variable ) {
-		echo '<p><a href="' . esc_url( varconv_url( array( 'tab' => 'split' ) ) ) . '">&larr; ' . esc_html__( 'All variable products', 'variation-converter' ) . '</a></p>';
-		varconv_render_split_card( $product );
-		return;
-	}
-	$search = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '';
-	$paged = max( 1, isset( $_GET['paged'] ) ? absint( wp_unslash( $_GET['paged'] ) ) : 1 );
-	$found = varconv_variables( $search, $paged, VARCONV_PER_PAGE );
-	$pages = max( 1, (int) ceil( $found['total'] / VARCONV_PER_PAGE ) );
-	?>
-	<p><?php esc_html_e( 'Pick a variable product to make one simple product from each of its variations (same SKU, prices, stock and image). The variable product is hidden from the catalog and search, not deleted, and Undo in History brings it back.', 'variation-converter' ); ?></p>
-	<form method="get" class="varconv-toolbar">
-		<input type="hidden" name="post_type" value="product">
-		<input type="hidden" name="page" value="<?php echo esc_attr( VARCONV_PAGE ); ?>">
-		<input type="hidden" name="tab" value="split">
-		<label class="screen-reader-text" for="varconv-split-search"><?php esc_html_e( 'Search variable products', 'variation-converter' ); ?></label>
-		<input type="search" id="varconv-split-search" name="s" value="<?php echo esc_attr( $search ); ?>" placeholder="<?php esc_attr_e( 'Name or SKU', 'variation-converter' ); ?>">
-		<button class="button"><?php esc_html_e( 'Search', 'variation-converter' ); ?></button>
-	</form>
-	<?php if ( ! $found['ids'] ) : ?>
-		<p>
-			<?php
-			if ( '' !== $search ) {
-				/* translators: %s: search text. */
-				echo esc_html( sprintf( __( 'No variable products match "%s".', 'variation-converter' ), $search ) );
-			} else {
-				esc_html_e( 'There are no published variable products to split.', 'variation-converter' );
-			}
-			?>
-		</p>
-		<?php return; ?>
-	<?php endif; ?>
-	<table class="widefat striped varconv-list">
-		<thead><tr>
-			<th><?php esc_html_e( 'Variable product', 'variation-converter' ); ?></th>
-			<th><?php esc_html_e( 'SKU', 'variation-converter' ); ?></th>
-			<th><?php esc_html_e( 'Variations', 'variation-converter' ); ?></th>
-			<th><?php esc_html_e( 'Actions', 'variation-converter' ); ?></th>
-		</tr></thead>
-		<tbody>
-		<?php foreach ( $found['ids'] as $pid ) : ?>
-			<?php $p = wc_get_product( $pid ); ?>
-			<tr>
-				<td><a href="<?php echo esc_url( get_edit_post_link( $pid ) ); ?>"><?php echo esc_html( get_post_field( 'post_title', $pid, 'raw' ) ); ?></a></td>
-				<td><?php echo esc_html( $p ? $p->get_sku( 'edit' ) : '' ); ?></td>
-				<td><?php echo (int) ( $p ? count( $p->get_children() ) : 0 ); ?></td>
-				<td><a class="button" href="<?php echo esc_url( varconv_url( array( 'tab' => 'split', 'product' => $pid ) ) ); ?>"><?php echo $p && '' !== (string) $p->get_meta( VARCONV_META ) ? esc_html__( 'Undo...', 'variation-converter' ) : esc_html__( 'Split...', 'variation-converter' ); ?></a></td>
-			</tr>
-		<?php endforeach; ?>
-		</tbody>
-	</table>
-	<?php if ( $pages > 1 ) : ?>
-		<p class="varconv-pages">
-			<?php
-			echo wp_kses_post( paginate_links( array(
-				'base'    => add_query_arg( 'paged', '%#%', varconv_url( array_filter( array( 'tab' => 'split', 's' => $search ) ) ) ),
-				'format'  => '',
-				'current' => min( $paged, $pages ),
-				'total'   => $pages,
-			) ) );
-			?>
-		</p>
-	<?php endif; ?>
-	<?php
-}
-
-function varconv_render_split_card( WC_Product_Variable $product ): void {
-	$id = $product->get_id();
-	$error = isset( $_GET['varconv_failed'] );
-	?>
-	<div class="varconv-candidate<?php echo $error ? ' is-error' : ''; ?>" id="varconv-split-<?php echo (int) $id; ?>">
-		<h2><?php echo esc_html( get_post_field( 'post_title', $id, 'raw' ) ); ?></h2>
-		<?php if ( '' !== (string) $product->get_meta( VARCONV_META ) ) : ?>
-			<p><?php esc_html_e( 'This was combined by Variation Converter. Undo restores the original products.', 'variation-converter' ); ?></p>
-			<?php varconv_undo_form( 'varconv_undo', $id ); ?>
-		<?php elseif ( '' !== (string) $product->get_meta( VARCONV_SPLIT_META ) ) : ?>
-			<p><?php esc_html_e( 'This product is already split. Undo deletes the simple products made from it and shows it again.', 'variation-converter' ); ?></p>
-			<?php varconv_undo_form( 'varconv_split_undo', $id ); ?>
-		<?php elseif ( 'publish' !== $product->get_status() ) : ?>
-			<p><?php esc_html_e( 'Only published products can be split.', 'variation-converter' ); ?></p>
-		<?php else : ?>
-			<?php $rows = varconv_split_rows( $product ); ?>
-			<?php if ( ! $rows ) : ?>
-				<p><?php esc_html_e( 'This product has no variations to split.', 'variation-converter' ); ?></p>
-			<?php else : ?>
-				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
-					<input type="hidden" name="action" value="varconv_split">
-					<input type="hidden" name="tab" value="split">
-					<input type="hidden" name="product" value="<?php echo (int) $id; ?>">
-					<?php wp_nonce_field( 'varconv_split_' . $id ); ?>
-					<table class="widefat striped">
-						<thead><tr>
-							<th class="check"><span class="screen-reader-text"><?php esc_html_e( 'Include', 'variation-converter' ); ?></span></th>
-							<th class="thumb"><span class="screen-reader-text"><?php esc_html_e( 'Image', 'variation-converter' ); ?></span></th>
-							<th><?php esc_html_e( 'New product name', 'variation-converter' ); ?></th>
-							<th><?php esc_html_e( 'SKU', 'variation-converter' ); ?></th>
-							<th><?php esc_html_e( 'Price', 'variation-converter' ); ?></th>
-							<th><?php esc_html_e( 'Stock', 'variation-converter' ); ?></th>
-						</tr></thead>
-						<tbody>
-						<?php foreach ( $rows as $r ) : ?>
-							<tr>
-								<td><input type="checkbox" name="rows[<?php echo (int) $r['id']; ?>][use]" value="1" <?php checked( '' === $r['problem'] ); ?> <?php disabled( '' !== $r['problem'] ); ?> aria-label="<?php /* translators: %s: new product name. */ echo esc_attr( sprintf( __( 'Include %s', 'variation-converter' ), $r['name'] ) ); ?>"></td>
-								<td class="thumb"><?php echo $r['image'] ? wp_get_attachment_image( $r['image'], array( 40, 40 ) ) : ''; ?></td>
-								<td>
-									<input type="text" name="rows[<?php echo (int) $r['id']; ?>][name]" value="<?php echo esc_attr( $r['name'] ); ?>" aria-label="<?php /* translators: %d: variation ID. */ echo esc_attr( sprintf( __( 'New product name for variation %d', 'variation-converter' ), $r['id'] ) ); ?>">
-									<?php if ( $r['problem'] ) : ?>
-										<p class="varconv-notes"><?php echo esc_html( $r['problem'] ); ?></p>
-									<?php endif; ?>
-								</td>
-								<td><a href="<?php echo esc_url( get_edit_post_link( $id ) ); ?>"><?php echo esc_html( $r['sku'] ?: '#' . $r['id'] ); ?></a></td>
-								<td><?php echo esc_html( (string) $r['price'] ); ?></td>
-								<td><?php echo esc_html( (string) $r['stock'] ); ?></td>
-							</tr>
-						<?php endforeach; ?>
-						</tbody>
-					</table>
-					<p class="description"><?php esc_html_e( 'Each new product takes this product\'s descriptions, categories, tags and other attributes. Unchecked variations are not made into products and stay only in the hidden variable product.', 'variation-converter' ); ?></p>
-					<div class="varconv-actions">
-						<button class="button button-primary">
-							<?php
-							$count = count( array_filter( $rows, static fn( $r ) => '' === $r['problem'] ) );
-							/* translators: %d: number of simple products to make. */
-							echo esc_html( sprintf( _n( 'Split into %d simple product', 'Split into %d simple products', $count, 'variation-converter' ), $count ) );
-							?>
-						</button>
-						<span class="description"><?php esc_html_e( 'The variable product is hidden, not deleted; Undo in History brings it back.', 'variation-converter' ); ?></span>
-					</div>
-				</form>
-			<?php endif; ?>
-		<?php endif; ?>
-	</div>
-	<?php
-}
-
 /** An Undo button for a conversion, posting to the given admin-post action; assets/admin.js asks first. */
 function varconv_undo_form( string $action, int $id, string $label = '' ): void {
 	$confirm = 'varconv_undo' === $action
@@ -454,7 +316,7 @@ function varconv_undo_form( string $action, int $id, string $label = '' ): void 
 		<input type="hidden" name="tab" value="history">
 		<input type="hidden" name="product" value="<?php echo (int) $id; ?>">
 		<?php wp_nonce_field( $action . '_' . $id ); ?>
-		<button class="button button-link-delete"><?php echo esc_html( '' !== $label ? $label : __( 'Undo', 'variation-converter' ) ); ?></button>
+		<button class="button"><?php echo esc_html( '' !== $label ? $label : __( 'Undo', 'variation-converter' ) ); ?></button>
 	</form>
 	<?php
 }
@@ -466,72 +328,6 @@ function varconv_product_links( array $ids ): string {
 		esc_url( (string) get_edit_post_link( (int) $s ) ),
 		esc_html( (string) get_post_meta( (int) $s, '_sku', true ) ?: '#' . (int) $s )
 	), $ids ) );
-}
-
-/** The History tab: every product combined or split here, with Undo. */
-function varconv_render_history(): void {
-	$created = varconv_created();
-	$split = varconv_split_list();
-	?>
-	<h2><?php esc_html_e( 'Combined', 'variation-converter' ); ?></h2>
-	<?php if ( ! $created ) : ?>
-		<p><?php esc_html_e( 'Nothing combined yet.', 'variation-converter' ); ?></p>
-	<?php else : ?>
-		<table class="widefat striped varconv-list">
-			<thead><tr>
-				<th><?php esc_html_e( 'Variable product', 'variation-converter' ); ?></th>
-				<th><?php esc_html_e( 'SKU', 'variation-converter' ); ?></th>
-				<th><?php esc_html_e( 'Variations', 'variation-converter' ); ?></th>
-				<th><?php esc_html_e( 'Made from', 'variation-converter' ); ?></th>
-				<th><?php esc_html_e( 'Actions', 'variation-converter' ); ?></th>
-			</tr></thead>
-			<tbody>
-			<?php foreach ( $created as $id ) : ?>
-				<?php
-				$product = wc_get_product( $id );
-				$sources = json_decode( (string) get_post_meta( $id, VARCONV_META, true ), true ) ?: array();
-				?>
-				<tr>
-					<td><a href="<?php echo esc_url( get_edit_post_link( $id ) ); ?>"><?php echo esc_html( get_post_field( 'post_title', $id, 'raw' ) ); ?></a>
-						&middot; <a href="<?php echo esc_url( (string) get_permalink( $id ) ); ?>"><?php esc_html_e( 'View', 'variation-converter' ); ?></a></td>
-					<td><?php echo esc_html( $product ? $product->get_sku( 'edit' ) : '' ); ?></td>
-					<td><?php echo (int) ( $product ? count( $product->get_children() ) : 0 ); ?></td>
-					<td><?php echo wp_kses_post( varconv_product_links( $sources ) ); ?></td>
-					<td><?php varconv_undo_form( 'varconv_undo', $id ); ?></td>
-				</tr>
-			<?php endforeach; ?>
-			</tbody>
-		</table>
-	<?php endif; ?>
-
-	<h2><?php esc_html_e( 'Split', 'variation-converter' ); ?></h2>
-	<?php if ( ! $split ) : ?>
-		<p><?php esc_html_e( 'Nothing split yet.', 'variation-converter' ); ?></p>
-	<?php else : ?>
-		<table class="widefat striped varconv-list">
-			<thead><tr>
-				<th><?php esc_html_e( 'Variable product (hidden)', 'variation-converter' ); ?></th>
-				<th><?php esc_html_e( 'SKU', 'variation-converter' ); ?></th>
-				<th><?php esc_html_e( 'Simple products made', 'variation-converter' ); ?></th>
-				<th><?php esc_html_e( 'Actions', 'variation-converter' ); ?></th>
-			</tr></thead>
-			<tbody>
-			<?php foreach ( $split as $id ) : ?>
-				<?php
-				$product = wc_get_product( $id );
-				$made = json_decode( (string) get_post_meta( $id, VARCONV_SPLIT_META, true ), true ) ?: array();
-				?>
-				<tr>
-					<td><a href="<?php echo esc_url( get_edit_post_link( $id ) ); ?>"><?php echo esc_html( get_post_field( 'post_title', $id, 'raw' ) ); ?></a></td>
-					<td><?php echo esc_html( $product ? $product->get_sku( 'edit' ) : '' ); ?></td>
-					<td><?php echo wp_kses_post( varconv_product_links( $made ) ); ?></td>
-					<td><?php varconv_undo_form( 'varconv_split_undo', $id ); ?></td>
-				</tr>
-			<?php endforeach; ?>
-			</tbody>
-		</table>
-	<?php endif; ?>
-	<?php
 }
 
 function varconv_notice(): void {
