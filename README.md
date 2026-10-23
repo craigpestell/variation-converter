@@ -1,97 +1,110 @@
 # Variation Converter for WooCommerce
 
-Finds groups of simple WooCommerce products that are really one product in several variants ("Tri-Rings Black", "Tri-Rings Blue") and merges each group you approve into one variable product. It also splits a variable product into one simple product per variation. The originals are hidden, not deleted, and Undo brings them back.
+Many stores list one simple product per color or size: "Tri-Rings Black", "Tri-Rings Blue", "Tri-Rings Red". Variation Converter finds those groups and turns each one you approve into a single variable product. It also works the other way, splitting a variable product into separate simple products.
 
-This is the development repo. The user-facing docs are in [`readme.txt`](readme.txt), which is also the [wordpress.org listing](https://wordpress.org/plugins/variation-converter-for-woocommerce/) (slug `variation-converter-for-woocommerce`; the admin page and WP-CLI command keep the shorter `variation-converter`).
+![The Combine tab listing proposed groups, each with a product count, parent SKU, price range, attribute and status.](site/images/combine-list.webp)
 
-## Status
+**What it does**
 
-- **Merge** (simple to variable): works, v0.1.0.
-- **Split** (variable to simple): works, v0.1.0.
+- Scans your catalog and suggests groups of simple products that are variants of one product.
+- Lets you check and edit each group before anything changes.
+- Creates one variable product per group, with a variation for each original product.
+- Splits a variable product into one simple product per variation.
+- Hides the products it converts from. It never deletes them.
+- Undoes any conversion in one click.
+- Sends visitors of an old product page to the new variable product, with that option already selected.
 
 ## Requirements
 
-- WordPress 6.5+
-- WooCommerce 8.0+
-- PHP 7.4+
+- WordPress 6.5 or later
+- WooCommerce 8.0 or later
+- PHP 7.4 or later
+- A user role that can manage WooCommerce, such as Shop Manager or Administrator
 
-## How it works
+## Installation
 
-| File | What it does |
-|---|---|
-| `variation-converter-for-woocommerce.php` | Plugin header, loads the includes, name-cleaning helpers |
-| `includes/scan.php` | Pure matching functions, no WordPress calls besides translation: SKU families, shared name prefixes, attribute guess, notes, validation |
-| `includes/create.php` | Catalog query, scan cache, creating the variable product, Undo |
-| `includes/split.php` | Variable product list, splitting into simple products, Undo of a split |
-| `includes/redirect.php` | 301 from a combined simple product's page to its variable product, with its option chosen; Undo ends it |
-| `includes/admin.php` | The **Products > Variation Converter** screen, its tabs and form handlers |
-| `includes/admin-combine.php` | The Combine tab as a list table: views (Ready, Needs review, Skipped), search, filters, sortable columns, bulk and row actions, the review card that opens under its row, Screen Options (groups per page) |
-| `includes/admin-split.php` | The Split tab (variable products as a list table, card opening inline) and the History tab (one dated table with views, search and Undo) |
-| `includes/admin-products.php` | Products > All Products bulk action "Combine into variable product": opens a card for the checked products, whatever their SKUs |
-| `includes/ajax.php` | admin-ajax handlers so the Combine tab creates, undoes, skips and bulk-creates without reloading |
-| `assets/admin.css`, `assets/admin.js` | Screen styles; opening review cards, Select by SKU, the row filter, drag and keyboard reorder, price preview, batched bulk create and the confirm before Undo. Every form also works without scripts |
-| `uninstall.php` | Removes the dismissed list and cached scan on delete; products are left alone |
-| `includes/cli.php` | WP-CLI commands `wp variation-converter combine` and `undo` |
-| `tests/integration-bulk.php` | Bulk pieces against a real site: run lock, remembered unchecked members, chosen categories, `varconv_convert()` (`wp eval-file`, test site only) |
-| `tests/test-scan.php` | Offline tests for `scan.php` |
-| `tests/browser-combine.mjs` | Browser walkthrough of the Combine tab on the harness demo catalog; saves screenshots (`harness/wp-harness browse tests/browser-combine.mjs --out shots`) |
-| `tests/test-split.php` | Offline tests for the pure helpers in `split.php` |
-| `tests/integration-redirect.php` | Old product URLs after a combine, the filter, and Undo (`wp eval-file`, test site only) |
-| `tests/integration-split.php` | Split, Undo and the merge interplay against a real site: `wp eval-file tests/integration-split.php` (makes and deletes its own products; use a test site) |
+1. Make sure WooCommerce is installed and active.
+2. Get the plugin zip, `variation-converter-for-woocommerce.zip`, from the download button on the [project website](https://craigpestell.github.io/variation-converter/).
+3. In WordPress, go to **Plugins > Add New > Upload Plugin**, upload the zip and activate it.
 
-**Grouping.** Only published, visible simple products with a SKU are scanned. Products are grouped by SKU family (the SKU minus its last `-` segment and any short packaging suffix, so `SE1421-01 CL` gives `SE1421`), then split within a family by the longest run of leading name words two members share. A brand at the start of a name doesn't count as shared, so "Acme Plug" and "Acme Wand" stay apart: brands are the WooCommerce Brands terms plus any 1 to 3 word name start found in 5 or more SKU families. The rest of each name becomes the variant label, or the SKU when nothing is left. Products sharing one SKU are copies, not variants: the lowest ID is scanned and the rest are noted. The attribute (Color, Size, Flavor, Scent, Volume, else Option) is guessed from built-in word lists when most labels match. Results are cached in a transient for 30 minutes.
+Take a database backup before converting many products at once. Undo is there, but a backup is good practice.
 
-**Creating.** Builds the variable product from the first member (description, images, taxonomies, tax and shipping class) and one variation per member (SKU, prices, sale dates, stock, dimensions, image). WooCommerce's unique-SKU check is bypassed while saving, so each SKU then exists on both the variation and the hidden original. If any save fails, the partial product is deleted. Members are set to `hidden` catalog visibility, with their previous visibility and the parent ID stored in post meta.
+## Combine simple products into a variable product
 
-**Splitting.** Makes one simple product per checked variation (SKU, prices, sale dates, stock, virtual/downloadable, dimensions, image), taking the variable product's descriptions, gallery, taxonomies, non-variation attributes, tax status and purchase note. Fields a variation leaves to its parent (weight, dimensions, tax class, shipping class, image) come from the parent. A variation that shares its parent's stock count gets no stock count of its own, so stock is not multiplied. Variations set to "Any" for an attribute can't be split. The variable product is set to `hidden`, with its previous visibility, the new IDs (`_varconv_split`) and the time (`_varconv_time`, also set on combined products for History) in post meta, and each new product records its source (`_varconv_split_from`); split products are left out of the merge scan. A product made by merging can't be split; it offers Undo instead.
+1. Go to **Products > Variation Converter**. The **Combine** tab lists the groups the plugin found.
+2. Click a group to open it.
+3. Check the product name, the attribute (for example Color or Size), the parent SKU and the label of each variant ("Black", "Blue"). Untick any product that doesn't belong. Drag rows to change their order; the first product gives the new product its image and description.
+4. Click **Create variable product**. If the group isn't really one product, click **Skip, not variants** so it stops appearing.
 
-**Undo.** Restores each member's stored visibility, removes the meta, and deletes the variable product and its variations.
+![A group open for review: product name, attribute, parent SKU and one row per variant.](site/images/combine-card.webp)
 
-If Relevanssi is active, changed products are reindexed (parent after variations, so variation SKUs are searchable).
+**Working through a long list.** The **Ready** view shows groups with no warnings. **Needs review** shows groups with a warning, such as different prices, different categories, missing or repeated labels, long labels, or two products with the same SKU. **Skipped** lists the groups you skipped; you can restore them. You can also search, filter by brand, group size or warning, and use **Bulk actions** to create or skip many groups at once.
 
-There are no settings. The attribute word lists are hardcoded in `varconv_attribute()`.
+**Combining products the plugin didn't group.** In **Products > All Products**, tick the products, choose **Combine into variable product** from the bulk actions, and click **Apply**. Their SKUs don't need to match.
+
+**How groups are found.** Only published simple products that have a SKU and are shown in the catalog are scanned. Products without a SKU are never suggested. Products are grouped when:
+
+- their SKUs belong to one family, such as `SE1421-01` and `SE1421-03`, and
+- their names start with the same words. A brand name at the start doesn't count.
+
+Whatever follows the shared words becomes the variant label. The plugin guesses the attribute (Color, Size, Flavor, Scent or Volume, otherwise Option); you can change it. Each variable product gets one attribute. Results are kept for 30 minutes, so click **Scan again** after you change products.
+
+**What the new product gets.** Each variation takes its original's SKU, regular and sale price, sale dates, stock settings, weight, dimensions and image. The variable product takes the first product's descriptions, image, categories, tags, tax and shipping class, and adds the other products' images to its gallery. When the products are in different categories, you choose the new product's categories in the group. If WooCommerce fails to save any part, the partial product is removed.
+
+**What happens to the originals.** They are hidden from your shop and search, not deleted. Past orders still point to them. Their old URLs redirect (301) to the variable product with that option selected. Reviews are not copied. Each SKU now exists twice, on the hidden original and on the variation, so that Undo can restore everything. Once you are sure you will keep the new product, you can delete the hidden originals yourself.
+
+## Split a variable product into simple products
+
+1. Go to **Products > Variation Converter** and open the **Split** tab, or click **Split into simple products** under a variable product in **Products > All Products**.
+2. Each variation gets a row with a suggested name, such as "Tri-Rings Black". Edit the names, and untick variations you don't want as separate products.
+3. Click **Split into N simple products**.
+
+![The Split tab with a variable product open, showing its variations and their new product names.](site/images/split.webp)
+
+Each new product takes its variation's SKU, prices, sale dates, stock, weight, dimensions and image, plus the variable product's descriptions (a variation's own description wins if it has one), categories, tags, other attributes, tax status and purchase note. If a variation uses the variable product's shared stock count, the new product doesn't copy that count, so your stock isn't multiplied. The variable product is hidden, not deleted.
+
+You can't split a variation set to "Any" for an attribute (for example "Any Size"). Give it a specific value first. A variable product that the plugin made by combining offers Undo instead of a split, so you get your original products back.
+
+## Undo a conversion
+
+Open the **History** tab. It lists every combine and split, newest first. Click **Undo** on a row.
+
+- **Undoing a combine** deletes the variable product and its variations, and shows the original simple products again.
+- **Undoing a split** deletes the new simple products and shows the variable product again.
+
+Restored products get back the visibility they had before, plus the current prices and stock from the products being deleted, so sales made in the meantime carry over.
+
+If customers have already ordered the product that Undo deletes, their orders keep the line items and totals, but those lines no longer link to a product. In that case it is usually better to keep the new product.
+
+![The History tab with an Undo button for each conversion.](site/images/history.webp)
+
+## Good to know
+
+- There is no settings page.
+- If you use Relevanssi, changed products are reindexed automatically. Other search plugins pick up the changes on their next reindex.
+- Deleting the plugin removes its saved options and cached scan. Products it made, and the products it hid, stay as they are.
 
 ## WP-CLI
 
-```
-wp variation-converter combine --all --dry-run          # list what the scan would create, with each group's key
-wp variation-converter combine --all [--min-size=3] [--skip=price,cats] [--limit=50]
-wp variation-converter combine <key>...                  # just these groups
-wp variation-converter undo <id>... | --all [--yes]      # combined or split products
-```
-
-`combine` uses the proposed name, attribute, SKU and labels, leaves out members unchecked on the admin page, skips groups that need a label, and leaves a parent SKU empty when it is already in use. Only one bulk run can create products at a time (an option row taken with `INSERT IGNORE`, which also works on SQLite); a run that dies loses the lock after 10 minutes.
-
-## Hooks
-
-| Filter | Arguments | Use |
-|---|---|---|
-| `varconv_scan_products` | `array $products` (id, sku, name, title, price, stock, cats, brands) | Leave products out of the scan, such as testers or display units |
-| `varconv_brand_names` | `string[] $names` (default: WooCommerce Brands terms) | Add or replace the brand names a product name can start with |
-| `varconv_collections` | `array $collections`, `array $products` | Change the proposed groups after the scan: add members, drop groups. Skipped groups are kept apart for the Skipped view and are not passed in. Each group has key, family, name, brand, attribute, sku, members (with label) and notes (kind => text) |
-| `varconv_redirect_url` | `string $url`, `int $id`, `int $parent_id` | Change where a combined simple product's page redirects (the variable product with its option chosen); return `''` to show the old page instead |
-
-The scan result is cached for 30 minutes, so clear the `varconv_scan` transient (or click **Scan again**) after changing a filter.
-
-## Development
+You can also combine and undo from the command line. There is no command for splitting.
 
 ```sh
-php tests/test-scan.php       # scan tests, no WordPress needed
-find . -name '*.php' -exec php -l {} \;
+wp variation-converter combine --all --dry-run   # list what would be created, with each group's key
+wp variation-converter combine --all --min-size=3 --skip=price,cats
+wp variation-converter combine 3f2a9c81d0e4      # create only the groups with these keys
+wp variation-converter undo 1234                 # undo a combine or split by product ID
+wp variation-converter undo --all --yes          # undo everything, without asking
 ```
 
-To try it in WordPress, `harness/wp-harness up` makes a throwaway WordPress + WooCommerce site on SQLite with this plugin active and a messy demo catalog, at http://localhost:8080 (admin / admin). Then:
+`combine` options: `--limit=<n>` creates at most n groups; `--min-size=<n>` only takes groups of at least n products (default 2); `--skip` leaves out groups with these warnings: `dupes`, `label`, `long`, `price`, `cats`.
 
-```sh
-harness/wp-harness test     # all of tests/, the integration ones with wp eval-file
-harness/wp-harness check    # Plugin Check
-harness/wp-harness shot 'edit.php?post_type=product&page=variation-converter' --out shots
-harness/wp-harness down
-```
+Groups are created as suggested, without products you unticked on the admin page. Groups with a missing or repeated label are skipped for you to fix on the admin page. If the suggested parent SKU is already in use, the product is created without one. Only one bulk run, from WP-CLI or the admin page, can create products at a time.
 
-It needs PHP with pdo_sqlite, or Docker when there's no PHP. See [harness/README.md](harness/README.md).
+## For developers
 
-All functions, constants and CSS classes use the `varconv_` / `VARCONV_` / `varconv-` prefix.
+- Filters: `varconv_scan_products` (leave products out of the scan), `varconv_brand_names` (brand names a product name can start with), `varconv_collections` (change the suggested groups) and `varconv_redirect_url` (change or turn off the old-URL redirect by returning `''`). Click **Scan again** after changing a scan filter.
+- Build the plugin zip: `git archive --format=zip --prefix=variation-converter-for-woocommerce/ -o variation-converter-for-woocommerce.zip HEAD`
+- Tests and a throwaway WordPress + WooCommerce test site: see [harness/README.md](harness/README.md).
 
 ## License
 
