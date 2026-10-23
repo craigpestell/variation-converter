@@ -1,7 +1,7 @@
 /*
- * The Combine tab: create, undo and skip groups without a reload, the filter and SKU shading inside a group, row
- * order, the price preview, remembered unchecked products, the taken-SKU warning and "Create selected groups" in
- * batches. Every form also posts normally without this script. Undo asks first everywhere.
+ * The Combine tab: open a group's review card under its row, create, undo and skip without a reload, Select by
+ * SKU, drag to reorder, the live count and price, remembered unchecked products, the taken-SKU warning and the
+ * Create bulk action in batches. Every link and form also works without this script. Undo asks first everywhere.
  */
 ( function () {
 	var settings = window.varconv || null;
@@ -53,7 +53,20 @@
 		return row.querySelector( '.varconv-use' ).checked;
 	}
 
-	/* The count and price range in the group's row and under its table, and the check-all box. */
+	function shown( row ) {
+		return ! row.hidden;
+	}
+
+	/* The group's row in the list, above its card. */
+	function groupRow( card ) {
+		return document.getElementById( 'varconv-row-' + card.dataset.key );
+	}
+
+	function reviewRow( card ) {
+		return card.closest( '.varconv-review' );
+	}
+
+	/* The count and price range in the group's row, row shading, and the check-all box. */
 	function refresh( card ) {
 		var all = rows( card );
 		var picked = all.filter( used );
@@ -68,10 +81,14 @@
 			var high = Math.max.apply( null, prices );
 			range = low === high ? price( low ) : price( low ) + ' – ' + price( high );
 		}
-		var group = card.closest( '.varconv-group' );
-		group.querySelector( '.varconv-count' ).textContent = format( strings.count, picked.length, all.length );
-		group.querySelector( '.varconv-range' ).textContent = range;
-		card.querySelector( '.varconv-preview-range' ).textContent = range;
+		var row = groupRow( card );
+		if ( row ) {
+			row.querySelector( '.column-products' ).textContent = picked.length === all.length ? String( all.length ) : format( strings.count, picked.length, all.length );
+			row.querySelector( '.column-price' ).textContent = range;
+		}
+		all.forEach( function ( r ) {
+			r.classList.toggle( 'is-off', ! used( r ) );
+		} );
 		var checkAll = card.querySelector( '.varconv-check-all' );
 		checkAll.checked = all.length > 0 && picked.length === all.length;
 		checkAll.indeterminate = picked.length > 0 && picked.length < all.length;
@@ -79,16 +96,14 @@
 
 	/* Remembers which products are unchecked, so the card and bulk runs leave them out next time. */
 	function remember( card, changed ) {
+		// Products picked by hand are not a scan group, so there is nothing to remember them by.
+		if ( card.dataset.manual ) {
+			return;
+		}
 		var on = changed.filter( function ( row ) {
 			return ! used( row );
 		} );
 		var off = changed.filter( used );
-		var group = card.closest( '.varconv-group' );
-		// Products picked by hand are not a scan group, so there is nothing to remember them by.
-		if ( group.dataset.manual ) {
-			return;
-		}
-		var key = group.dataset.key;
 		[ [ on, 1 ], [ off, 0 ] ].forEach( function ( pair ) {
 			if ( ! pair[ 0 ].length ) {
 				return;
@@ -96,7 +111,7 @@
 			var data = new window.FormData();
 			data.append( 'action', 'varconv_exclude' );
 			data.append( '_wpnonce', settings.nonce );
-			data.append( 'key', key );
+			data.append( 'key', card.dataset.key );
 			data.append( 'on', pair[ 1 ] );
 			pair[ 0 ].forEach( function ( row ) {
 				data.append( 'ids[]', row.dataset.id );
@@ -116,57 +131,75 @@
 		refresh( card );
 	}
 
-	function shown( row ) {
-		return ! row.hidden;
+	/* Opens or closes a group's card under its row. */
+	function toggle( key, open ) {
+		var row = document.getElementById( 'varconv-row-' + key );
+		var review = document.getElementById( 'varconv-' + key );
+		if ( ! row || ! review ) {
+			return;
+		}
+		open = undefined === open ? review.hidden : open;
+		review.hidden = ! open;
+		row.classList.toggle( 'varconv-open', open );
+		row.querySelectorAll( '.row-title' ).forEach( function ( link ) {
+			link.setAttribute( 'aria-expanded', open ? 'true' : 'false' );
+			link.querySelector( '.varconv-toggle' ).innerHTML = open ? '&#9662;' : '&#9656;';
+		} );
+		if ( open ) {
+			sortable( review.querySelector( '.varconv-members tbody' ) );
+			var first = review.querySelector( 'input[name="name"]' );
+			if ( first ) {
+				first.focus( { preventScroll: true } );
+			}
+		}
 	}
 
-	/*
-	 * Shades rows by their SKU's first N characters: rows that match up to there share a shade, and the shade
-	 * alternates from one run to the next. The first row of each run can check just that run.
-	 */
-	function bands( card ) {
-		var input = card.querySelector( '.varconv-sku-chars' );
-		var n = input ? Math.max( 0, parseInt( input.value, 10 ) || 0 ) : 0;
-		var last = null;
-		var odd = false;
-		rows( card ).forEach( function ( row ) {
-			var link = row.querySelector( '.varconv-member-sku' );
-			var sku = link.dataset.sku;
-			var old = row.querySelector( '.varconv-only-band' );
-			if ( old ) {
-				old.remove();
-			}
-			row.classList.remove( 'varconv-band-a', 'varconv-band-b' );
-			link.textContent = sku;
-			if ( ! n || ! shown( row ) ) {
-				return;
-			}
-			var prefix = sku.slice( 0, n ).toUpperCase();
-			var start = prefix !== last;
-			if ( start ) {
-				odd = ! odd;
-				last = prefix;
-			}
-			row.classList.add( odd ? 'varconv-band-a' : 'varconv-band-b' );
-			row.dataset.band = prefix;
-			var mark = document.createElement( 'mark' );
-			mark.textContent = sku.slice( 0, n );
-			link.textContent = sku.slice( n );
-			link.insertBefore( mark, link.firstChild );
-			if ( start ) {
-				var button = document.createElement( 'button' );
-				button.type = 'button';
-				button.className = 'button-link varconv-only-band';
-				button.textContent = strings.onlyBand;
-				button.setAttribute( 'aria-label', format( strings.onlyLabel, sku.slice( 0, n ) ) );
-				link.parentNode.appendChild( button );
-			}
+	/* Drag to reorder, with the handle; the up and down buttons do the same from the keyboard. */
+	function sortable( body ) {
+		var $ = window.jQuery;
+		if ( ! body || ! $ || ! $.fn.sortable || body.dataset.sortable ) {
+			return;
+		}
+		body.dataset.sortable = '1';
+		$( body ).sortable( {
+			handle: '.varconv-handle',
+			axis: 'y',
+			items: '> tr',
+			helper: function ( event, tr ) {
+				// Keep the cells' widths while dragging.
+				var cells = tr.children();
+				var helper = tr.clone();
+				helper.children().each( function ( i ) {
+					$( this ).width( cells.eq( i ).width() );
+				} );
+				return helper;
+			},
 		} );
+	}
+
+	/* Marks a group's row done (created or skipped) and takes it out of the bulk selection. */
+	function finish( card, badge, kind ) {
+		var row = groupRow( card );
+		if ( ! row ) {
+			return;
+		}
+		row.classList.add( 'is-done' );
+		var pick = row.querySelector( '.varconv-pick' );
+		if ( pick ) {
+			pick.checked = false;
+			pick.disabled = true;
+		}
+		var actions = row.querySelector( '.row-actions' );
+		if ( actions ) {
+			actions.remove();
+		}
+		row.querySelector( '.column-status' ).innerHTML = '<span class="varconv-badge varconv-badge-' + kind + '"></span>';
+		row.querySelector( '.column-status .varconv-badge' ).textContent = badge;
+		updateBulk();
 	}
 
 	/* After a create: drop the products it used; two or more left stay a group to create from next. */
 	function created( card, data ) {
-		var group = card.closest( '.varconv-group' );
 		data.members.forEach( function ( id ) {
 			var row = card.querySelector( 'tr[data-id="' + id + '"]' );
 			if ( row ) {
@@ -174,33 +207,31 @@
 			}
 		} );
 		var left = rows( card );
-		if ( left.length < 2 ) {
-			var pick = group.querySelector( '.varconv-pick' );
-			if ( pick ) {
-				pick.remove();
-			}
-			group.classList.add( 'is-done' );
-			group.querySelector( 'details' ).replaceWith( notice( 'success', data.html ) );
-			updateBulk();
-			return;
-		}
 		var message = card.querySelector( '.varconv-card-message' );
 		message.innerHTML = '';
+		if ( left.length < 2 ) {
+			finish( card, strings.created, 'ready' );
+			card.querySelector( '.varconv-card-message' ).appendChild( notice( 'success', data.html ) );
+			Array.prototype.slice.call( card.children ).forEach( function ( child ) {
+				if ( ! child.classList.contains( 'varconv-card-message' ) ) {
+					child.hidden = true;
+				}
+			} );
+			return;
+		}
 		message.appendChild( notice( 'success', data.html + text( format( strings.remaining, left.length ) ) ) );
 		left.forEach( function ( row ) {
 			row.querySelector( '.varconv-use' ).checked = true;
 		} );
 		remember( card, left );
 		// The parent SKU just went to the new product.
-		var sku = card.querySelector( '.varconv-parent-sku' );
-		sku.value = '';
+		card.querySelector( '.varconv-parent-sku' ).value = '';
 		card.querySelector( '.varconv-sku-note' ).textContent = '';
 		var filter = card.querySelector( '.varconv-row-filter' );
 		if ( filter ) {
 			filter.value = '';
 			filterRows( card );
 		}
-		bands( card );
 		refresh( card );
 	}
 
@@ -210,12 +241,11 @@
 		rows( card ).forEach( function ( row ) {
 			row.hidden = '' !== needle && -1 === row.dataset.search.indexOf( needle );
 		} );
-		bands( card );
 	}
 
 	function submitCard( card, dismiss ) {
 		var message = card.querySelector( '.varconv-card-message' );
-		var buttons = card.querySelectorAll( '.varconv-actions button' );
+		var buttons = card.querySelectorAll( '.varconv-review-foot button' );
 		var data = new window.FormData( card );
 		if ( dismiss ) {
 			data.append( 'dismiss', '1' );
@@ -225,33 +255,27 @@
 		} );
 		message.innerHTML = '';
 		message.appendChild( notice( 'info', text( strings.working ) ) );
-		post( data ).then( function ( response ) {
+		function done() {
 			buttons.forEach( function ( b ) {
 				b.disabled = false;
 			} );
 			message.innerHTML = '';
+		}
+		post( data ).then( function ( response ) {
+			done();
 			if ( ! response.success ) {
 				message.appendChild( notice( 'error', text( ( response.data && response.data.message ) || strings.failed ) ) );
 				message.scrollIntoView( { block: 'nearest' } );
 				return;
 			}
 			if ( response.data.dismissed ) {
-				var group = card.closest( '.varconv-group' );
-				var pick = group.querySelector( '.varconv-pick' );
-				if ( pick ) {
-					pick.remove();
-				}
-				group.classList.add( 'is-done' );
-				group.querySelector( 'details' ).replaceWith( notice( 'info', text( strings.skipped ) ) );
-				updateBulk();
+				finish( card, strings.skippedBadge, 'skipped' );
+				toggle( card.dataset.key, false );
 				return;
 			}
 			created( card, response.data );
 		}, function () {
-			buttons.forEach( function ( b ) {
-				b.disabled = false;
-			} );
-			message.innerHTML = '';
+			done();
 			message.appendChild( notice( 'error', text( strings.failed ) ) );
 		} );
 	}
@@ -271,42 +295,65 @@
 		} );
 	}
 
-	/* "Create selected groups": the checked groups, or all that match, a batch at a time. */
+	/* Bulk actions: Create runs a batch at a time with progress; Skip and Restore post the form. */
 	var bulk = document.getElementById( 'varconv-bulk' );
 
 	function picks() {
 		return Array.prototype.slice.call( document.querySelectorAll( '.varconv-pick' ) );
 	}
 
-	function updateBulk() {
-		if ( ! bulk ) {
-			return;
-		}
-		var all = bulk.querySelector( '.varconv-pick-all' );
-		var any = picks().some( function ( p ) {
-			return p.checked;
-		} ) || ( all && all.checked );
-		bulk.querySelector( '.varconv-bulk-create' ).disabled = ! any;
+	function allPicked() {
+		var all = document.querySelector( '.varconv-pick-all' );
+		return !! ( all && all.checked );
 	}
 
-	function runBulk() {
-		var all = bulk.querySelector( '.varconv-pick-all' );
-		var keys = all && all.checked ? JSON.parse( bulk.dataset.keys ) : picks().filter( function ( p ) {
+	function updateBulk() {
+		var head = document.querySelectorAll( '.varconv-pick-page' );
+		var boxes = picks().filter( function ( p ) {
+			return ! p.disabled;
+		} );
+		var every = boxes.length > 0 && boxes.every( function ( p ) {
+			return p.checked;
+		} );
+		head.forEach( function ( h ) {
+			h.checked = every;
+		} );
+	}
+
+	function runBulk( action ) {
+		var keys = allPicked() ? JSON.parse( bulk.dataset.keys ) : picks().filter( function ( p ) {
 			return p.checked;
 		} ).map( function ( p ) {
 			return p.value;
 		} );
-		var progress = bulk.querySelector( '.varconv-progress' );
-		var button = bulk.querySelector( '.varconv-bulk-create' );
+		var progress = document.querySelector( '.varconv-progress' );
+		var buttons = document.querySelectorAll( '.varconv-bulk-apply' );
+		if ( ! keys.length ) {
+			progress.hidden = false;
+			progress.innerHTML = text( strings.noGroups );
+			return;
+		}
+		if ( 'create' !== action ) {
+			bulk.submit();
+			return;
+		}
 		var totals = { made: 0, skip: 0, failed: 0 };
 		var done = 0;
 		var size = 10;
-		button.disabled = true;
+		buttons.forEach( function ( b ) {
+			b.disabled = true;
+		} );
 		progress.hidden = false;
-		progress.textContent = format( strings.progress, 0, keys.length );
+		progress.innerHTML = text( format( strings.progress, 0, keys.length ) );
+		function stop( message ) {
+			progress.innerHTML = text( message );
+			buttons.forEach( function ( b ) {
+				b.disabled = false;
+			} );
+		}
 		function next() {
 			if ( done >= keys.length ) {
-				progress.textContent = format( strings.bulkDone, totals.made, totals.skip, totals.failed );
+				progress.innerHTML = text( format( strings.bulkDone, totals.made, totals.skip, totals.failed ) );
 				window.setTimeout( function () {
 					window.location.reload();
 				}, 1500 );
@@ -320,19 +367,17 @@
 			} );
 			post( data ).then( function ( response ) {
 				if ( ! response.success ) {
-					progress.textContent = ( response.data && response.data.message ) || strings.failed;
-					button.disabled = false;
+					stop( ( response.data && response.data.message ) || strings.failed );
 					return;
 				}
 				totals.made += response.data.made;
 				totals.skip += response.data.skip;
 				totals.failed += response.data.failed;
 				done += size;
-				progress.textContent = format( strings.progress, Math.min( done, keys.length ), keys.length );
+				progress.innerHTML = text( format( strings.progress, Math.min( done, keys.length ), keys.length ) );
 				next();
 			}, function () {
-				progress.textContent = strings.failed;
-				button.disabled = false;
+				stop( strings.failed );
 			} );
 		}
 		next();
@@ -346,7 +391,7 @@
 				return;
 			}
 			// On the Combine tab, undo in place; elsewhere the page reloads into History.
-			if ( settings && form.closest( '.varconv-group, .varconv-created' ) ) {
+			if ( settings && form.closest( '.varconv-card, .varconv-created' ) ) {
 				event.preventDefault();
 				submitUndo( form );
 			}
@@ -357,17 +402,29 @@
 		}
 		if ( form.matches( 'form.varconv-card' ) ) {
 			event.preventDefault();
-			submitCard( form, !! ( event.submitter && event.submitter.name === 'dismiss' ) );
+			submitCard( form, !! ( event.submitter && 'dismiss' === event.submitter.name ) );
 		} else if ( form === bulk ) {
 			event.preventDefault();
-			runBulk();
+			var which = event.submitter && 'bottom' === event.submitter.value ? 'bulk_action2' : 'bulk_action';
+			var select = document.querySelector( '[name="' + which + '"]' );
+			var action = select ? select.value : '';
+			if ( ! action ) {
+				var progress = document.querySelector( '.varconv-progress' );
+				progress.hidden = false;
+				progress.innerHTML = text( strings.noAction );
+				return;
+			}
+			// Bulk Apply submits the form with the menu that was used; keep both menus in step for a plain submit.
+			document.querySelectorAll( '[name="bulk_action"], [name="bulk_action2"]' ).forEach( function ( s ) {
+				s.value = action;
+			} );
+			runBulk( action );
 		}
 	} );
 
 	if ( ! settings ) {
 		return;
 	}
-	updateBulk();
 
 	document.addEventListener( 'change', function ( event ) {
 		var input = event.target;
@@ -376,22 +433,23 @@
 			remember( card, [ input.closest( 'tr' ) ] );
 			refresh( card );
 		} else if ( input.matches( '.varconv-check-all' ) ) {
-			setUsed( card, rows( card ), input.checked );
+			setUsed( card, rows( card ).filter( shown ), input.checked );
 		} else if ( input.matches( '.varconv-pick-page' ) ) {
 			picks().forEach( function ( p ) {
-				p.checked = input.checked;
+				if ( ! p.disabled ) {
+					p.checked = input.checked;
+				}
 			} );
 			updateBulk();
 		} else if ( input.matches( '.varconv-pick-all' ) ) {
 			if ( input.checked ) {
 				picks().forEach( function ( p ) {
-					p.checked = true;
+					p.checked = ! p.disabled;
 				} );
-				bulk.querySelector( '.varconv-pick-page' ).checked = true;
 			}
 			updateBulk();
 		} else if ( input.matches( '.varconv-pick' ) ) {
-			var all = bulk && bulk.querySelector( '.varconv-pick-all' );
+			var all = document.querySelector( '.varconv-pick-all' );
 			if ( all && ! input.checked ) {
 				all.checked = false;
 			}
@@ -408,8 +466,6 @@
 		}
 		if ( input.matches( '.varconv-row-filter' ) ) {
 			filterRows( card );
-		} else if ( input.matches( '.varconv-sku-chars' ) ) {
-			bands( card );
 		} else if ( input.matches( '.varconv-attribute' ) ) {
 			card.querySelector( '.varconv-attribute-name' ).textContent = input.value;
 		} else if ( input.matches( '.varconv-parent-sku' ) ) {
@@ -428,6 +484,16 @@
 	} );
 
 	document.addEventListener( 'click', function ( event ) {
+		var link = event.target.closest( 'a.varconv-review-toggle, a.varconv-cancel' );
+		if ( link ) {
+			var tr = link.closest( 'tr' );
+			var key = tr.dataset.key || ( link.closest( '.varconv-card' ) || {} ).dataset.key;
+			if ( key && document.getElementById( 'varconv-' + key ) ) {
+				event.preventDefault();
+				toggle( key, link.classList.contains( 'varconv-cancel' ) ? false : undefined );
+			}
+			return;
+		}
 		var button = event.target.closest( 'button' );
 		var card = button && button.closest( 'form.varconv-card' );
 		if ( ! card ) {
@@ -437,28 +503,32 @@
 		if ( button.matches( '.varconv-up' ) && row.previousElementSibling ) {
 			row.parentNode.insertBefore( row, row.previousElementSibling );
 			button.focus();
-			bands( card );
 		} else if ( button.matches( '.varconv-down' ) && row.nextElementSibling ) {
 			row.parentNode.insertBefore( row.nextElementSibling, row );
 			button.focus();
-			bands( card );
 		} else if ( button.matches( '.varconv-check-shown' ) ) {
 			var list = rows( card );
 			setUsed( card, list.filter( shown ), true );
 			setUsed( card, list.filter( function ( r ) {
 				return ! shown( r );
 			} ), false );
-		} else if ( button.matches( '.varconv-uncheck-shown' ) ) {
-			setUsed( card, rows( card ).filter( shown ), false );
-		} else if ( button.matches( '.varconv-only-band' ) ) {
-			var band = row.dataset.band;
+		} else if ( button.matches( '.varconv-band-pick' ) ) {
+			var prefix = button.dataset.prefix;
 			var all = rows( card );
+			var match = function ( r ) {
+				return '' === prefix || 0 === r.dataset.sku.indexOf( prefix );
+			};
+			setUsed( card, all.filter( match ), true );
 			setUsed( card, all.filter( function ( r ) {
-				return shown( r ) && r.dataset.band === band;
-			} ), true );
-			setUsed( card, all.filter( function ( r ) {
-				return ! shown( r ) || r.dataset.band !== band;
+				return ! match( r );
 			} ), false );
+			card.querySelectorAll( '.varconv-band-pick' ).forEach( function ( b ) {
+				b.setAttribute( 'aria-pressed', b === button ? 'true' : 'false' );
+			} );
 		}
 	} );
+
+	// Cards open on load (a failed create, a link to one group) can be dragged right away.
+	document.querySelectorAll( '.varconv-review:not([hidden]) .varconv-members tbody' ).forEach( sortable );
+	updateBulk();
 }() );

@@ -192,4 +192,22 @@ expect( varconv_manual( array( $p( 32, 'AB-2', 'B' ), $p( 31, 'AB-1', 'A' ) ) )[
 expect( varconv_manual( array( $p( 31, 'AB-1', 'Red Cup' ), $p( 32, 'AB-2', 'Blue Mug' ) ) )['name'], 'Red Cup', 'manual name falls back to the first name' );
 expect( varconv_manual( array( $p( 31, 'AB-1', 'Cup' ), $p( 32, 'AB-2', 'Cup' ) ) )['sku'], 'AB', 'manual parent SKU' );
 
+// List order with direction, price sort, warning filter.
+expect( array_column( varconv_sorted( $list, 'size', 'asc' ), 'key' ), array( 'z', 'x', 'y' ), 'sort by size ascending' );
+expect( array_column( varconv_sorted( $list, 'name', 'desc' ), 'key' ), array( 'z', 'x', 'y' ), 'sort by name descending' );
+$priced = array(
+	array( 'key' => 'p1', 'name' => 'B', 'members' => array( array( 'price' => '9' ), array( 'price' => '12' ) ) ),
+	array( 'key' => 'p2', 'name' => 'A', 'members' => array( array( 'price' => '5' ), array( 'price' => '' ) ) ),
+);
+expect( array_column( varconv_sorted( $priced, 'price' ), 'key' ), array( 'p2', 'p1' ), 'sort by lowest price' );
+expect( array_column( varconv_with( $groups, 'price' ), 'key' ), array( 'b' ), 'with price note' );
+expect( array_column( varconv_with( $groups, 'label' ), 'key' ), array( 'c' ), 'with label covers repeat' );
+expect( count( varconv_with( $groups, '' ) ), count( $groups ), 'with nothing keeps all' );
+
+// Picking part of a group by SKU.
+expect( varconv_sku_bands( array( 'GS3-A1', 'GS3-A2', 'GS3-B1', 'GS3-B2', 'GS3-B3', 'GS3-C1' ) ), array( 'GS3-A' => 2, 'GS3-B' => 3, 'GS3-C' => 1 ), 'SKU bands' );
+expect( varconv_sku_bands( array( 'KN5-01-00', 'KN5-01-01', 'KN5-02-00', 'KN5-02-01' ) ), array( 'KN5-01' => 2, 'KN5-02' => 2 ), 'SKU bands across a separator' );
+expect( varconv_sku_bands( array( 'SE1421-00', 'SE1421-01', 'SE1421-03' ) ), array(), 'no bands when SKUs differ only at the end' );
+expect( varconv_sku_bands( array( 'A1', 'A2' ) ), array(), 'no bands for two products' );
+
 echo "Variant collection scan tests passed.\n";
