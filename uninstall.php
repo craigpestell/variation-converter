@@ -12,3 +12,4 @@ delete_option( 'varconv_dismissed' );
 delete_option( 'varconv_excluded' );
 delete_option( 'varconv_lock' );
 delete_transient( 'varconv_scan' );
+delete_metadata( 'user', 0, 'varconv_per_page', '', true );

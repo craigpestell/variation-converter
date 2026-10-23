@@ -127,6 +127,7 @@ function varconv_candidates( bool $fresh = false ): array {
 	$collections = (array) apply_filters( 'varconv_collections', varconv_scan( $products, $dismissed, $brand_names ), $products );
 	$scan = array(
 		'time'        => time(),
+		'products'    => count( $products ),
 		'collections' => $collections,
 	);
 	set_transient( VARCONV_SCAN_TRANSIENT, $scan, 30 * MINUTE_IN_SECONDS );
