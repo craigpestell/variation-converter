@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 0.2.4
+Stable tag: 0.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -122,6 +122,9 @@ A variation set to "Any" for an attribute (for example "Any Size") isn't one spe
 
 == Changelog ==
 
+= 0.3.0 =
+* The WP-CLI command is now `wp varconv` (was `wp variation-converter`). The admin page address is now `page=varconv`; old links redirect.
+
 = 0.2.4 =
 * Undo brings back current prices and stock: sales made while products were combined or split now carry over to the restored products.
 
@@ -148,6 +151,9 @@ A variation set to "Any" for an attribute (for example "Any Size") isn't one spe
 * First public version: detect groups of simple products, review them, merge each into a variable product, split variable products into simple products, and undo either.
 
 == Upgrade Notice ==
+
+= 0.3.0 =
+The WP-CLI command is renamed to `wp varconv`. Update any scripts that call `wp variation-converter`.
 
 = 0.2.0 =
 Bulk combine, a Products-list action, WP-CLI, and redirects from old product URLs.
