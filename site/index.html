@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Variation Converter for WooCommerce</title>
+<meta name="description" content="A free WordPress plugin that merges near-duplicate WooCommerce simple products into one variable product, or splits a variable product into simple ones. Preview first, undo in one click.">
+<meta property="og:title" content="Variation Converter for WooCommerce">
+<meta property="og:description" content="Merge near-duplicate simple products into a variable product, or split a variable product into simple ones. Preview first, undo in one click.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://variation-converter.bizrocket.ca/images/combine-list.png">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="top">
+	<div class="wrap top-inner">
+		<a class="brand" href="#"><img src="favicon.svg" alt="" width="28" height="28"> Variation Converter</a>
+		<nav>
+			<a href="#features">Features</a>
+			<a href="#how">How it works</a>
+			<a href="#faq">FAQ</a>
+			<a href="https://github.com/craigpestell/variation-converter">GitHub</a>
+		</nav>
+	</div>
+</header>
+
+<main>
+<section class="hero">
+	<div class="wrap">
+		<p class="eyebrow">Free WordPress plugin for WooCommerce</p>
+		<h1>Turn a pile of near-duplicate products into one variable product.</h1>
+		<p class="lead">Variation Converter finds the simple products in your catalog that are really one product in several colors, sizes or scents, and merges each group into a variable product. It splits variable products back into simple ones too. You preview every change, and Undo puts everything back.</p>
+		<div class="actions">
+			<span class="button button-muted" aria-disabled="true">WordPress.org listing coming soon</span>
+			<a class="button" href="https://github.com/craigpestell/variation-converter">Get it on GitHub</a>
+		</div>
+		<p class="meta">GPLv2 or later · WordPress 6.5+ · WooCommerce 8.0+ · PHP 7.4+</p>
+	</div>
+	<div class="wrap">
+		<figure class="shot shot-hero">
+			<img src="images/combine-list.webp" width="1120" height="738" alt="The Combine tab listing proposed groups such as Classic Crew Tee and Soy Candle, each with a product count, parent SKU, price range, attribute and status.">
+		</figure>
+	</div>
+</section>
+
+<section class="problem">
+	<div class="wrap narrow">
+		<h2>Three listings where there should be one</h2>
+		<p>Lots of stores start out with one simple product per variant: "Tri-Rings Black", "Tri-Rings Blue", "Tri-Rings Red". Supplier feeds and platform imports do it too. Shoppers see three listings, and you have three products to keep in sync.</p>
+		<p>Fixing that by hand means building a variable product, re-entering every SKU, price, stock level and image, and then hiding the old products. Variation Converter does it for you, and keeps the originals so nothing is lost.</p>
+	</div>
+</section>
+
+<section id="how" class="how">
+	<div class="wrap">
+		<h2>How it works</h2>
+		<ol class="steps">
+			<li>
+				<div class="step-text">
+					<h3>It finds the groups</h3>
+					<p>Go to <b>Products &gt; Variation Converter</b>. The plugin scans your published simple products and groups the ones whose SKUs share a family (TEE100-BLK, TEE100-NAV) and whose names start with the same words. Each group shows a guessed attribute, a suggested parent SKU, and notes on anything worth a second look: different prices, different categories, duplicate labels.</p>
+				</div>
+			</li>
+			<li>
+				<div class="step-text">
+					<h3>You review and adjust</h3>
+					<p>Open a group to see each product, the variant label read from its name, its SKU, price and stock. Rename the product, change the attribute, fix labels, drag to reorder, or untick anything that doesn't belong. Nothing changes until you click Create.</p>
+				</div>
+				<figure class="shot">
+					<img src="images/combine-card.webp" width="1076" height="390" alt="A group being reviewed: product name Classic Crew Tee, attribute Color, parent SKU TEE100, and four rows labeled Black, Heather Grey, Navy and White with their SKUs, prices and stock.">
+				</figure>
+			</li>
+			<li>
+				<div class="step-text">
+					<h3>One click makes the variable product</h3>
+					<p>Each original becomes a variation with its SKU, regular and sale price, sale dates, stock, weight, dimensions and image. The new product takes the first member's description, categories, tags, tax and shipping class, with every member's image in its gallery. The originals are hidden from your shop, not deleted, and their old URLs redirect to the new product with the right option selected.</p>
+				</div>
+			</li>
+			<li>
+				<div class="step-text">
+					<h3>Undo is always there</h3>
+					<p>The History tab lists every conversion with an Undo button. Undo removes what the plugin made and brings the originals back with the visibility they had, carrying over current prices and stock so sales made in between aren't lost.</p>
+				</div>
+				<figure class="shot">
+					<img src="images/history.webp" width="1120" height="328" alt="The History tab showing Classic Crew Tee, combined from four simple products, with an Undo button.">
+				</figure>
+			</li>
+		</ol>
+	</div>
+</section>
+
+<section class="split">
+	<div class="wrap two-col">
+		<div>
+			<h2>It works the other way too</h2>
+			<p>If a variable product would sell better as separate listings, or you're moving to a setup that needs one product per variant, split it. Pick a variable product on the Split tab, or use the <b>Split into simple products</b> link in your product list. You get one row per variation with a suggested name you can edit.</p>
+			<p>Each checked variation becomes a simple product with its own SKU, prices, stock, weight, dimensions and image, plus the parent's descriptions, categories and tags. The variable product is hidden, not deleted, and Undo brings it back.</p>
+		</div>
+		<figure class="shot">
+			<img src="images/split.webp" width="1120" height="568" alt="The Split tab with Canvas Apron open, showing two variations to become simple products named Canvas Apron Sand and Canvas Apron Charcoal.">
+		</figure>
+	</div>
+</section>
+
+<section id="features" class="features">
+	<div class="wrap">
+		<h2>What you get</h2>
+		<ul class="grid">
+			<li><h3>Both directions</h3><p>Merge simple products into a variable product, or split a variable product into simple products.</p></li>
+			<li><h3>Finds the groups for you</h3><p>Grouped by SKU family and shared name, sorted and filterable, with Ready, Needs review and Skipped views.</p></li>
+			<li><h3>Review before anything changes</h3><p>Rename, change the attribute, fix labels and leave products out. Skip a group that isn't really variants.</p></li>
+			<li><h3>Keeps your data</h3><p>SKUs, prices, sale dates, stock, weight, dimensions and images move to the variations.</p></li>
+			<li><h3>Non-destructive</h3><p>Originals are hidden, never deleted. Their orders, reviews and links stay as they were.</p></li>
+			<li><h3>Old links keep working</h3><p>A combined product's old URL sends a 301 to the variable product with that option chosen.</p></li>
+			<li><h3>One-click Undo</h3><p>Every conversion can be reversed from History, in either direction.</p></li>
+			<li><h3>All or nothing</h3><p>If WooCommerce fails to save any part of a new product, the partial product is removed.</p></li>
+			<li><h3>Bulk when you're ready</h3><p>Create many groups at once from the list, or select products in <b>All Products</b> and choose "Combine into variable product".</p></li>
+			<li><h3>Lightweight</h3><p>No settings page, no scripts or styles on your storefront, no external services, nothing stored beyond a few options and product meta fields.</p></li>
+		</ul>
+	</div>
+</section>
+
+<section class="cli">
+	<div class="wrap two-col">
+		<div>
+			<h2>For developers: WP-CLI</h2>
+			<p>Cleaning up a client's catalog? Preview with <code>--dry-run</code>, leave out groups with warnings, and undo from the command line too. Undo works the same as the admin page, in both directions.</p>
+		</div>
+<pre><code><span class="c"># See what would be created</span>
+wp variation-converter combine --all --dry-run
+
+<span class="c"># Create groups of 3+ with matching prices and categories</span>
+wp variation-converter combine --all --min-size=3 --skip=price,cats
+
+<span class="c"># Undo one conversion, or all of them</span>
+wp variation-converter undo 1234
+wp variation-converter undo --all --yes</code></pre>
+	</div>
+</section>
+
+<section id="faq" class="faq">
+	<div class="wrap narrow">
+		<h2>Questions</h2>
+		<details>
+			<summary>Will this delete my products?</summary>
+			<p>No. The original simple products are set to hidden catalog visibility so they no longer show in your shop or search results. They are not deleted, and Undo makes them visible again.</p>
+		</details>
+		<details>
+			<summary>What happens to existing orders, reviews and links?</summary>
+			<p>They stay with the original simple products. Past orders still point to them, and old product URLs redirect to the new variable product with that option selected. Reviews are not copied to the new variable product.</p>
+		</details>
+		<details>
+			<summary>My products don't have SKUs. Will it work?</summary>
+			<p>Not yet. Grouping relies on SKUs, so products without one are never proposed. Name-only matching is being considered for a future version.</p>
+		</details>
+		<details>
+			<summary>Can a product have more than one attribute, like color and size?</summary>
+			<p>Not in this version. Each variable product gets one attribute. You can rename it before creating, for example from "Color" to "Finish".</p>
+		</details>
+		<details>
+			<summary>Why are there two products with the same SKU after a conversion?</summary>
+			<p>The originals are kept, hidden, so Undo can restore everything exactly. Once you're sure you'll keep the new product, you can delete the hidden one yourself.</p>
+		</details>
+		<details>
+			<summary>What if I undo after customers have ordered the new product?</summary>
+			<p>Orders keep their line items and totals, but those lines will no longer link to a product. If the new product has already sold, it's usually better to keep it.</p>
+		</details>
+		<details>
+			<summary>Who can use it?</summary>
+			<p>Anyone with a role that can manage WooCommerce products: Shop Manager or Administrator. We recommend a database backup before converting many products at once.</p>
+		</details>
+	</div>
+</section>
+
+<section class="get">
+	<div class="wrap narrow center">
+		<h2>Get Variation Converter</h2>
+		<p>It's free and open source. The WordPress.org listing is on its way; until then you can download it from GitHub and upload it under <b>Plugins &gt; Add New &gt; Upload Plugin</b>.</p>
+		<div class="actions">
+			<a class="button" href="variation-converter-for-woocommerce.zip">Download from GitHub</a>
+			<a class="button button-ghost" href="https://github.com/craigpestell/variation-converter/issues">Report an issue</a>
+		</div>
+	</div>
+</section>
+</main>
+
+<footer class="foot">
+	<div class="wrap foot-inner">
+		<p>Made by <a href="https://craigpestell.com">Craig Pestell</a>. Variation Converter is free software under the GPLv2 or later.</p>
+		<p class="small">Not affiliated with WooCommerce or Automattic. WooCommerce is a trademark of Automattic Inc.</p>
+	</div>
+</footer>
+
+</body>
+</html>
