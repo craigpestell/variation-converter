@@ -1,6 +1,6 @@
 <?php
 /**
- * WP-CLI commands: wp variation-converter combine | undo.
+ * WP-CLI commands: wp varconv combine | undo.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -42,9 +42,9 @@ class Varconv_CLI_Command {
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     wp variation-converter combine --all --dry-run
-	 *     wp variation-converter combine --all --min-size=3 --skip=price,cats
-	 *     wp variation-converter combine 3f2a9c81d0e4
+	 *     wp varconv combine --all --dry-run
+	 *     wp varconv combine --all --min-size=3 --skip=price,cats
+	 *     wp varconv combine 3f2a9c81d0e4
 	 *
 	 * @param string[] $args
 	 * @param array    $options
@@ -123,8 +123,8 @@ class Varconv_CLI_Command {
 	 *
 	 * ## EXAMPLES
 	 *
-	 *     wp variation-converter undo 1234
-	 *     wp variation-converter undo --all --yes
+	 *     wp varconv undo 1234
+	 *     wp varconv undo --all --yes
 	 *
 	 * @param string[] $args
 	 * @param array    $options
@@ -153,4 +153,4 @@ class Varconv_CLI_Command {
 	}
 }
 
-WP_CLI::add_command( 'variation-converter', 'Varconv_CLI_Command' );
+WP_CLI::add_command( 'varconv', 'Varconv_CLI_Command' );

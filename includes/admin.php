@@ -10,7 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-const VARCONV_PAGE = 'variation-converter';
+const VARCONV_PAGE = 'varconv';
 const VARCONV_CAP = 'manage_woocommerce';
 const VARCONV_PER_PAGE = 25;
 

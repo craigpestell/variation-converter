@@ -3,7 +3,7 @@
 // Checks labels and notes, a partial create, a whole create, the taken-SKU error, bulk create and phone width.
 export default async function ({ page, go, shot, problems }) {
 	const row = (name) => page.locator('tr.varconv-group-row', { hasText: name }).first();
-	await go('edit.php?post_type=product&page=variation-converter');
+	await go('edit.php?post_type=product&page=varconv');
 	console.log('groups:', (await page.locator('tr.varconv-group-row .row-title').allTextContents()).map(s => s.replace(/\s+/g, ' ').trim()).join(' | '));
 	await shot('combine');
 	// Labels, size order, duplicate and category notes
@@ -35,7 +35,7 @@ export default async function ({ page, go, shot, problems }) {
 	await page.locator('.varconv-card-message .notice-success').waitFor();
 	console.log('in place:', (await page.locator('.varconv-card-message .notice-success').innerText()).split('\n')[0]);
 	// SKU error names the product
-	await go('edit.php?post_type=product&page=variation-converter');
+	await go('edit.php?post_type=product&page=varconv');
 	r = row('Classic Crew Tee');
 	key = await r.getAttribute('data-key');
 	await r.locator('.row-title').click();
@@ -45,16 +45,16 @@ export default async function ({ page, go, shot, problems }) {
 	await card.locator('.notice-error').waitFor();
 	console.log('sku error:', await card.locator('.notice-error').innerText());
 	// Bulk create with JS ends on the notice
-	await go('edit.php?post_type=product&page=variation-converter');
+	await go('edit.php?post_type=product&page=varconv');
 	await row('Northwind Tote').locator('.varconv-pick').check();
 	await page.selectOption('[name="bulk_action"]', 'create');
 	await Promise.all([page.waitForNavigation({ timeout: 20000 }), page.locator('.varconv-bulk-apply').first().click()]);
 	console.log('bulk notice:', await page.locator('.notice-success, .notice-warning').first().innerText());
-	console.log('scan again on history:', await (async () => { await go('edit.php?post_type=product&page=variation-converter&tab=history'); return page.locator('.varconv-rescan').count(); })());
+	console.log('scan again on history:', await (async () => { await go('edit.php?post_type=product&page=varconv&tab=history'); return page.locator('.varconv-rescan').count(); })());
 	console.log('combine count on history:', await page.locator('.nav-tab .count').first().innerText());
 	// Phone width
 	await page.setViewportSize({ width: 390, height: 800 });
-	await go('edit.php?post_type=product&page=variation-converter');
+	await go('edit.php?post_type=product&page=varconv');
 	console.log('phone: open cards', await page.locator('tr.varconv-review:not([hidden])').count(), '| visible', await page.locator('tr.varconv-review').evaluateAll(els => els.filter(e => e.offsetHeight > 0).length), '| scroll', await page.evaluate(() => document.documentElement.scrollWidth));
 	await page.locator('.row-title').first().click();
 	console.log('phone open: scroll', await page.evaluate(() => document.documentElement.scrollWidth), '| card width', await page.locator('tr.varconv-review:not([hidden]) .varconv-review-inner').evaluate(e => e.getBoundingClientRect().width));
