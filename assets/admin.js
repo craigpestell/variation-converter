@@ -83,7 +83,12 @@
 			return ! used( row );
 		} );
 		var off = changed.filter( used );
-		var key = card.closest( '.varconv-group' ).dataset.key;
+		var group = card.closest( '.varconv-group' );
+		// Products picked by hand are not a scan group, so there is nothing to remember them by.
+		if ( group.dataset.manual ) {
+			return;
+		}
+		var key = group.dataset.key;
 		[ [ on, 1 ], [ off, 0 ] ].forEach( function ( pair ) {
 			if ( ! pair[ 0 ].length ) {
 				return;

@@ -319,8 +319,10 @@ function varconv_render_group( array $c, array $excluded, array $f, int $paged, 
 	$badges = array_intersect_key( varconv_note_badges(), $c['notes'] );
 	$title_id = 'varconv-title-' . $c['key'];
 	?>
-	<div class="varconv-group" id="varconv-<?php echo esc_attr( $c['key'] ); ?>" data-key="<?php echo esc_attr( $c['key'] ); ?>">
-		<input type="checkbox" class="varconv-pick" form="varconv-bulk" name="keys[]" value="<?php echo esc_attr( $c['key'] ); ?>" aria-labelledby="<?php echo esc_attr( $title_id ); ?>">
+	<div class="varconv-group" id="varconv-<?php echo esc_attr( $c['key'] ); ?>" data-key="<?php echo esc_attr( $c['key'] ); ?>"<?php echo empty( $c['manual'] ) ? '' : ' data-manual="1"'; ?>>
+		<?php if ( empty( $c['manual'] ) ) : ?>
+			<input type="checkbox" class="varconv-pick" form="varconv-bulk" name="keys[]" value="<?php echo esc_attr( $c['key'] ); ?>" aria-labelledby="<?php echo esc_attr( $title_id ); ?>">
+		<?php endif; ?>
 		<details<?php echo $open || $posted ? ' open' : ''; ?>>
 			<summary>
 				<?php if ( '' !== (string) $c['brand'] ) : ?>
@@ -377,6 +379,9 @@ function varconv_render_card( array $c, array $checked, ?array $posted, array $f
 		<input type="hidden" name="key" value="<?php echo esc_attr( $c['key'] ); ?>">
 		<input type="hidden" name="filters" value="<?php echo esc_attr( http_build_query( varconv_filter_args( $f ) ) ); ?>">
 		<input type="hidden" name="paged" value="<?php echo (int) $paged; ?>">
+		<?php if ( ! empty( $c['manual'] ) ) : ?>
+			<input type="hidden" name="combine" value="<?php echo esc_attr( implode( ',', array_map( static fn( $m ) => (int) $m['id'], $c['members'] ) ) ); ?>">
+		<?php endif; ?>
 		<?php wp_nonce_field( 'varconv_create_' . $c['key'] ); ?>
 		<div class="varconv-card-message" aria-live="polite">
 			<?php if ( $posted ) : ?>
@@ -476,7 +481,9 @@ function varconv_render_card( array $c, array $checked, ?array $posted, array $f
 		</p>
 		<div class="varconv-actions">
 			<button class="button button-primary varconv-create"><?php esc_html_e( 'Create variable product', 'variation-converter' ); ?></button>
-			<button class="button varconv-dismiss" name="dismiss" value="1" formnovalidate><?php esc_html_e( 'Skip, not variants', 'variation-converter' ); ?></button>
+			<?php if ( empty( $c['manual'] ) ) : ?>
+				<button class="button varconv-dismiss" name="dismiss" value="1" formnovalidate><?php esc_html_e( 'Skip, not variants', 'variation-converter' ); ?></button>
+			<?php endif; ?>
 		</div>
 	</form>
 	<?php

@@ -25,6 +25,7 @@ This is the development repo. The user-facing docs are in [`readme.txt`](readme.
 | `includes/split.php` | Variable product list, splitting into simple products, Undo of a split |
 | `includes/admin.php` | The **Products > Variation Converter** screen, its tabs and form handlers |
 | `includes/admin-combine.php` | The Combine tab: filters, sort, group rows and cards, Screen Options (groups per page) |
+| `includes/admin-products.php` | Products > All Products bulk action "Combine into variable product": opens a card for the checked products, whatever their SKUs |
 | `includes/ajax.php` | admin-ajax handlers so the Combine tab creates, undoes, skips and bulk-creates without reloading |
 | `assets/admin.css`, `assets/admin.js` | Screen styles; the in-group filter, SKU shading, row order, price preview, batched bulk create and the confirm before Undo. Every form also works without scripts |
 | `uninstall.php` | Removes the dismissed list and cached scan on delete; products are left alone |
