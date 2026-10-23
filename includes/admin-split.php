@@ -78,14 +78,23 @@ function varconv_render_split(): void {
 	$open = isset( $_GET['product'] ) ? absint( wp_unslash( $_GET['product'] ) ) : 0;
 	$search = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '';
 	$paged = max( 1, isset( $_GET['paged'] ) ? absint( wp_unslash( $_GET['paged'] ) ) : 1 );
-	$found = varconv_variables( $search, $paged, VARCONV_PER_PAGE );
-	$args = array_filter( array( 'tab' => 'split', 's' => $search ) );
+	$orderby = isset( $_GET['orderby'] ) && 'variations' === $_GET['orderby'] ? 'variations' : '';
+	$order = isset( $_GET['order'] ) && 'asc' === $_GET['order'] ? 'asc' : 'desc';
+	$found = varconv_variables( $search, $paged, VARCONV_PER_PAGE, $orderby, $order );
+	$args = array_filter( array( 'tab' => 'split', 's' => $search, 'orderby' => $orderby, 'order' => $orderby ? $order : '' ) );
+	// Most variations first on the first click, then the other way.
+	$sorted = 'variations' === $orderby;
+	$variations_url = varconv_url( array_merge( $args, array( 'orderby' => 'variations', 'order' => $sorted && 'desc' === $order ? 'asc' : 'desc', 'paged' => '' ) ) );
 	?>
 	<p class="varconv-lead"><?php esc_html_e( 'Turn a variable product into one simple product per variation. The variable product is hidden, not deleted, and Undo in History brings it back.', 'variation-converter' ); ?></p>
 	<form method="get" class="search-form">
 		<input type="hidden" name="post_type" value="product">
 		<input type="hidden" name="page" value="<?php echo esc_attr( VARCONV_PAGE ); ?>">
 		<input type="hidden" name="tab" value="split">
+		<?php if ( $sorted ) : ?>
+			<input type="hidden" name="orderby" value="variations">
+			<input type="hidden" name="order" value="<?php echo esc_attr( $order ); ?>">
+		<?php endif; ?>
 		<p class="search-box">
 			<label class="screen-reader-text" for="varconv-split-search"><?php esc_html_e( 'Search variable products', 'variation-converter' ); ?></label>
 			<input type="search" id="varconv-split-search" name="s" value="<?php echo esc_attr( $search ); ?>">
@@ -107,7 +116,9 @@ function varconv_render_split(): void {
 		<thead><tr>
 			<th scope="col" class="column-primary"><?php esc_html_e( 'Variable product', 'variation-converter' ); ?></th>
 			<th scope="col" class="column-sku"><?php esc_html_e( 'SKU', 'variation-converter' ); ?></th>
-			<th scope="col" class="column-variations"><?php esc_html_e( 'Variations', 'variation-converter' ); ?></th>
+			<th scope="col" class="manage-column column-variations <?php echo $sorted ? 'sorted ' . esc_attr( $order ) : 'sortable asc'; ?>"<?php echo $sorted ? ' aria-sort="' . ( 'asc' === $order ? 'ascending' : 'descending' ) . '"' : ''; ?>>
+				<a href="<?php echo esc_url( $variations_url ); ?>"><span><?php esc_html_e( 'Variations', 'variation-converter' ); ?></span><span class="sorting-indicators"><span class="sorting-indicator asc" aria-hidden="true"></span><span class="sorting-indicator desc" aria-hidden="true"></span></span></a>
+			</th>
 			<th scope="col" class="column-price"><?php esc_html_e( 'Price', 'variation-converter' ); ?></th>
 			<th scope="col" class="column-note"><?php esc_html_e( 'Note', 'variation-converter' ); ?></th>
 		</tr></thead>
