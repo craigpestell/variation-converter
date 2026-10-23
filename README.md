@@ -2,7 +2,7 @@
 
 Finds groups of simple WooCommerce products that are really one product in several variants ("Tri-Rings Black", "Tri-Rings Blue") and merges each group you approve into one variable product. It also splits a variable product into one simple product per variation. The originals are hidden, not deleted, and Undo brings them back.
 
-This is the development repo. The user-facing docs are in [`readme.txt`](readme.txt), which is also the wordpress.org listing.
+This is the development repo. The user-facing docs are in [`readme.txt`](readme.txt), which is also the [wordpress.org listing](https://wordpress.org/plugins/variation-converter-for-woocommerce/) (slug `variation-converter-for-woocommerce`; the admin page and WP-CLI command keep the shorter `variation-converter`).
 
 ## Status
 
