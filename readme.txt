@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 0.1.0
+Stable tag: 0.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -122,10 +122,23 @@ A variation set to "Any" for an attribute (for example "Any Size") isn't one spe
 
 == Changelog ==
 
+= 0.2.0 =
+* Combine list: a sortable, filterable table with Ready, Needs review and Skipped views, an inline card per group, and Select by SKU.
+* Combine from the Products list: select products and choose "Combine into variable product".
+* Create many groups at once, from the list or with WP-CLI (`wp variation-converter combine` and `undo`).
+* Split and History tabs are list tables too.
+* Better grouping: sizes in size order, "12 oz" and "12oz" treated alike, bracketed labels unwrapped, clearer notes about duplicates, prices and categories.
+* A free parent SKU is suggested when the group's SKU is taken.
+* Old product URLs now 301 to the variable product with the option chosen (filter: `varconv_redirect_url`). Undo stops it.
+* Fixes: cards on phones, the next group after a partial create, works without mbstring.
+
 = 0.1.0 =
 * First public version: detect groups of simple products, review them, merge each into a variable product, split variable products into simple products, and undo either.
 
 == Upgrade Notice ==
+
+= 0.2.0 =
+Bulk combine, a Products-list action, WP-CLI, and redirects from old product URLs.
 
 = 0.1.0 =
 First public version.
