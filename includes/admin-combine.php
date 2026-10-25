@@ -38,6 +38,15 @@ function varconv_warning_options(): array {
 	);
 }
 
+/** @return array<string,string> View => what it holds, shown as the view link's tooltip. */
+function varconv_view_tips(): array {
+	return array(
+		'ready'   => __( 'Groups with no warnings. They can be created as suggested.', 'variation-converter-for-woocommerce' ),
+		'review'  => __( 'Groups with a warning to check first, such as different prices or missing labels.', 'variation-converter-for-woocommerce' ),
+		'skipped' => __( 'Groups you marked "Skip, not variants". They can be restored.', 'variation-converter-for-woocommerce' ),
+	);
+}
+
 /** @return array<string,string> View => label. */
 function varconv_views(): array {
 	return array(
@@ -299,11 +308,12 @@ function varconv_render_combine(): void {
 	$skipped = 'skipped' === $f['view'];
 	$keep = array_diff_key( varconv_filter_args( $f ), array( 's' => 1, 'brand' => 1, 'min' => 1, 'warn' => 1 ) );
 	?>
-	<p class="varconv-lead"><?php esc_html_e( 'Groups of simple products that look like one product in several variants. Nothing changes until you create a group, and every change can be undone from History.', 'variation-converter-for-woocommerce' ); ?></p>
+	<p class="varconv-lead"><?php esc_html_e( 'Groups of simple products that look like one product in several variants. Nothing changes until you create a group, and every change can be undone from History. Ready groups have no warnings and can be created as suggested; Needs review groups have something to check first, named in the Status column.', 'variation-converter-for-woocommerce' ); ?></p>
 
 	<ul class="subsubsub">
+		<?php $tips = varconv_view_tips(); ?>
 		<?php foreach ( varconv_views() as $key => $label ) : ?>
-			<li><a href="<?php echo esc_url( varconv_url( array_filter( array( 'view' => $key ) ) ) ); ?>"<?php echo $key === $f['view'] ? ' class="current" aria-current="page"' : ''; ?>><?php echo esc_html( $label ); ?> <span class="count">(<?php echo (int) $counts[ $key ]; ?>)</span></a><?php echo 'skipped' === $key ? '' : ' |'; ?></li>
+			<li><a href="<?php echo esc_url( varconv_url( array_filter( array( 'view' => $key ) ) ) ); ?>"<?php echo $key === $f['view'] ? ' class="current" aria-current="page"' : ''; ?><?php echo isset( $tips[ $key ] ) ? ' title="' . esc_attr( $tips[ $key ] ) . '"' : ''; ?>><?php echo esc_html( $label ); ?> <span class="count">(<?php echo (int) $counts[ $key ]; ?>)</span></a><?php echo 'skipped' === $key ? '' : ' |'; ?></li>
 		<?php endforeach; ?>
 	</ul>
 	<form method="get" class="search-form">
@@ -479,7 +489,7 @@ function varconv_render_group( array $c, array $excluded, array $f, int $paged, 
 			<?php if ( $skipped ) : ?>
 				<span class="varconv-badge varconv-badge-skipped"><?php esc_html_e( 'Skipped', 'variation-converter-for-woocommerce' ); ?></span>
 			<?php elseif ( ! $badges ) : ?>
-				<span class="varconv-badge varconv-badge-ready"><?php esc_html_e( 'Ready', 'variation-converter-for-woocommerce' ); ?></span>
+				<span class="varconv-badge varconv-badge-ready" title="<?php echo esc_attr( varconv_view_tips()['ready'] ); ?>"><?php esc_html_e( 'Ready', 'variation-converter-for-woocommerce' ); ?></span>
 			<?php endif; ?>
 			<?php foreach ( $badges as $kind => $badge ) : ?>
 				<span class="varconv-badge varconv-badge-warn varconv-badge-<?php echo esc_attr( $kind ); ?>"><?php echo esc_html( $badge ); ?></span>
