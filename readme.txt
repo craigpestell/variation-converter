@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 0.2.4
+Stable tag: 0.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -13,7 +13,7 @@ Merge near-duplicate simple products into a variable product, or split a variabl
 
 == Description ==
 
-Lots of WooCommerce stores start out with one simple product per color or size: "Tri-Rings Black", "Tri-Rings Blue", "Tri-Rings Red". Shoppers see three listings where there should be one, and you have three products to keep in sync.
+Lots of WooCommerce stores start out with one simple product per color or size: "Classic Tee Black", "Classic Tee Blue", "Classic Tee Red". Shoppers see three listings where there should be one, and you have three products to keep in sync.
 
 Fixing that by hand means building a variable product, re-entering every SKU, price, stock level and image, and then hiding the old products. Variation Converter does it for you.
 
@@ -43,7 +43,7 @@ It works the other way too. If a variable product would sell better as separate 
 
 = Splitting a variable product =
 
-Going the other way works too. On the **Split** tab, or from the **Split into simple products** link under any variable product in Products > All Products, pick a variable product. You get one row per variation with a suggested name ("Tri-Rings Black"), which you can edit. Click **Split** and each checked variation becomes a simple product with its SKU, prices, stock, weight, dimensions and image, plus the variable product's descriptions, categories, tags and other attributes. The variable product is hidden, not deleted, and Undo in **History** brings it back and removes the simple products.
+Going the other way works too. On the **Split** tab, or from the **Split into simple products** link under any variable product in Products > All Products, pick a variable product. You get one row per variation with a suggested name ("Classic Tee Black"), which you can edit. Click **Split** and each checked variation becomes a simple product with its SKU, prices, stock, weight, dimensions and image, plus the variable product's descriptions, categories, tags and other attributes. The variable product is hidden, not deleted, and Undo in **History** brings it back and removes the simple products.
 
 A variable product the plugin made by merging offers Undo instead of a split, so you get your original products back rather than new copies.
 
@@ -122,6 +122,11 @@ A variation set to "Any" for an attribute (for example "Any Size") isn't one spe
 
 == Changelog ==
 
+= 0.3.0 =
+* The WP-CLI command is now `wp varconv` (was `wp variation-converter`). The admin page address is now `page=varconv`; old links redirect.
+* The Combine list explains its Ready, Needs review and Skipped views, with tips on hover.
+* Clearer example product names in the description and empty list.
+
 = 0.2.4 =
 * Undo brings back current prices and stock: sales made while products were combined or split now carry over to the restored products.
 
@@ -148,6 +153,9 @@ A variation set to "Any" for an attribute (for example "Any Size") isn't one spe
 * First public version: detect groups of simple products, review them, merge each into a variable product, split variable products into simple products, and undo either.
 
 == Upgrade Notice ==
+
+= 0.3.0 =
+The WP-CLI command is renamed to `wp varconv`. Update any scripts that call `wp variation-converter`.
 
 = 0.2.0 =
 Bulk combine, a Products-list action, WP-CLI, and redirects from old product URLs.
