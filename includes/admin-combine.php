@@ -427,7 +427,7 @@ function varconv_render_empty( array $scan, array $f, bool $filtered ): void {
 	} elseif ( empty( $scan['products'] ) ) {
 		esc_html_e( 'There are no published simple products with a SKU to check. The scan only looks at simple products that have a SKU and are shown in the catalog.', 'variation-converter-for-woocommerce' );
 	} else {
-		esc_html_e( 'No groups found. The scan looks for simple products whose SKUs share a family (SE1421-01, SE1421-03) and whose names start the same ("Classic Tee Black", "Classic Tee Blue").', 'variation-converter-for-woocommerce' );
+		esc_html_e( 'No groups found. The scan looks for simple products whose SKUs share a family (TEE100-BLK, TEE100-BLU) and whose names start the same ("Classic Tee Black", "Classic Tee Blue").', 'variation-converter-for-woocommerce' );
 	}
 }
 
