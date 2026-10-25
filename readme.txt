@@ -13,7 +13,7 @@ Merge near-duplicate simple products into a variable product, or split a variabl
 
 == Description ==
 
-Lots of WooCommerce stores start out with one simple product per color or size: "Tri-Rings Black", "Tri-Rings Blue", "Tri-Rings Red". Shoppers see three listings where there should be one, and you have three products to keep in sync.
+Lots of WooCommerce stores start out with one simple product per color or size: "Classic Tee Black", "Classic Tee Blue", "Classic Tee Red". Shoppers see three listings where there should be one, and you have three products to keep in sync.
 
 Fixing that by hand means building a variable product, re-entering every SKU, price, stock level and image, and then hiding the old products. Variation Converter does it for you.
 
@@ -43,7 +43,7 @@ It works the other way too. If a variable product would sell better as separate 
 
 = Splitting a variable product =
 
-Going the other way works too. On the **Split** tab, or from the **Split into simple products** link under any variable product in Products > All Products, pick a variable product. You get one row per variation with a suggested name ("Tri-Rings Black"), which you can edit. Click **Split** and each checked variation becomes a simple product with its SKU, prices, stock, weight, dimensions and image, plus the variable product's descriptions, categories, tags and other attributes. The variable product is hidden, not deleted, and Undo in **History** brings it back and removes the simple products.
+Going the other way works too. On the **Split** tab, or from the **Split into simple products** link under any variable product in Products > All Products, pick a variable product. You get one row per variation with a suggested name ("Classic Tee Black"), which you can edit. Click **Split** and each checked variation becomes a simple product with its SKU, prices, stock, weight, dimensions and image, plus the variable product's descriptions, categories, tags and other attributes. The variable product is hidden, not deleted, and Undo in **History** brings it back and removes the simple products.
 
 A variable product the plugin made by merging offers Undo instead of a split, so you get your original products back rather than new copies.
 

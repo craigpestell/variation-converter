@@ -1,7 +1,7 @@
 <?php
 /**
  * Variation Converter: groups of simple products that are one product in several variants, the variant written into
- * the name ("Tri-Rings Black", "Tri-Rings Blue"). Members share a SKU family (SE1421-01 CL, SE1421-03 CL) and the
+ * the name ("Classic Tee Black", "Classic Tee Blue"). Members share a SKU family (SE1421-01 CL, SE1421-03 CL) and the
  * start of their name; what follows is the variant label. Pure functions, no WordPress calls besides translation; see
  * variation-converter-for-woocommerce.php and tests/test-scan.php.
  */

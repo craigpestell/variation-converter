@@ -1,6 +1,6 @@
 # Variation Converter for WooCommerce
 
-Many stores list one simple product per color or size: "Tri-Rings Black", "Tri-Rings Blue", "Tri-Rings Red". Variation Converter finds those groups and turns each one you approve into a single variable product. It also works the other way, splitting a variable product into separate simple products.
+Many stores list one simple product per color or size: "Classic Tee Black", "Classic Tee Blue", "Classic Tee Red". Variation Converter finds those groups and turns each one you approve into a single variable product. It also works the other way, splitting a variable product into separate simple products.
 
 ![The Combine tab listing proposed groups, each with a product count, parent SKU, price range, attribute and status.](site/images/combine-list.webp)
 
@@ -56,7 +56,7 @@ Whatever follows the shared words becomes the variant label. The plugin guesses 
 ## Split a variable product into simple products
 
 1. Go to **Products > Variation Converter** and open the **Split** tab, or click **Split into simple products** under a variable product in **Products > All Products**.
-2. Each variation gets a row with a suggested name, such as "Tri-Rings Black". Edit the names, and untick variations you don't want as separate products.
+2. Each variation gets a row with a suggested name, such as "Classic Tee Black". Edit the names, and untick variations you don't want as separate products.
 3. Click **Split into N simple products**.
 
 ![The Split tab with a variable product open, showing its variations and their new product names.](site/images/split.webp)

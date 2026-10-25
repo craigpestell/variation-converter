@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name:       Variation Converter for WooCommerce
- * Description:       Finds groups of simple WooCommerce products that are really one product in several variants ("Tri-Rings Black", "Tri-Rings Blue") and, for each group you approve, makes one variable product, or splits a variable product into one simple product per variation. The originals are hidden, not deleted, and Undo brings them back.
+ * Description:       Finds groups of simple WooCommerce products that are really one product in several variants ("Classic Tee Black", "Classic Tee Blue") and, for each group you approve, makes one variable product, or splits a variable product into one simple product per variation. The originals are hidden, not deleted, and Undo brings them back.
  * Version:           0.2.4
  * Requires at least: 6.5
  * Requires PHP:      7.4

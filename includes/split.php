@@ -17,7 +17,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 const VARCONV_SPLIT_META = '_varconv_split';
 const VARCONV_SPLIT_FROM_META = '_varconv_split_from';
 
-/** A new simple product's name: the variable product's name and the variation's values ("Tri-Rings Black"). */
+/** A new simple product's name: the variable product's name and the variation's values ("Classic Tee Black"). */
 function varconv_split_name( string $parent, array $values ): string {
 	$values = array_filter( array_map( static fn( $v ) => trim( (string) $v ), $values ), 'strlen' );
 	return trim( trim( $parent ) . ' ' . implode( ' ', $values ) );
