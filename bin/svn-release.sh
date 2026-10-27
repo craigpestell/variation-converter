@@ -51,9 +51,9 @@ find .wordpress-org -maxdepth 1 -type f \( -name '*.png' -o -name '*.jpg' -o -na
 
 cd "$work/svn"
 svn add --quiet --force trunk assets
-svn status | grep '^!' | cut -c9- | while IFS= read -r gone; do svn rm --quiet "$gone"; done
-for f in assets/*.png; do [ -e "$f" ] && svn propset --quiet svn:mime-type image/png "$f"; done
-for f in assets/*.svg; do [ -e "$f" ] && svn propset --quiet svn:mime-type image/svg+xml "$f"; done
+svn status | { grep '^!' || true; } | cut -c9- | while IFS= read -r gone; do svn rm --quiet "$gone"; done
+for f in assets/*.png; do if [ -e "$f" ]; then svn propset --quiet svn:mime-type image/png "$f"; fi; done
+for f in assets/*.svg; do if [ -e "$f" ]; then svn propset --quiet svn:mime-type image/svg+xml "$f"; fi; done
 svn copy --quiet trunk "tags/$version"
 svn status
 
