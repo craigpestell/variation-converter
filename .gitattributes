@@ -7,3 +7,5 @@
 /harness export-ignore
 /.wp-harness export-ignore
 /site export-ignore
+/.wordpress-org export-ignore
+/bin export-ignore

@@ -11,3 +11,5 @@ HANDOFF.md
 /harness
 /.wp-harness
 /site
+/.wordpress-org
+/bin
