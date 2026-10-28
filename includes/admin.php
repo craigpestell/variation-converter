@@ -349,7 +349,7 @@ function varconv_render(): void {
 	}
 	?>
 	<div class="wrap varconv">
-		<h1 class="wp-heading-inline"><?php esc_html_e( 'Variation Converter', 'variation-converter-for-woocommerce' ); ?></h1>
+		<h1 class="wp-heading-inline"><?php esc_html_e( 'Variation Converter', 'variation-converter-for-woocommerce' ); ?> <span class="varconv-version"><?php echo esc_html( VARCONV_VERSION ); ?></span></h1>
 		<?php if ( 'combine' === $tab ) : ?>
 		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="varconv-rescan">
 			<input type="hidden" name="action" value="varconv_rescan">
