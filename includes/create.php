@@ -259,10 +259,10 @@ function varconv_create( string $name, string $attribute_name, string $sku, arra
 		$parent->set_description( $first->get_description( 'edit' ) );
 		$parent->set_short_description( $first->get_short_description( 'edit' ) );
 		$parent->set_image_id( $first->get_image_id( 'edit' ) );
-		$parent->set_gallery_image_ids( array_values( array_unique( array_filter( array_merge(
-			$first->get_gallery_image_ids( 'edit' ),
-			array_map( static fn( $s ) => (int) $s[0]->get_image_id( 'edit' ), array_slice( $sources, 1 ) )
-		) ) ) ) );
+		$parent->set_gallery_image_ids( varconv_gallery( array_map(
+			static fn( $s ) => array_merge( array( $s[0]->get_image_id( 'edit' ) ), $s[0]->get_gallery_image_ids( 'edit' ) ),
+			$sources
+		) ) );
 		$parent->set_tax_class( $first->get_tax_class( 'edit' ) );
 		$parent->set_tax_status( $first->get_tax_status( 'edit' ) );
 		$parent->set_shipping_class_id( $first->get_shipping_class_id( 'edit' ) );
@@ -336,6 +336,19 @@ function varconv_create( string $name, string $attribute_name, string $sku, arra
 	wc_delete_product_transients( $parent_id );
 	delete_transient( VARCONV_SCAN_TRANSIENT );
 	return $parent_id;
+}
+
+/**
+ * The variable product's gallery: every source's featured and gallery images, in source order, each once. The first
+ * source's featured image is left out, as it is the variable product's own image.
+ *
+ * @param array<int, array<int, int|string>> $images Per source: its featured image ID, then its gallery image IDs.
+ * @return int[]
+ */
+function varconv_gallery( array $images ): array {
+	$ids = array_map( 'intval', array_merge( ...array_values( $images ) ) );
+	$featured = $images ? (int) ( reset( $images )[0] ?? 0 ) : 0;
+	return array_values( array_unique( array_filter( $ids, static fn( $id ) => $id > 0 && $id !== $featured ) ) );
 }
 
 /**
