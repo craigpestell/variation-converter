@@ -113,6 +113,10 @@ Yes. Use the Split tab, or the "Split into simple products" link under a variabl
 
 A variation set to "Any" for an attribute (for example "Any Size") isn't one specific product, so there's nothing to turn into a simple product. Give it a specific value first.
 
+= Where can I report a bug or contribute? =
+
+Questions about using the plugin go in the support forum here on wordpress.org. Bug reports and pull requests are welcome on [GitHub](https://github.com/craigpestell/variation-converter).
+
 == Screenshots ==
 
 1. Proposed groups, each with its members, labels, attribute and notes.
