@@ -1,7 +1,7 @@
 <?php
 /**
  * The Combine tab without reloads (assets/admin.js): create, undo and skip a group, remember unchecked products,
- * check whether a parent SKU is taken, and create selected groups a batch at a time. Each mirrors an admin-post
+ * check whether a parent SKU is taken, and start and follow the bulk create job. Each mirrors an admin-post
  * handler in admin.php, which the page falls back to without scripts.
  */
 
@@ -109,15 +109,50 @@ function varconv_ajax_sku(): void {
 	) );
 }
 
-/** One batch of "Create selected groups". */
+/** "Create selected groups": starts the bulk job (includes/job.php) and runs its first batch. */
 add_action( 'wp_ajax_varconv_bulk', 'varconv_ajax_bulk' );
 function varconv_ajax_bulk(): void {
 	varconv_ajax_check( 'varconv_bulk' );
 	$keys = isset( $_POST['keys'] ) && is_array( $_POST['keys'] ) ? array_map( 'sanitize_key', wp_unslash( $_POST['keys'] ) ) : array();
 	try {
-		$counts = varconv_bulk_create( array_slice( $keys, 0, 25 ) );
+		varconv_job_start( $keys );
 	} catch ( RuntimeException $e ) {
 		wp_send_json_error( array( 'message' => varconv_message( $e ) ) );
 	}
-	wp_send_json_success( $counts );
+	varconv_ajax_job( varconv_job_step() );
+}
+
+/** Runs the bulk job's next batch for a tab of the plugin page, and returns its progress. */
+add_action( 'wp_ajax_varconv_job', 'varconv_ajax_job_step' );
+function varconv_ajax_job_step(): void {
+	varconv_ajax_check( 'varconv_ajax' );
+	varconv_ajax_job( varconv_job_step() );
+}
+
+add_action( 'wp_ajax_varconv_job_stop', 'varconv_ajax_job_stop' );
+function varconv_ajax_job_stop(): void {
+	varconv_ajax_check( 'varconv_ajax' );
+	varconv_job_stop();
+	varconv_ajax_job( false );
+}
+
+/** The job's notice for the page. Once it has finished, the summary is shown here and not again on the next page. */
+function varconv_ajax_job( bool $worked ): void {
+	$job = varconv_job();
+	if ( ! $job ) {
+		wp_send_json_success( array( 'running' => false, 'html' => '' ) );
+	}
+	$running = varconv_job_running( $job );
+	if ( ! $running ) {
+		delete_option( VARCONV_JOB_OPTION );
+	}
+	wp_send_json_success( array(
+		'running' => $running,
+		'worked'  => $worked,
+		'class'   => varconv_job_class( $job ),
+		'html'    => varconv_job_html( $job ),
+		'made'    => $job['made'],
+		'skip'    => $job['skip'],
+		'failed'  => $job['failed'],
+	) );
 }

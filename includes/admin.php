@@ -69,10 +69,6 @@ function varconv_assets(): void {
 			/* translators: %d: number of products left in the group. */
 			'skipped'   => __( 'Skipped. Later scans leave this group out.', 'variation-converter-for-woocommerce' ),
 			'undone'    => __( 'Undone. The simple products are visible again; scan again to see them as a group.', 'variation-converter-for-woocommerce' ),
-			/* translators: 1: groups done, 2: groups selected. */
-			'progress'  => __( 'Creating groups: %1$d of %2$d done...', 'variation-converter-for-woocommerce' ),
-			/* translators: 1: products made, 2: groups skipped, 3: groups that failed. */
-			'bulkDone'  => __( 'Done: %1$d variable products created, %2$d groups skipped, %3$d failed. Reloading...', 'variation-converter-for-woocommerce' ),
 			'noAction'  => __( 'Choose a bulk action first.', 'variation-converter-for-woocommerce' ),
 			'noGroups'  => __( 'Select at least one group first.', 'variation-converter-for-woocommerce' ),
 		),
@@ -203,7 +199,10 @@ function varconv_handle_create(): void {
 	varconv_back( array( 'varconv_done' => 'created', 'varconv_product' => $id ) );
 }
 
-/** Bulk actions on the checked groups, or on all that match: create (without scripts; admin.js batches it), skip, restore. */
+/**
+ * Bulk actions on the checked groups, or on all that match: create (without scripts; admin.js starts a background job
+ * instead), skip, restore.
+ */
 add_action( 'admin_post_varconv_bulk', 'varconv_handle_bulk' );
 function varconv_handle_bulk(): void {
 	if ( ! current_user_can( VARCONV_CAP ) ) {
@@ -237,37 +236,6 @@ function varconv_handle_bulk(): void {
 		varconv_fail( $e->getMessage(), array() );
 	}
 	varconv_back( array( 'varconv_done' => 'bulk', 'varconv_made' => $counts['made'], 'varconv_skip' => $counts['skip'], 'varconv_failed_count' => $counts['failed'] ) );
-}
-
-/**
- * Creates the groups $keys as the scan proposed them, under the bulk lock.
- *
- * @param string[] $keys
- * @return array{made:int,skip:int,failed:int,results:array<string,array>}
- * @throws RuntimeException When another bulk run holds the lock.
- */
-function varconv_bulk_create( array $keys ): array {
-	if ( ! varconv_lock() ) {
-		throw new RuntimeException( esc_html__( 'Another bulk run is in progress. Try again in a few minutes.', 'variation-converter-for-woocommerce' ) );
-	}
-	$counts = array( 'made' => 0, 'skip' => 0, 'failed' => 0, 'results' => array() );
-	try {
-		$wanted = array_flip( $keys );
-		foreach ( varconv_bulk_candidates() as $c ) {
-			if ( ! isset( $wanted[ $c['key'] ] ) ) {
-				continue;
-			}
-			$result = varconv_convert( $c );
-			$counts['made'] += 'made' === $result['status'] ? 1 : 0;
-			$counts['skip'] += 'skip' === $result['status'] ? 1 : 0;
-			$counts['failed'] += 'failed' === $result['status'] ? 1 : 0;
-			$counts['results'][ $c['key'] ] = $result;
-			varconv_lock_renew();
-		}
-	} finally {
-		varconv_unlock();
-	}
-	return $counts;
 }
 
 add_action( 'admin_post_varconv_undo', 'varconv_handle_undo' );
@@ -405,6 +373,7 @@ function varconv_render(): void {
 		</nav>
 		<?php
 		varconv_notice();
+		varconv_job_notice();
 		if ( 'split' === $tab ) {
 			varconv_render_split();
 		} elseif ( 'history' === $tab ) {
@@ -417,6 +386,57 @@ function varconv_render(): void {
 		?>
 	</div>
 	<?php
+}
+
+/**
+ * The bulk job's notice, on every tab: its progress while it runs (assets/admin.js keeps it current), or how it ended,
+ * shown once.
+ */
+function varconv_job_notice(): void {
+	$job = varconv_job();
+	if ( ! $job ) {
+		return;
+	}
+	if ( ! varconv_job_running( $job ) ) {
+		delete_option( VARCONV_JOB_OPTION );
+	}
+	printf( '<div class="%s" aria-live="polite">%s</div>', esc_attr( varconv_job_class( $job ) ), varconv_job_html( $job ) ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped where it is built.
+}
+
+function varconv_job_class( array $job ): string {
+	$kind = varconv_job_running( $job ) ? 'info' : ( $job['failed'] || $job['stopped'] ? 'warning' : 'success' );
+	return 'notice notice-' . $kind . ' inline varconv-job' . ( varconv_job_running( $job ) ? ' is-running' : '' );
+}
+
+/** The bulk job's notice text: progress and a Stop button while it runs, then the summary. */
+function varconv_job_html( array $job ): string {
+	if ( varconv_job_running( $job ) ) {
+		return '<p>' . esc_html( sprintf(
+			/* translators: 1: groups done, 2: groups selected. */
+			__( 'Creating groups: %1$d of %2$d done. This keeps going if you leave the page.', 'variation-converter-for-woocommerce' ),
+			$job['done'],
+			$job['total']
+		) ) . ' <button type="button" class="button-link varconv-job-stop">' . esc_html__( 'Stop', 'variation-converter-for-woocommerce' ) . '</button></p>';
+	}
+	$stopped = $job['stopped'] ? esc_html( sprintf(
+		/* translators: 1: groups done, 2: groups selected. */
+		__( 'Bulk create stopped after %1$d of %2$d groups.', 'variation-converter-for-woocommerce' ),
+		$job['done'],
+		$job['total']
+	) ) . ' ' : '';
+	return '<p>' . $stopped . wp_kses_post( varconv_bulk_summary( $job['made'], $job['skip'], $job['failed'] ) ) . '</p>';
+}
+
+/** What a bulk create did, with a link to History. */
+function varconv_bulk_summary( int $made, int $skip, int $failed ): string {
+	return sprintf(
+		/* translators: 1: products made, 2: groups skipped, 3: groups that failed, 4: link to the History tab. */
+		_n( 'Created %1$d variable product; %2$d groups were skipped because they need a label checked, and %3$d failed. Undo is in <a href="%4$s">History</a>.', 'Created %1$d variable products; %2$d groups were skipped because they need a label checked, and %3$d failed. Undo is in <a href="%4$s">History</a>.', $made, 'variation-converter-for-woocommerce' ),
+		$made,
+		$skip,
+		$failed,
+		esc_url( varconv_url( array( 'tab' => 'history' ) ) )
+	);
 }
 
 /** An Undo button for a conversion, posting to the given admin-post action; assets/admin.js asks first. */
@@ -461,18 +481,7 @@ function varconv_notice(): void {
 			$made   = isset( $_GET['varconv_made'] ) ? absint( wp_unslash( $_GET['varconv_made'] ) ) : 0;
 			$skip   = isset( $_GET['varconv_skip'] ) ? absint( wp_unslash( $_GET['varconv_skip'] ) ) : 0;
 			$failed = isset( $_GET['varconv_failed_count'] ) ? absint( wp_unslash( $_GET['varconv_failed_count'] ) ) : 0;
-			printf(
-				'<div class="notice notice-%s"><p>%s</p></div>',
-				$failed ? 'warning' : 'success',
-				wp_kses_post( sprintf(
-					/* translators: 1: products made, 2: groups skipped, 3: groups that failed, 4: link to the History tab. */
-					_n( 'Created %1$d variable product; %2$d groups were skipped because they need a label checked, and %3$d failed. Undo is in <a href="%4$s">History</a>.', 'Created %1$d variable products; %2$d groups were skipped because they need a label checked, and %3$d failed. Undo is in <a href="%4$s">History</a>.', $made, 'variation-converter-for-woocommerce' ),
-					$made,
-					$skip,
-					$failed,
-					esc_url( varconv_url( array( 'tab' => 'history' ) ) )
-				) )
-			);
+			printf( '<div class="notice notice-%s"><p>%s</p></div>', $failed ? 'warning' : 'success', wp_kses_post( varconv_bulk_summary( $made, $skip, $failed ) ) );
 			break;
 		case 'undone':
 			$restored = isset( $_GET['varconv_restored'] ) ? absint( wp_unslash( $_GET['varconv_restored'] ) ) : 0;

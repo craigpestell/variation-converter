@@ -21,6 +21,8 @@
 .varconv-badge-skipped { background: #f0f0f1; color: #50575e; }
 .varconv-pick-all-wrap { margin: 0 0 6px; }
 .varconv-progress { margin: 0 0 8px; }
+.varconv .varconv-job { margin: 12px 0 0; }
+.varconv-job .varconv-job-stop { margin-left: 4px; }
 .varconv-filters .varconv-clear { display: inline-block; margin-left: 6px; line-height: 30px; }
 
 /* Review card, opened under its row */
