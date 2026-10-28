@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 0.3.1
+Stable tag: 0.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -122,6 +122,10 @@ A variation set to "Any" for an attribute (for example "Any Size") isn't one spe
 
 == Changelog ==
 
+= 0.4.0 =
+* Bulk create runs on the server, through WooCommerce's Action Scheduler, so it finishes even if you leave the page. Its progress shows on every tab, with a Stop button.
+* The plugin's version shows beside the page title.
+
 = 0.3.1 =
 * Combine keeps every product's gallery images on the new variable product, not just the first product's.
 
@@ -156,6 +160,9 @@ A variation set to "Any" for an attribute (for example "Any Size") isn't one spe
 * First public version: detect groups of simple products, review them, merge each into a variable product, split variable products into simple products, and undo either.
 
 == Upgrade Notice ==
+
+= 0.4.0 =
+Bulk create now keeps running in the background when you leave the page.
 
 = 0.3.0 =
 The WP-CLI command is renamed to `wp varconv`. Update any scripts that call `wp variation-converter`.
