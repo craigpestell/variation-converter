@@ -1,7 +1,8 @@
 /*
  * The Combine tab: open a group's review card under its row, create, undo and skip without a reload, Select by
- * SKU, drag to reorder, the live count and price, remembered unchecked products, the taken-SKU warning and the
- * Create bulk action in batches. Every link and form also works without this script. Undo asks first everywhere.
+ * SKU, drag to reorder, the live count and price, remembered unchecked products, the taken-SKU warning, starting the
+ * Create bulk action, and following its progress on every tab. Every link and form also works without this script.
+ * Undo asks first everywhere.
  */
 ( function () {
 	var settings = window.varconv || null;
@@ -326,7 +327,6 @@
 			return p.value;
 		} );
 		var progress = document.querySelector( '.varconv-progress' );
-		var buttons = document.querySelectorAll( '.varconv-bulk-apply' );
 		if ( ! keys.length ) {
 			progress.hidden = false;
 			progress.innerHTML = text( strings.noGroups );
@@ -336,48 +336,85 @@
 			bulk.submit();
 			return;
 		}
-		var totals = { made: 0, skip: 0, failed: 0 };
-		var done = 0;
-		var size = 10;
-		buttons.forEach( function ( b ) {
-			b.disabled = true;
+		var data = new window.FormData();
+		data.append( 'action', 'varconv_bulk' );
+		data.append( '_wpnonce', bulk.querySelector( '[name="_wpnonce"]' ).value );
+		keys.forEach( function ( key ) {
+			data.append( 'keys[]', key );
 		} );
-		progress.hidden = false;
-		progress.innerHTML = text( format( strings.progress, 0, keys.length ) );
-		function stop( message ) {
-			progress.innerHTML = text( message );
-			buttons.forEach( function ( b ) {
-				b.disabled = false;
-			} );
-		}
-		function next() {
-			if ( done >= keys.length ) {
-				progress.innerHTML = text( format( strings.bulkDone, totals.made, totals.skip, totals.failed ) );
-				reload( { varconv_done: 'bulk', varconv_made: totals.made, varconv_skip: totals.skip, varconv_failed_count: totals.failed } );
+		bulkButtons( true );
+		progress.hidden = true;
+		post( data ).then( function ( response ) {
+			if ( ! response.success ) {
+				bulkButtons( false );
+				progress.hidden = false;
+				progress.innerHTML = text( ( response.data && response.data.message ) || strings.failed );
 				return;
 			}
-			var data = new window.FormData();
-			data.append( 'action', 'varconv_bulk' );
-			data.append( '_wpnonce', bulk.querySelector( '[name="_wpnonce"]' ).value );
-			keys.slice( done, done + size ).forEach( function ( key ) {
-				data.append( 'keys[]', key );
-			} );
-			post( data ).then( function ( response ) {
-				if ( ! response.success ) {
-					stop( ( response.data && response.data.message ) || strings.failed );
-					return;
-				}
-				totals.made += response.data.made;
-				totals.skip += response.data.skip;
-				totals.failed += response.data.failed;
-				done += size;
-				progress.innerHTML = text( format( strings.progress, Math.min( done, keys.length ), keys.length ) );
-				next();
-			}, function () {
-				stop( strings.failed );
-			} );
+			showJob( response.data );
+		}, function () {
+			bulkButtons( false );
+			progress.hidden = false;
+			progress.innerHTML = text( strings.failed );
+		} );
+	}
+
+	function bulkButtons( disabled ) {
+		document.querySelectorAll( '.varconv-bulk-apply' ).forEach( function ( b ) {
+			b.disabled = disabled;
+		} );
+	}
+
+	/*
+	 * The bulk create job runs on the server (includes/job.php) and finishes without this page. While any tab of the
+	 * plugin page is open, this asks for the next batch as soon as one is done, and shows the progress.
+	 */
+	function jobBox() {
+		var box = document.querySelector( '.varconv-job' );
+		if ( ! box ) {
+			box = document.createElement( 'div' );
+			box.setAttribute( 'aria-live', 'polite' );
+			document.querySelector( '.varconv .nav-tab-wrapper' ).after( box );
 		}
-		next();
+		return box;
+	}
+
+	function showJob( job ) {
+		if ( ! job.html ) {
+			return;
+		}
+		var box = jobBox();
+		box.className = job.class;
+		box.innerHTML = job.html;
+		if ( job.running ) {
+			bulkButtons( true );
+			window.setTimeout( followJob, job.worked ? 100 : 2000 );
+			return;
+		}
+		bulkButtons( false );
+		// The Combine list still shows the groups just created: load it again, with the summary.
+		if ( bulk ) {
+			reload( { varconv_done: 'bulk', varconv_made: job.made, varconv_skip: job.skip, varconv_failed_count: job.failed } );
+		}
+	}
+
+	function jobRequest( action ) {
+		var data = new window.FormData();
+		data.append( 'action', action );
+		data.append( '_wpnonce', settings.nonce );
+		return post( data );
+	}
+
+	function followJob() {
+		jobRequest( 'varconv_job' ).then( function ( response ) {
+			if ( response.success ) {
+				showJob( response.data );
+			} else {
+				window.setTimeout( followJob, 5000 );
+			}
+		}, function () {
+			window.setTimeout( followJob, 5000 );
+		} );
 	}
 
 	document.addEventListener( 'submit', function ( event ) {
@@ -481,6 +518,12 @@
 	} );
 
 	document.addEventListener( 'click', function ( event ) {
+		var stop = event.target.closest( '.varconv-job-stop' );
+		if ( stop ) {
+			stop.disabled = true;
+			jobRequest( 'varconv_job_stop' );
+			return;
+		}
 		var link = event.target.closest( 'a.varconv-review-toggle, a.varconv-cancel' );
 		if ( link ) {
 			var tr = link.closest( 'tr' );
@@ -528,4 +571,8 @@
 	// Cards open on load (a failed create, a link to one group) can be dragged right away.
 	document.querySelectorAll( '.varconv-review:not([hidden]) .varconv-members tbody' ).forEach( sortable );
 	updateBulk();
+	if ( document.querySelector( '.varconv-job.is-running' ) ) {
+		bulkButtons( true );
+		followJob();
+	}
 }() );
