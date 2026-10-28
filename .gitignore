@@ -3,3 +3,4 @@ HANDOFF.md
 /vendor/
 /node_modules/
 *.zip
+svn-pass.txt
