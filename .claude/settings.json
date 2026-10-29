@@ -1,0 +1,9 @@
+{
+  "extraKnownMarketplaces": {
+    "company-kit": { "source": { "source": "github", "repo": "craigpestell/company-kit" } }
+  },
+  "enabledPlugins": {
+    "company-skills@company-kit": true,
+    "company-full@company-kit": true
+  }
+}
