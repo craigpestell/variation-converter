@@ -27,7 +27,7 @@ function varconv_note_badges(): array {
 	);
 }
 
-/** @return array<string,string> Note kind the warning filter offers => its option text. */
+/** @return array<string,string> Note kind the warning filter offers => its checkbox text. */
 function varconv_warning_options(): array {
 	return array(
 		'price' => __( 'Prices differ', 'variation-converter-for-woocommerce' ),
@@ -58,7 +58,8 @@ function varconv_views(): array {
 }
 
 /**
- * The list's filters from a request: view, search, brand, minimum group size, warning, sort column and direction.
+ * The list's filters from a request: view, search, brand, minimum group size, warnings, sort column and direction.
+ * Warnings come as warn[] from the filter form or comma separated from links; they are kept comma separated.
  *
  * @param array $request $_GET, or the filters a form carried.
  * @return array{view:string,s:string,brand:string,min:int,warn:string,orderby:string,order:string}
@@ -66,7 +67,9 @@ function varconv_views(): array {
 function varconv_filters( array $request ): array {
 	$get = static fn( string $key ): string => isset( $request[ $key ] ) && is_scalar( $request[ $key ] ) ? sanitize_text_field( wp_unslash( (string) $request[ $key ] ) ) : '';
 	$view = sanitize_key( $get( 'view' ) );
-	$warn = sanitize_key( $get( 'warn' ) );
+	$warn = isset( $request['warn'] ) ? wp_unslash( $request['warn'] ) : '';
+	$warn = array_map( 'sanitize_key', is_array( $warn ) ? array_filter( $warn, 'is_string' ) : explode( ',', is_string( $warn ) ? $warn : '' ) );
+	$warn = implode( ',', array_keys( array_intersect_key( varconv_warning_options(), array_flip( $warn ) ) ) );
 	$orderby = sanitize_key( $get( 'orderby' ) );
 	$order = sanitize_key( $get( 'order' ) );
 	return array(
@@ -74,7 +77,7 @@ function varconv_filters( array $request ): array {
 		's'       => $get( 's' ),
 		'brand'   => $get( 'brand' ),
 		'min'     => min( 5, max( 2, (int) $get( 'min' ) ) ),
-		'warn'    => isset( varconv_warning_options()[ $warn ] ) ? $warn : '',
+		'warn'    => $warn,
 		'orderby' => in_array( $orderby, array( 'name', 'price' ), true ) ? $orderby : '',
 		'order'   => in_array( $order, array( 'asc', 'desc' ), true ) ? $order : '',
 	);
@@ -359,13 +362,28 @@ function varconv_render_combine(): void {
 					<option value="<?php echo (int) $n; ?>" <?php selected( $f['min'], $n ); ?>><?php echo esc_html( sprintf( __( '%d+ products', 'variation-converter-for-woocommerce' ), $n ) ); ?></option>
 				<?php endforeach; ?>
 			</select>
-			<label for="varconv-warn" class="screen-reader-text"><?php esc_html_e( 'Filter by warning', 'variation-converter-for-woocommerce' ); ?></label>
-			<select name="warn" id="varconv-warn">
-				<option value=""><?php esc_html_e( 'All warnings', 'variation-converter-for-woocommerce' ); ?></option>
-				<?php foreach ( varconv_warning_options() as $kind => $label ) : ?>
-					<option value="<?php echo esc_attr( $kind ); ?>" <?php selected( $f['warn'], $kind ); ?>><?php echo esc_html( $label ); ?></option>
-				<?php endforeach; ?>
-			</select>
+			<?php $warn = '' === $f['warn'] ? array() : explode( ',', $f['warn'] ); ?>
+			<details class="varconv-warn-pick">
+				<summary class="button">
+					<?php
+					if ( ! $warn ) {
+						esc_html_e( 'All warnings', 'variation-converter-for-woocommerce' );
+					} elseif ( 1 === count( $warn ) ) {
+						/* translators: %s: the one warning picked in the filter, such as "Prices differ". */
+						echo esc_html( sprintf( __( 'Only: %s', 'variation-converter-for-woocommerce' ), varconv_warning_options()[ $warn[0] ] ) );
+					} else {
+						/* translators: %d: number of warnings picked in the filter. */
+						echo esc_html( sprintf( __( 'Only %d warnings', 'variation-converter-for-woocommerce' ), count( $warn ) ) );
+					}
+					?>
+				</summary>
+				<fieldset>
+					<legend><?php esc_html_e( 'Show groups with only these warnings', 'variation-converter-for-woocommerce' ); ?></legend>
+					<?php foreach ( varconv_warning_options() as $kind => $label ) : ?>
+						<label><input type="checkbox" name="warn[]" value="<?php echo esc_attr( $kind ); ?>" <?php checked( in_array( $kind, $warn, true ) ); ?>> <?php echo esc_html( $label ); ?></label>
+					<?php endforeach; ?>
+				</fieldset>
+			</details>
 			<button class="button"><?php esc_html_e( 'Filter', 'variation-converter-for-woocommerce' ); ?></button>
 			<?php if ( $filtered ) : ?>
 				<a href="<?php echo esc_url( varconv_url( $keep ) ); ?>" class="varconv-clear"><?php esc_html_e( 'Clear filters', 'variation-converter-for-woocommerce' ); ?></a>

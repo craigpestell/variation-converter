@@ -575,4 +575,17 @@
 		bulkButtons( true );
 		followJob();
 	}
+
+	// The warnings filter's dropdown closes on a click outside it or Escape, like a select.
+	function closeWarnPick( event ) {
+		var open = document.querySelector( '.varconv-warn-pick[open]' );
+		if ( open && ( 'keydown' === event.type ? 'Escape' === event.key : ! open.contains( event.target ) ) ) {
+			open.removeAttribute( 'open' );
+			if ( 'keydown' === event.type ) {
+				open.querySelector( 'summary' ).focus();
+			}
+		}
+	}
+	document.addEventListener( 'click', closeWarnPick );
+	document.addEventListener( 'keydown', closeWarnPick );
 }() );
