@@ -71,6 +71,8 @@ function varconv_assets(): void {
 			'undone'    => __( 'Undone. The simple products are visible again; scan again to see them as a group.', 'variation-converter-for-woocommerce' ),
 			'noAction'  => __( 'Choose a bulk action first.', 'variation-converter-for-woocommerce' ),
 			'noGroups'  => __( 'Select at least one group first.', 'variation-converter-for-woocommerce' ),
+			'stopping'  => __( 'Stopping after the group being created now...', 'variation-converter-for-woocommerce' ),
+			'stopFailed' => __( 'Could not stop the bulk create. Reload the page and try again.', 'variation-converter-for-woocommerce' ),
 		),
 	) );
 }
@@ -411,12 +413,7 @@ function varconv_job_class( array $job ): string {
 /** The bulk job's notice text: progress and a Stop button while it runs, then the summary. */
 function varconv_job_html( array $job ): string {
 	if ( varconv_job_running( $job ) ) {
-		return '<p>' . esc_html( sprintf(
-			/* translators: 1: groups done, 2: groups selected. */
-			__( 'Creating groups: %1$d of %2$d done. This keeps going if you leave the page.', 'variation-converter-for-woocommerce' ),
-			$job['done'],
-			$job['total']
-		) ) . ' <button type="button" class="button-link varconv-job-stop">' . esc_html__( 'Stop', 'variation-converter-for-woocommerce' ) . '</button></p>';
+		return '<p><span class="varconv-job-text">' . esc_html( varconv_job_text( $job ) ) . '</span>' . ( $job['stopped'] ? '' : ' <button type="button" class="button-link varconv-job-stop">' . esc_html__( 'Stop', 'variation-converter-for-woocommerce' ) . '</button>' ) . '</p>';
 	}
 	$stopped = $job['stopped'] ? esc_html( sprintf(
 		/* translators: 1: groups done, 2: groups selected. */
@@ -425,6 +422,19 @@ function varconv_job_html( array $job ): string {
 		$job['total']
 	) ) . ' ' : '';
 	return '<p>' . $stopped . wp_kses_post( varconv_bulk_summary( $job['made'], $job['skip'], $job['failed'] ) ) . '</p>';
+}
+
+/** A running job's progress, or that it is stopping. */
+function varconv_job_text( array $job ): string {
+	if ( $job['stopped'] ) {
+		return __( 'Stopping after the group being created now...', 'variation-converter-for-woocommerce' );
+	}
+	return sprintf(
+		/* translators: 1: groups done, 2: groups selected. */
+		__( 'Creating groups: %1$d of %2$d done. This keeps going if you leave the page.', 'variation-converter-for-woocommerce' ),
+		$job['done'],
+		$job['total']
+	);
 }
 
 /** What a bulk create did, with a link to History. */

@@ -34,8 +34,10 @@ export default async function ({ page, go, shot, problems }) {
 
 	// Stop it, then start again from Combine and let it finish on the Split tab.
 	await job.locator('.varconv-job-stop').click();
-	await page.locator('.varconv-job:not(.is-running)').waitFor();
+	console.log('after click:', await job.innerText());
+	await page.locator('.varconv-job:not(.is-running)').waitFor({ timeout: 60000 });
 	console.log('stopped:', await job.innerText());
+	if (!/stopped after/.test(await job.innerText())) throw new Error('Stop did not stop the job');
 	await shot('job-stopped');
 	await go('edit.php?post_type=product&page=varconv&tab=split');
 	console.log('split after stop, notice shown again:', await job.count());

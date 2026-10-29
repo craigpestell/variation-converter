@@ -35,17 +35,21 @@ function varconv_bulk_create( array $keys ): array {
 }
 
 /**
- * Creates the groups $keys; the caller holds the bulk lock. Keys no longer in the scan are left out.
+ * Creates the groups $keys; the caller holds the bulk lock. Keys no longer in the scan are left out. $stop, checked
+ * before each group, ends the run early when it returns true.
  *
  * @param string[] $keys
  * @return array{made:int,skip:int,failed:int,results:array<string,array>}
  */
-function varconv_bulk_run( array $keys ): array {
+function varconv_bulk_run( array $keys, ?callable $stop = null ): array {
 	$counts = array( 'made' => 0, 'skip' => 0, 'failed' => 0, 'results' => array() );
 	$wanted = array_flip( $keys );
 	foreach ( varconv_bulk_candidates() as $c ) {
 		if ( ! isset( $wanted[ $c['key'] ] ) ) {
 			continue;
+		}
+		if ( $stop && $stop() ) {
+			break;
 		}
 		$result = varconv_convert( $c );
 		$counts['made'] += 'made' === $result['status'] ? 1 : 0;
@@ -100,15 +104,30 @@ function varconv_job_start( array $keys ): array {
 	return $job;
 }
 
-/** Stops the job after the batch that is running, if any. */
+/**
+ * Stops the job: no more groups are started. When a batch is running, the job stays running ("stopping") until that
+ * batch has finished its current group and recorded its counts; otherwise it finishes now.
+ */
 function varconv_job_stop(): void {
 	$job = varconv_job();
-	if ( varconv_job_running( $job ) ) {
-		$job['keys'] = array();
-		$job['finished'] = time();
-		$job['stopped'] = true;
-		update_option( VARCONV_JOB_OPTION, $job, false );
+	if ( ! varconv_job_running( $job ) ) {
+		return;
 	}
+	$job['keys'] = array();
+	$job['stopped'] = true;
+	update_option( VARCONV_JOB_OPTION, $job, false );
+	if ( varconv_lock() ) {
+		$job = varconv_job() ?? $job;
+		$job['finished'] = $job['finished'] ?: time();
+		update_option( VARCONV_JOB_OPTION, $job, false );
+		varconv_unlock();
+	}
+}
+
+/** Whether Stop was pressed: the batch running checks between groups. */
+function varconv_job_stopping(): bool {
+	$job = varconv_job();
+	return ! $job || $job['stopped'];
 }
 
 /**
@@ -127,11 +146,14 @@ function varconv_job_step(): bool {
 			return false;
 		}
 		$batch = array_slice( $job['keys'], 0, VARCONV_JOB_BATCH );
-		$counts = varconv_bulk_run( $batch );
-		// And again, in case Stop was pressed while the batch ran.
-		$job = varconv_job() ?? $job;
+		$counts = $batch ? varconv_bulk_run( $batch, 'varconv_job_stopping' ) : array( 'made' => 0, 'skip' => 0, 'failed' => 0, 'results' => array() );
+		// And again, in case Stop was pressed while the batch ran. A job deleted meanwhile stays deleted.
+		$job = varconv_job();
+		if ( ! $job ) {
+			return true;
+		}
 		$job['keys'] = array_values( array_diff( $job['keys'], $batch ) );
-		$job['done'] += count( $batch );
+		$job['done'] += $job['stopped'] ? count( $counts['results'] ) : count( $batch );
 		foreach ( array( 'made', 'skip', 'failed' ) as $count ) {
 			$job[ $count ] += $counts[ $count ];
 		}
