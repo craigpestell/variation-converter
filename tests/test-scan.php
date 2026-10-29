@@ -214,6 +214,16 @@ expect( array_column( varconv_sorted( $priced, 'price' ), 'key' ), array( 'p2', 
 expect( array_column( varconv_with( $groups, 'price' ), 'key' ), array( 'b' ), 'with price note' );
 expect( array_column( varconv_with( $groups, 'label' ), 'key' ), array( 'c' ), 'with label covers repeat' );
 expect( count( varconv_with( $groups, '' ) ), count( $groups ), 'with nothing keeps all' );
+$mixed = array(
+	array( 'key' => 'p', 'notes' => array( 'price' => 'x' ) ),
+	array( 'key' => 'pc', 'notes' => array( 'price' => 'x', 'cats' => 'x' ) ),
+	array( 'key' => 'cp', 'notes' => array( 'cats' => 'x', 'price' => 'x' ) ),
+	array( 'key' => 'pcl', 'notes' => array( 'price' => 'x', 'cats' => 'x', 'label' => 'x' ) ),
+	array( 'key' => 'lr', 'notes' => array( 'label' => 'x', 'repeat' => 'x' ) ),
+);
+expect( array_column( varconv_with( $mixed, 'price' ), 'key' ), array( 'p' ), 'only that warning' );
+expect( array_column( varconv_with( $mixed, 'cats,price' ), 'key' ), array( 'pc', 'cp' ), 'exactly these two warnings, any order' );
+expect( array_column( varconv_with( $mixed, 'label' ), 'key' ), array( 'lr' ), 'label and repeat count as one warning' );
 
 // Picking part of a group by SKU.
 expect( varconv_sku_bands( array( 'GS3-A1', 'GS3-A2', 'GS3-B1', 'GS3-B2', 'GS3-B3', 'GS3-C1' ) ), array( 'GS3-A' => 2, 'GS3-B' => 3, 'GS3-C' => 1 ), 'SKU bands' );

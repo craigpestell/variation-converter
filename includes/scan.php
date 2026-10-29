@@ -530,13 +530,21 @@ function varconv_sorted( array $collections, string $sort, string $order = '' ):
 	return $collections;
 }
 
-/** Collections carrying the note $kind (see varconv_notes()); label also covers repeat; '' keeps them all. */
-function varconv_with( array $collections, string $kind ): array {
-	if ( '' === $kind ) {
+/**
+ * Collections whose warnings are exactly $kinds (see varconv_notes()), so "price" leaves out a group that also has
+ * "cats"; label also covers repeat. $kinds is comma separated; '' keeps them all.
+ */
+function varconv_with( array $collections, string $kinds ): array {
+	if ( '' === $kinds ) {
 		return $collections;
 	}
-	$kinds = 'label' === $kind ? array( 'label', 'repeat' ) : array( $kind );
-	return array_values( array_filter( $collections, static fn( $c ) => (bool) array_intersect( array_keys( $c['notes'] ), $kinds ) ) );
+	$want = array_unique( explode( ',', $kinds ) );
+	sort( $want );
+	return array_values( array_filter( $collections, static function ( $c ) use ( $want ) {
+		$have = array_unique( array_map( static fn( $k ) => 'repeat' === $k ? 'label' : $k, array_keys( $c['notes'] ) ) );
+		sort( $have );
+		return $have === $want;
+	} ) );
 }
 
 /**
