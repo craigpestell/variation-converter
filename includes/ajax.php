@@ -109,7 +109,7 @@ function varconv_ajax_sku(): void {
 	) );
 }
 
-/** "Create selected groups": starts the bulk job (includes/job.php) and runs its first batch. */
+/** "Create selected groups": starts the bulk job (includes/job.php). */
 add_action( 'wp_ajax_varconv_bulk', 'varconv_ajax_bulk' );
 function varconv_ajax_bulk(): void {
 	varconv_ajax_check( 'varconv_bulk' );
@@ -119,7 +119,8 @@ function varconv_ajax_bulk(): void {
 	} catch ( RuntimeException $e ) {
 		wp_send_json_error( array( 'message' => varconv_message( $e ) ) );
 	}
-	varconv_ajax_job( varconv_job_step() );
+	// The page asks for the first batch at once; answering now shows the progress and Stop button straight away.
+	varconv_ajax_job( true );
 }
 
 /** Runs the bulk job's next batch for a tab of the plugin page, and returns its progress. */
@@ -151,6 +152,8 @@ function varconv_ajax_job( bool $worked ): void {
 		'worked'  => $worked,
 		'class'   => varconv_job_class( $job ),
 		'html'    => varconv_job_html( $job ),
+		'text'    => $running ? varconv_job_text( $job ) : '',
+		'stopped' => $job['stopped'],
 		'made'    => $job['made'],
 		'skip'    => $job['skip'],
 		'failed'  => $job['failed'],

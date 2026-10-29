@@ -384,8 +384,21 @@
 			return;
 		}
 		var box = jobBox();
+		var shown = box.querySelector( '.varconv-job-text' );
 		box.className = job.class;
-		box.innerHTML = job.html;
+		if ( job.running && shown ) {
+			// Change only the words, so the Stop button stays the same element and a click on it is never lost.
+			var stop = box.querySelector( '.varconv-job-stop' );
+			// After a click on Stop, keep "Stopping..." until the server has the stop too.
+			if ( job.stopped || ! stop || ! stop.hidden ) {
+				shown.textContent = job.text;
+			}
+			if ( stop && job.stopped ) {
+				stop.remove();
+			}
+		} else {
+			box.innerHTML = job.html;
+		}
 		if ( job.running ) {
 			bulkButtons( true );
 			window.setTimeout( followJob, job.worked ? 100 : 2000 );
@@ -520,8 +533,19 @@
 	document.addEventListener( 'click', function ( event ) {
 		var stop = event.target.closest( '.varconv-job-stop' );
 		if ( stop ) {
-			stop.disabled = true;
-			jobRequest( 'varconv_job_stop' );
+			var words = stop.closest( '.varconv-job' ).querySelector( '.varconv-job-text' );
+			var before = words.textContent;
+			stop.hidden = true;
+			words.textContent = strings.stopping;
+			jobRequest( 'varconv_job_stop' ).then( function ( response ) {
+				if ( ! response.success ) {
+					throw new Error();
+				}
+				// The progress already being followed picks up the stop and shows the summary.
+			} ).catch( function () {
+				stop.hidden = false;
+				words.textContent = before + ' ' + strings.stopFailed;
+			} );
 			return;
 		}
 		var link = event.target.closest( 'a.varconv-review-toggle, a.varconv-cancel' );

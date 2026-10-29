@@ -81,6 +81,29 @@ try {
 	check( array( $job['stopped'], $job['made'], $job['finished'] > 0 ), array( true, 0, true ), 'job stopped' );
 	check( varconv_job_step(), false, 'stopped job does nothing' );
 
+	// Stop while a batch holds the lock: the job is "stopping" until that batch records its counts, and the batch's
+	// write does not bring it back to running.
+	delete_option( VARCONV_JOB_OPTION );
+	varconv_job_start( array( $keys[2] ) );
+	varconv_lock();
+	varconv_job_stop();
+	$job = varconv_job();
+	check( array( $job['stopped'], $job['finished'], $job['keys'] ), array( true, 0, array() ), 'stopping while a batch runs' );
+	check( varconv_job_running( $job ), true, 'still running until the batch ends' );
+	varconv_unlock();
+	check( varconv_job_step(), true, 'the next step finishes it' );
+	$job = varconv_job();
+	check( array( $job['finished'] > 0, $job['made'] ), array( true, 0 ), 'stopped without creating' );
+
+	// A batch stops between groups once Stop is pressed.
+	$calls = 0;
+	$counts = varconv_bulk_run( array( $keys[2] ), static function () use ( &$calls ) {
+		return 0 < $calls++;
+	} );
+	check( count( $counts['results'] ), 1, 'first group made before the stop check' );
+	$cleanup[] = $counts['results'][ $keys[2] ]['id'];
+	check( count( varconv_bulk_run( array( $keys[2] ), '__return_true' )['results'] ), 0, 'stopped before any group' );
+
 	echo "Job integration tests passed.\n";
 } finally {
 	varconv_unlock();
