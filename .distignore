@@ -13,3 +13,6 @@ HANDOFF.md
 /site
 /.wordpress-org
 /bin
+/docs
+/.claude
+CLAUDE.md

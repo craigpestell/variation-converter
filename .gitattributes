@@ -9,3 +9,6 @@
 /site export-ignore
 /.wordpress-org export-ignore
 /bin export-ignore
+/docs export-ignore
+/.claude export-ignore
+/CLAUDE.md export-ignore
