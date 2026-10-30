@@ -568,6 +568,10 @@
 
 	document.addEventListener( 'submit', function ( event ) {
 		var form = event.target;
+		if ( form.matches( 'form.varconv-confirm' ) && ! window.confirm( form.dataset.confirm ) ) {
+			event.preventDefault();
+			return;
+		}
 		if ( form.matches( 'form.varconv-undo' ) ) {
 			if ( ! window.confirm( form.dataset.confirm ) ) {
 				event.preventDefault();

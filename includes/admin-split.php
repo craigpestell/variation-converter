@@ -352,4 +352,74 @@ function varconv_render_history(): void {
 		</tbody>
 	</table>
 	<?php
+	varconv_render_spelling();
+}
+
+/** How the store spells attribute names, and a Rename for products spelled the other way. */
+function varconv_render_spelling(): void {
+	$spelling = varconv_spelling();
+	$pairs = varconv_spelling_pairs();
+	$names = static fn( string $as ): string => implode( ', ', array_map( static fn( $n ) => varconv_spell( $n, $as, $pairs ), array_keys( $pairs ) ) );
+	$ids = varconv_misspelled_products();
+	?>
+	<h2 id="varconv-spelling"><?php esc_html_e( 'Attribute spelling', 'variation-converter-for-woocommerce' ); ?></h2>
+	<p class="varconv-lead"><?php esc_html_e( 'Some attribute names are spelled two ways. Products made here use the spelling you choose, so shoppers don\'t see both.', 'variation-converter-for-woocommerce' ); ?></p>
+	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="varconv-spelling">
+		<input type="hidden" name="action" value="varconv_spelling">
+		<input type="hidden" name="tab" value="history">
+		<?php wp_nonce_field( 'varconv_spelling' ); ?>
+		<fieldset>
+			<legend class="screen-reader-text"><?php esc_html_e( 'Attribute spelling', 'variation-converter-for-woocommerce' ); ?></legend>
+			<?php
+			$options = array(
+				/* translators: %s: attribute names, e.g. "Colour, Flavour". */
+				'british'  => __( 'British and Canadian (%s)', 'variation-converter-for-woocommerce' ),
+				/* translators: %s: attribute names, e.g. "Color, Flavor". */
+				'american' => __( 'American (%s)', 'variation-converter-for-woocommerce' ),
+			);
+			?>
+			<?php foreach ( $options as $value => $label ) : ?>
+				<label><input type="radio" name="spelling" value="<?php echo esc_attr( $value ); ?>"<?php checked( $spelling, $value ); ?>> <?php echo esc_html( sprintf( $label, $names( $value ) ) ); ?></label><br>
+			<?php endforeach; ?>
+		</fieldset>
+		<p><button class="button"><?php esc_html_e( 'Save spelling', 'variation-converter-for-woocommerce' ); ?></button></p>
+	</form>
+	<?php if ( $ids ) : ?>
+		<?php
+		/* translators: 1: number of products, 2: attribute names, e.g. "Colour, Flavour". */
+		$confirm = sprintf( _n( 'Rename the attributes of %1$d product to %2$s? Its variations are renamed too; orders keep the names they were placed with.', 'Rename the attributes of %1$d products to %2$s? Their variations are renamed too; orders keep the names they were placed with.', count( $ids ), 'variation-converter-for-woocommerce' ), count( $ids ), $names( $spelling ) );
+		?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="varconv-confirm" data-confirm="<?php echo esc_attr( $confirm ); ?>">
+			<input type="hidden" name="action" value="varconv_spelling">
+			<input type="hidden" name="tab" value="history">
+			<input type="hidden" name="rename" value="1">
+			<?php wp_nonce_field( 'varconv_spelling' ); ?>
+			<p>
+				<?php
+				/* translators: 1: number of products, 2: attribute names, e.g. "Color, Flavor". */
+				echo esc_html( sprintf( _n( '%1$d product has an attribute spelled the other way (%2$s).', '%1$d products have an attribute spelled the other way (%2$s).', count( $ids ), 'variation-converter-for-woocommerce' ), count( $ids ), $names( 'british' === $spelling ? 'american' : 'british' ) ) );
+				?>
+				<?php echo wp_kses_post( varconv_product_links( array_slice( $ids, 0, 20 ) ) ) . ( count( $ids ) > 20 ? ' …' : '' ); ?>
+			</p>
+			<p>
+				<button class="button button-primary">
+					<?php
+					/* translators: %s: attribute names, e.g. "Colour, Flavour". */
+					echo esc_html( sprintf( __( 'Rename to %s', 'variation-converter-for-woocommerce' ), $names( $spelling ) ) );
+					?>
+				</button>
+			</p>
+		</form>
+	<?php else : ?>
+		<p class="varconv-muted"><?php esc_html_e( 'Every product uses this spelling.', 'variation-converter-for-woocommerce' ); ?></p>
+	<?php endif; ?>
+	<?php foreach ( varconv_global_spelling_twins() as $twins ) : ?>
+		<div class="notice notice-warning inline"><p>
+			<?php
+			/* translators: %s: two attribute names, e.g. "Color and Colour". */
+			echo esc_html( sprintf( __( 'The global attributes %s are both in Products > Attributes. Renaming here doesn\'t merge those; move their products to one in WooCommerce, then delete the other.', 'variation-converter-for-woocommerce' ), $twins ) );
+			?>
+		</p></div>
+	<?php endforeach; ?>
+	<?php
 }

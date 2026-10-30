@@ -240,7 +240,11 @@ function varconv_create_grid( string $name, string $group_attribute, string $att
  */
 function varconv_make( string $name, array $attribute_names, string $sku, array $members, array $categories, array $errors ): int {
 	$name = trim( $name );
-	$attribute_names = array_map( 'trim', $attribute_names );
+	// In the store's spelling, so a typed Color doesn't sit beside the Colour other products have.
+	$attribute_names = array_map( static fn( $n ) => varconv_attribute_name( trim( (string) $n ) ), $attribute_names );
+	if ( count( array_unique( array_map( 'sanitize_title', $attribute_names ) ) ) < count( $attribute_names ) ) {
+		$errors[] = __( 'The two attributes need different names.', 'variation-converter-for-woocommerce' );
+	}
 	$sku = trim( $sku );
 	$sources = array();
 	foreach ( $members as $id => $labels ) {

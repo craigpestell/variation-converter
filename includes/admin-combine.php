@@ -431,7 +431,7 @@ function varconv_render_combine(): void {
 	<div class="varconv-progress notice notice-info inline" aria-live="polite" hidden></div>
 
 	<datalist id="varconv-attributes">
-		<?php foreach ( array( 'Color', 'Size', 'Flavor', 'Scent', 'Volume', 'Style' ) as $option ) : ?>
+		<?php foreach ( array_map( 'varconv_attribute_name', array( 'Color', 'Size', 'Flavor', 'Scent', 'Volume', 'Style' ) ) as $option ) : ?>
 			<option><?php echo esc_html( $option ); ?></option>
 		<?php endforeach; ?>
 	</datalist>
@@ -597,7 +597,7 @@ function varconv_render_group( array $c, array $excluded, array $f, int $paged, 
 		<td class="column-products" data-colname="<?php esc_attr_e( 'Products', 'variation-converter-for-woocommerce' ); ?>"><?php echo esc_html( $count ); ?></td>
 		<td class="column-sku" data-colname="<?php esc_attr_e( 'Parent SKU', 'variation-converter-for-woocommerce' ); ?>"><span class="varconv-mono"><?php echo esc_html( $c['sku'] ); ?></span></td>
 		<td class="column-price" data-colname="<?php esc_attr_e( 'Price', 'variation-converter-for-woocommerce' ); ?>"><?php echo esc_html( varconv_price_range( $picked ) ); ?></td>
-		<td class="column-attr" data-colname="<?php esc_attr_e( 'Attribute', 'variation-converter-for-woocommerce' ); ?>"><?php echo esc_html( empty( $c['grid'] ) ? $c['attribute'] : $c['group_attribute'] . ' × ' . $c['attribute'] ); ?></td>
+		<td class="column-attr" data-colname="<?php esc_attr_e( 'Attribute', 'variation-converter-for-woocommerce' ); ?>"><?php echo esc_html( empty( $c['grid'] ) ? varconv_attribute_name( $c['attribute'] ) : varconv_attribute_name( $c['group_attribute'] ) . ' × ' . varconv_attribute_name( $c['attribute'] ) ); ?></td>
 		<td class="column-status" data-colname="<?php esc_attr_e( 'Status', 'variation-converter-for-woocommerce' ); ?>">
 			<?php if ( $skipped ) : ?>
 				<span class="varconv-badge varconv-badge-skipped"><?php esc_html_e( 'Skipped', 'variation-converter-for-woocommerce' ); ?></span>
@@ -635,8 +635,8 @@ function varconv_render_card( array $c, array $checked, ?array $posted, array $f
 		usort( $members, static fn( $a, $b ) => ( $order[ (int) $a['id'] ] ?? PHP_INT_MAX ) <=> ( $order[ (int) $b['id'] ] ?? PHP_INT_MAX ) );
 	}
 	$name = $posted['name'] ?? $c['name'];
-	$attribute = $posted['attribute'] ?? $c['attribute'];
-	$group_attribute = $posted['group_attribute'] ?? $c['group_attribute'] ?? '';
+	$attribute = $posted['attribute'] ?? varconv_attribute_name( $c['attribute'] );
+	$group_attribute = $posted['group_attribute'] ?? varconv_attribute_name( $c['group_attribute'] ?? '' );
 	$sku = $posted['sku'] ?? $c['sku'];
 	$cat_ids = array();
 	$cat_sets = array();
@@ -930,7 +930,7 @@ function varconv_render_grid( array $keys ): void {
 	}
 	?>
 	<datalist id="varconv-attributes">
-		<?php foreach ( array( 'Color', 'Size', 'Flavor', 'Scent', 'Volume', 'Style' ) as $option ) : ?>
+		<?php foreach ( array_map( 'varconv_attribute_name', array( 'Color', 'Size', 'Flavor', 'Scent', 'Volume', 'Style' ) ) as $option ) : ?>
 			<option><?php echo esc_html( $option ); ?></option>
 		<?php endforeach; ?>
 	</datalist>
