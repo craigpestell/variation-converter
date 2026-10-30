@@ -435,6 +435,101 @@ function varconv_manual( array $products ): array {
 	);
 }
 
+/** Most groups "Combine groups into one product" takes at a time. */
+const VARCONV_GRID_MAX = 20;
+
+/**
+ * Several groups as one product with two attributes ("Combine groups into one product"): Lube Strawberry (4oz, 8oz)
+ * and Lube Cherry (4oz, 8oz, 16oz) make Lube, with a Flavor per group and the groups' own attribute, Size, per
+ * member. The words every group name starts with are the name, the rest of each group's name is the group's label
+ * (its parent SKU when nothing is left). Only the pairs that exist become variations.
+ *
+ * @param array<int,array> $collections Groups as varconv_scan() makes them, in the order the admin listed them.
+ * @return array The collection, as varconv_manual() makes it, plus group_attribute, grid (the groups' keys) and a
+ *               group label on each member.
+ */
+function varconv_grid( array $collections ): array {
+	$collections = array_values( $collections );
+	$words = array_map( static fn( $c ) => varconv_words( (string) $c['name'] ), $collections );
+	$n = $words ? count( $words[0] ) : 0;
+	foreach ( $words as $w ) {
+		$n = min( $n, varconv_common_words( $words[0], $w ) );
+	}
+	$members = array();
+	$groups = array();
+	foreach ( $collections as $i => $c ) {
+		$label = varconv_trim( implode( ' ', array_slice( $words[ $i ], $n ) ) );
+		$group = '' === $label ? trim( (string) $c['sku'] ) : $label;
+		$groups[] = $group;
+		foreach ( $c['members'] as $m ) {
+			$members[] = $m + array( 'group' => $group );
+		}
+	}
+	$keys = array_map( static fn( $c ) => (string) $c['key'], $collections );
+	$name = varconv_trim( implode( ' ', array_slice( $words[0] ?? array(), 0, $n ) ) );
+	$attributes = array_values( array_unique( array_filter( array_map( static fn( $c ) => (string) ( $c['attribute'] ?? '' ), $collections ), 'strlen' ) ) );
+	$attribute = 1 === count( $attributes ) ? $attributes[0] : varconv_attribute( array_column( $members, 'label' ) );
+	$group_attribute = varconv_attribute( $groups );
+	if ( 0 === strcasecmp( $group_attribute, $attribute ) ) {
+		$group_attribute = 'Option' === $attribute ? 'Style' : 'Option';
+	}
+	$notes = varconv_notes( $members );
+	// A label repeats across groups (4oz in each flavor); only the same pair twice is a problem.
+	unset( $notes['repeat'] );
+	$pairs = array_map( static fn( $m ) => strtolower( $m['group'] . '|' . $m['label'] ), $members );
+	if ( count( array_unique( $pairs ) ) < count( $pairs ) ) {
+		$notes['repeat'] = __( 'Two products have the same pair of labels.', 'variation-converter-for-woocommerce' );
+	}
+	if ( count( array_unique( array_map( 'strtolower', $groups ) ) ) < count( $groups ) ) {
+		$notes['label'] = __( 'Two groups have the same label; give each group its own.', 'variation-converter-for-woocommerce' );
+	}
+	return array(
+		'key'             => 'g' . substr( md5( 'grid|' . implode( ',', $keys ) ), 0, 11 ),
+		'family'          => '',
+		'name'            => '' !== $name ? $name : (string) ( $collections[0]['name'] ?? '' ),
+		'brand'           => varconv_brand( array( 'members' => $members ) ),
+		'group_attribute' => $group_attribute,
+		'attribute'       => $attribute,
+		'sku'             => varconv_parent_sku( '', array_map( static fn( $c ) => array( 'sku' => (string) $c['sku'] ), $collections ) ),
+		'members'         => $members,
+		'notes'           => $notes,
+		'manual'          => true,
+		'grid'            => $keys,
+	);
+}
+
+/**
+ * Checks a two-attribute product the admin submitted: member ID => array( group label, label ). Returns the
+ * problems, none when it can be created.
+ *
+ * @param array<int,array{0:string,1:string}> $members
+ */
+function varconv_validate_grid( string $name, string $group_attribute, string $attribute, array $members ): array {
+	$errors = varconv_validate( $name, $attribute, array_map( static fn( $pair ) => (string) ( $pair[1] ?? '' ), $members ), false );
+	if ( '' === trim( $group_attribute ) ) {
+		$errors[] = __( 'Both attributes need a name (Flavor, Size, ...).', 'variation-converter-for-woocommerce' );
+	} elseif ( 0 === strcasecmp( trim( $group_attribute ), trim( $attribute ) ) ) {
+		$errors[] = __( 'The two attributes need different names.', 'variation-converter-for-woocommerce' );
+	}
+	$seen = array();
+	foreach ( $members as $id => $pair ) {
+		$group = trim( (string) ( $pair[0] ?? '' ) );
+		$label = trim( (string) ( $pair[1] ?? '' ) );
+		if ( '' === $group ) {
+			/* translators: %d: product ID. */
+			$errors[] = sprintf( __( 'Product %d needs a label for both attributes.', 'variation-converter-for-woocommerce' ), $id );
+		} elseif ( str_contains( $group, '|' ) ) {
+			/* translators: %d: product ID. */
+			$errors[] = sprintf( __( 'Labels cannot contain "|" (product %d).', 'variation-converter-for-woocommerce' ), $id );
+		} elseif ( '' !== $label && isset( $seen[ strtolower( $group . '|' . $label ) ] ) ) {
+			/* translators: 1: first attribute's label, 2: second attribute's label. */
+			$errors[] = sprintf( __( '"%1$s, %2$s" is used twice.', 'variation-converter-for-woocommerce' ), $group, $label );
+		}
+		$seen[ strtolower( $group . '|' . $label ) ] = true;
+	}
+	return $errors;
+}
+
 /** Collections of at least $min products. */
 function varconv_min_size( array $collections, int $min ): array {
 	return array_values( array_filter( $collections, static fn( $c ) => count( $c['members'] ) >= $min ) );
@@ -649,8 +744,9 @@ function varconv_notes( array $members, array $duplicates = array(), array $name
  * Checks a collection the admin submitted: member ID => label. Returns the problems, none when it can be created.
  *
  * @param array<int,string> $members
+ * @param bool $unique Whether each label must differ; a two-attribute product checks pairs instead.
  */
-function varconv_validate( string $name, string $attribute, array $members ): array {
+function varconv_validate( string $name, string $attribute, array $members, bool $unique = true ): array {
 	$errors = array();
 	if ( '' === trim( $name ) ) {
 		$errors[] = __( 'The product needs a name.', 'variation-converter-for-woocommerce' );
@@ -670,7 +766,7 @@ function varconv_validate( string $name, string $attribute, array $members ): ar
 		} elseif ( str_contains( $label, '|' ) ) {
 			/* translators: %d: product ID. */
 			$errors[] = sprintf( __( 'Labels cannot contain "|" (product %d).', 'variation-converter-for-woocommerce' ), $id );
-		} elseif ( isset( $seen[ strtolower( $label ) ] ) ) {
+		} elseif ( $unique && isset( $seen[ strtolower( $label ) ] ) ) {
 			/* translators: %s: variant label. */
 			$errors[] = sprintf( __( 'Label "%s" is used twice.', 'variation-converter-for-woocommerce' ), $label );
 		}

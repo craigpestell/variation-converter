@@ -73,6 +73,10 @@ function varconv_assets(): void {
 			'noGroups'  => __( 'Select at least one group first.', 'variation-converter-for-woocommerce' ),
 			'stopping'  => __( 'Stopping after the group being created now...', 'variation-converter-for-woocommerce' ),
 			'stopFailed' => __( 'Could not stop the bulk create. Reload the page and try again.', 'variation-converter-for-woocommerce' ),
+			'notSold'   => __( 'Not sold', 'variation-converter-for-woocommerce' ),
+			/* translators: 1: number of variations, 2: number of possible pairs. */
+			'gridCount' => __( '%1$d variations of %2$d possible pairs.', 'variation-converter-for-woocommerce' ),
+			'twice'     => __( 'Two products have this pair; change a label.', 'variation-converter-for-woocommerce' ),
 		),
 	) );
 }
@@ -193,9 +197,10 @@ function varconv_handle_create(): void {
 	} catch ( RuntimeException $e ) {
 		// Shown in the group's card, refilled with what was submitted.
 		set_transient( 'varconv_posted_' . get_current_user_id(), array_merge( $group, array( 'key' => $key, 'error' => $e->getMessage() ) ), 5 * MINUTE_IN_SECONDS );
-		// Products picked in Products > All Products come back to their card.
+		// Products picked in Products > All Products, and groups combined into one product, come back to their card.
 		$combine = isset( $_POST['combine'] ) ? implode( ',', array_map( 'absint', explode( ',', sanitize_text_field( wp_unslash( $_POST['combine'] ) ) ) ) ) : '';
-		varconv_back( '' !== $combine ? array( 'combine' => $combine ) : array(), 'varconv-' . $key );
+		$grid = isset( $_POST['grid'] ) ? implode( ',', array_map( 'sanitize_key', explode( ',', sanitize_text_field( wp_unslash( $_POST['grid'] ) ) ) ) ) : '';
+		varconv_back( array_filter( array( 'combine' => $combine, 'grid' => $grid ) ), 'varconv-' . $key );
 	}
 	delete_transient( 'varconv_posted_' . get_current_user_id() );
 	varconv_back( array( 'varconv_done' => 'created', 'varconv_product' => $id ) );
@@ -231,6 +236,13 @@ function varconv_handle_bulk(): void {
 	if ( 'restore' === $action ) {
 		varconv_restore( $keys );
 		varconv_back( array( 'varconv_done' => 'restored', 'varconv_count' => count( $keys ) ) );
+	}
+	if ( 'grid' === $action ) {
+		if ( count( $keys ) < 2 || count( $keys ) > VARCONV_GRID_MAX ) {
+			/* translators: %d: most groups that can be combined at once. */
+			varconv_fail( sprintf( __( 'Select between 2 and %d groups to combine into one product.', 'variation-converter-for-woocommerce' ), VARCONV_GRID_MAX ), array() );
+		}
+		varconv_back( array( 'grid' => implode( ',', $keys ) ) );
 	}
 	try {
 		$counts = varconv_bulk_create( $keys );
@@ -382,6 +394,8 @@ function varconv_render(): void {
 			varconv_render_history();
 		} elseif ( varconv_combine_ids() ) {
 			varconv_render_manual( varconv_combine_ids() );
+		} elseif ( varconv_grid_keys() ) {
+			varconv_render_grid( varconv_grid_keys() );
 		} else {
 			varconv_render_combine();
 		}
