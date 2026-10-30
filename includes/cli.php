@@ -1,6 +1,6 @@
 <?php
 /**
- * WP-CLI commands: wp varconv combine | undo.
+ * WP-CLI commands: wp varconv combine | undo | spelling.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -82,7 +82,7 @@ class Varconv_CLI_Command {
 					$c['key'],
 					$c['sku'],
 					$c['name'],
-					$c['attribute'] . ': ' . implode( ' / ', array_column( $c['members'], 'label' ) ),
+					varconv_attribute_name( $c['attribute'] ) . ': ' . implode( ' / ', array_column( $c['members'], 'label' ) ),
 					$result['message'],
 				), 'strlen' ) );
 				'failed' === $result['status'] ? WP_CLI::warning( $line ) : WP_CLI::log( $line );
@@ -150,6 +150,67 @@ class Varconv_CLI_Command {
 		}
 		$summary = sprintf( 'Undid %d of %d conversions.', $done, count( $ids ) );
 		$done < count( $ids ) ? WP_CLI::error( $summary ) : WP_CLI::success( $summary );
+	}
+
+	/**
+	 * Shows or sets how the store spells attribute names, and renames custom attributes spelled the other way (Color
+	 * on some products, Colour on others) to it, with their variations. Global attributes (Products > Attributes) are
+	 * only reported; merge those in WooCommerce.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [--set=<spelling>]
+	 * : Save the store's spelling first.
+	 * ---
+	 * options:
+	 *   - british
+	 *   - american
+	 * ---
+	 *
+	 * [--rename]
+	 * : Rename the products listed. Without it, only list them.
+	 *
+	 * [--yes]
+	 * : Don't ask for confirmation.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp varconv spelling
+	 *     wp varconv spelling --set=british
+	 *     wp varconv spelling --rename --yes
+	 *
+	 * @param string[] $args
+	 * @param array    $options
+	 */
+	public function spelling( $args, $options ) {
+		if ( isset( $options['set'] ) ) {
+			update_option( VARCONV_SPELLING_OPTION, $options['set'] );
+		}
+		$spelling = varconv_spelling();
+		WP_CLI::log( sprintf( 'Spelling: %s (%s)', $spelling, implode( ', ', array_map( static fn( $n ) => varconv_spell( $n, $spelling, varconv_spelling_pairs() ), array_keys( varconv_spelling_pairs() ) ) ) ) );
+		foreach ( varconv_global_spelling_twins() as $twins ) {
+			WP_CLI::warning( sprintf( 'Global attributes %s are both in Products > Attributes; merge them in WooCommerce.', $twins ) );
+		}
+		$ids = varconv_misspelled_products();
+		foreach ( $ids as $id ) {
+			$renames = varconv_respellings( $id );
+			WP_CLI::log( sprintf( "%d\t%s\t%s", $id, varconv_product_name( $id ), implode( ', ', array_map( static fn( $from, $to ) => $from . ' => ' . $to, array_keys( $renames ), $renames ) ) ) );
+		}
+		if ( ! $ids ) {
+			WP_CLI::success( 'Every product uses the store\'s spelling.' );
+			return;
+		}
+		if ( empty( $options['rename'] ) ) {
+			WP_CLI::log( sprintf( '%d products to rename; run again with --rename to rename them.', count( $ids ) ) );
+			return;
+		}
+		WP_CLI::confirm( sprintf( 'Rename the attributes of %d products?', count( $ids ) ), $options );
+		$result = varconv_respell_all();
+		foreach ( $result['failed'] as $message ) {
+			WP_CLI::warning( $message );
+		}
+		$summary = sprintf( 'Renamed %d of %d products.', $result['done'], count( $ids ) );
+		$result['failed'] ? WP_CLI::error( $summary ) : WP_CLI::success( $summary );
 	}
 }
 

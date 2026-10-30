@@ -101,6 +101,10 @@ Yes. The attribute is only a suggestion. Edit it in the group before you click C
 
 Undo deletes the variable product and its variations. Orders keep their line items and totals, but those lines will no longer link to a product. If the new product has already sold, it's usually better to keep it.
 
+= My store has both Color and Colour. Can it fix that? =
+
+Yes. On the History tab, under Attribute spelling, choose how your store spells them (it starts with British and Canadian spelling for English sites other than US English). New products use that spelling. If some products already use the other one, Rename changes their attribute name and their variations, so shoppers see one spelling and the variations still match; orders keep the name they were placed with. It renames custom attributes made on each product; two global attributes in Products > Attributes are only reported, since WooCommerce manages those. Developers can add pairs with the `varconv_spelling_pairs` filter.
+
 = Does it work with my search plugin? =
 
 It reindexes changed products in Relevanssi automatically. Other search plugins will pick up the changes on their next reindex.
@@ -129,6 +133,7 @@ Questions about using the plugin go in the support forum here on wordpress.org. 
 = 0.7.0 =
 * The Combine tab puts search first, and search also finds products that are in no group, so you can combine them by hand.
 * New buttons above the list: Combine into one product, and Create a product for each group. They replace those two Bulk actions entries.
+* Attribute names in one spelling: choose British and Canadian (Colour, Flavour) or American (Color, Flavor) on the History tab, and products made here use it whatever was typed. Rename puts products already spelled the other way into that spelling, with their variations. Also `wp varconv spelling`.
 
 = 0.6.0 =
 * New bulk action, Combine groups into one product: several groups become one variable product with two attributes (for example Flavor and Size), with a grid of the pairs that exist.

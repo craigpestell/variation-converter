@@ -317,6 +317,27 @@ function varconv_handle_undo(): void {
 	varconv_back( array( 'varconv_done' => 'undone', 'varconv_restored' => $restored ) );
 }
 
+add_action( 'admin_post_varconv_spelling', 'varconv_handle_spelling' );
+function varconv_handle_spelling(): void {
+	if ( ! current_user_can( VARCONV_CAP ) ) {
+		wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'variation-converter-for-woocommerce' ), 403 );
+	}
+	check_admin_referer( 'varconv_spelling' );
+	$spelling = isset( $_POST['spelling'] ) ? sanitize_key( wp_unslash( $_POST['spelling'] ) ) : '';
+	if ( in_array( $spelling, array( 'british', 'american' ), true ) ) {
+		update_option( VARCONV_SPELLING_OPTION, $spelling );
+	}
+	if ( empty( $_POST['rename'] ) ) {
+		varconv_back( array( 'tab' => 'history', 'varconv_done' => 'spelling' ), 'varconv-spelling' );
+	}
+	$result = varconv_respell_all( VARCONV_RESPELL_SECONDS );
+	if ( $result['failed'] ) {
+		/* translators: 1: number of products renamed, 2: why the others were not. */
+		varconv_fail( sprintf( _n( 'Renamed %1$d product. Not renamed: %2$s', 'Renamed %1$d products. Not renamed: %2$s', $result['done'], 'variation-converter-for-woocommerce' ), $result['done'], implode( ' ', $result['failed'] ) ), array( 'tab' => 'history' ) );
+	}
+	varconv_back( array( 'tab' => 'history', 'varconv_done' => 'respelled', 'varconv_count' => $result['done'], 'varconv_left' => $result['left'] ), 'varconv-spelling' );
+}
+
 add_action( 'admin_post_varconv_rescan', 'varconv_handle_rescan' );
 function varconv_handle_rescan(): void {
 	if ( ! current_user_can( VARCONV_CAP ) ) {
@@ -554,6 +575,20 @@ function varconv_notice(): void {
 			$skip   = isset( $_GET['varconv_skip'] ) ? absint( wp_unslash( $_GET['varconv_skip'] ) ) : 0;
 			$failed = isset( $_GET['varconv_failed_count'] ) ? absint( wp_unslash( $_GET['varconv_failed_count'] ) ) : 0;
 			printf( '<div class="notice notice-%s"><p>%s</p></div>', $failed ? 'warning' : 'success', wp_kses_post( varconv_bulk_summary( $made, $skip, $failed ) ) );
+			break;
+		case 'spelling':
+			printf( '<div class="notice notice-success"><p>%s</p></div>', esc_html__( 'Saved the spelling.', 'variation-converter-for-woocommerce' ) );
+			break;
+		case 'respelled':
+			$count = isset( $_GET['varconv_count'] ) ? absint( wp_unslash( $_GET['varconv_count'] ) ) : 0;
+			$left  = isset( $_GET['varconv_left'] ) ? absint( wp_unslash( $_GET['varconv_left'] ) ) : 0;
+			/* translators: %d: number of products. */
+			$text = sprintf( _n( 'Renamed the attributes of %d product.', 'Renamed the attributes of %d products.', $count, 'variation-converter-for-woocommerce' ), $count );
+			if ( $left ) {
+				/* translators: %d: number of products. */
+				$text .= ' ' . sprintf( _n( '%d product is left; rename again to carry on.', '%d products are left; rename again to carry on.', $left, 'variation-converter-for-woocommerce' ), $left );
+			}
+			printf( '<div class="notice notice-%s"><p>%s</p></div>', $left ? 'warning' : 'success', esc_html( $text ) );
 			break;
 		case 'undone':
 			$restored = isset( $_GET['varconv_restored'] ) ? absint( wp_unslash( $_GET['varconv_restored'] ) ) : 0;
