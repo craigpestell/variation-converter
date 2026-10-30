@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 0.12.1
+Stable tag: 0.12.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -139,6 +139,9 @@ Questions about using the plugin go in the support forum here on wordpress.org. 
 4. The History tab with one-click Undo.
 
 == Changelog ==
+
+= 0.12.2 =
+* The attribute swap button now swaps the two attribute names and each product's labels in place. The fields are labeled First attribute and Second attribute, and the first one comes first on the product page.
 
 = 0.12.1 =
 * The attribute swap button also swaps the two attribute columns in the card's product list, so they read in the same order as the fields.
