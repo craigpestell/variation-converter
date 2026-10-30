@@ -153,5 +153,3 @@ p.varconv-notes { color: #996800; margin: 4px 0 0; }
 .varconv-grid-table td.is-missing { color: #8c8f94; font-family: inherit; font-style: italic; }
 .varconv-grid-table td.is-twice { color: #b32d2e; font-weight: 600; }
 .varconv-grid p { margin: 6px 0 0; }
-.varconv-rename-variant { width: 100%; }
-.varconv-renamed .varconv-rename-undo { display: inline-block; margin: 0 0 0 6px; }

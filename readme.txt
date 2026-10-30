@@ -142,6 +142,7 @@ Questions about using the plugin go in the support forum here on wordpress.org. 
 
 = 0.10.0 =
 * Variable products made by the plugin no longer get a SKU of their own; each variation keeps its original's SKU. The Parent SKU field is gone from the combine card, and the list's SKU column is now called SKU family.
+* Removed Set one name (added in 0.9.0). Combine into one product already sets the new product's name and each variation's label, so renaming the simple products first is not needed.
 
 = 0.9.0 =
 * Set one name: tick products on the Combine tab (or choose "Set one name for variants" in Products > All Products) and give them one shared name, each followed by its color, size or other variant, so they are listed together and can be combined into one variable product. The new names are previewed as you type, URLs stay the same, and Undo rename puts the old names back.
