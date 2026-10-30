@@ -18,10 +18,10 @@ expect( varconv_family( 'W622001' ), 'W6220', 'family no separator' );
 expect( varconv_family( 'AB12' ), 'AB12', 'family short' );
 expect( varconv_family( '' ), '', 'family empty' );
 
-expect( varconv_common_prefix( array( 'SE1421-01 CL', 'SE1421-03 CL', 'SE1421-12 CL' ) ), 'SE1421', 'parent SKU' );
+expect( varconv_common_prefix( array( 'SE1421-01 CL', 'SE1421-03 CL', 'SE1421-12 CL' ) ), 'SE1421', 'common prefix' );
 
-expect( varconv_parent_sku( 'D0212', array( array( 'sku' => 'D0212-00 CD' ), array( 'sku' => 'D0212-03 CD' ) ) ), 'D0212', 'parent SKU is the family' );
-expect( varconv_parent_sku( 'W6220', array( array( 'sku' => 'W622001' ), array( 'sku' => 'W622002' ) ) ), 'W62200', 'parent SKU without separator' );
+expect( varconv_group_sku( 'D0212', array( array( 'sku' => 'D0212-00 CD' ), array( 'sku' => 'D0212-03 CD' ) ) ), 'D0212', 'group SKU is the family' );
+expect( varconv_group_sku( 'W6220', array( array( 'sku' => 'W622001' ), array( 'sku' => 'W622002' ) ) ), 'W62200', 'group SKU without separator' );
 expect( varconv_trim( ' - Zen - ' ), 'Zen', 'trim separators' );
 
 $p = static fn( int $id, string $sku, string $name, string $price = '9.99', array $cats = array( 5 ) ) => compact( 'id', 'sku', 'name', 'price', 'cats' );
@@ -197,11 +197,11 @@ $manual = varconv_manual( array(
 expect( $manual['name'], 'Velvet Wand', 'manual name' );
 expect( array_column( $manual['members'], 'label' ), array( 'Pink', 'AB-2', 'Purple' ), 'manual labels, SKU order, SKU when no label' );
 expect( $manual['attribute'], 'Color', 'manual attribute' );
-expect( $manual['sku'], '', 'manual parent SKU empty when SKUs share nothing' );
+expect( $manual['sku'], '', 'manual group SKU empty when SKUs share nothing' );
 expect( 1 === preg_match( '/^m[0-9a-f]{11}$/', $manual['key'] ), true, 'manual key' );
 expect( varconv_manual( array( $p( 32, 'AB-2', 'B' ), $p( 31, 'AB-1', 'A' ) ) )['key'], varconv_manual( array( $p( 31, 'AB-1', 'A' ), $p( 32, 'AB-2', 'B' ) ) )['key'], 'manual key ignores order' );
 expect( varconv_manual( array( $p( 31, 'AB-1', 'Red Cup' ), $p( 32, 'AB-2', 'Blue Mug' ) ) )['name'], 'Red Cup', 'manual name falls back to the first name' );
-expect( varconv_manual( array( $p( 31, 'AB-1', 'Cup' ), $p( 32, 'AB-2', 'Cup' ) ) )['sku'], 'AB', 'manual parent SKU' );
+expect( varconv_manual( array( $p( 31, 'AB-1', 'Cup' ), $p( 32, 'AB-2', 'Cup' ) ) )['sku'], 'AB', 'manual group SKU' );
 
 // List order with direction, price sort, warning filter.
 expect( array_column( varconv_sorted( $list, 'size', 'asc' ), 'key' ), array( 'z', 'x', 'y' ), 'sort by size ascending' );
@@ -239,7 +239,7 @@ $grid = varconv_grid( array( $strawberry, $cherry ) );
 expect( $grid['name'], 'Glide Lube', 'grid name is the shared words' );
 expect( $grid['group_attribute'], 'Flavor', 'grid attribute from the group labels' );
 expect( $grid['attribute'], 'Volume', 'grid keeps the groups\' attribute' );
-expect( $grid['sku'], 'GL', 'grid parent SKU' );
+expect( $grid['sku'], 'GL', 'grid group SKU' );
 expect( array_column( $grid['members'], 'group' ), array( 'Strawberry', 'Strawberry', 'Cherry', 'Cherry', 'Cherry' ), 'grid group labels' );
 expect( array_column( $grid['members'], 'label' ), array( '4oz', '8oz', '4oz', '8oz', '16oz' ), 'grid member labels' );
 expect( $grid['grid'], array( 'aaa', 'bbb' ), 'grid group keys' );

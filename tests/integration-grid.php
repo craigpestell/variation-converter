@@ -37,14 +37,14 @@ try {
 
 	// A pair used twice is refused, and nothing is made.
 	try {
-		varconv_create_grid( $tag . ' Lube', 'Flavor', 'Size', '', array( $st4 => array( 'Strawberry', '4oz' ), $st8 => array( 'Strawberry', '4oz' ) ) );
+		varconv_create_grid( $tag . ' Lube', 'Flavor', 'Size', array( $st4 => array( 'Strawberry', '4oz' ), $st8 => array( 'Strawberry', '4oz' ) ) );
 		throw new LogicException( 'repeated pair accepted' );
 	} catch ( RuntimeException $e ) {
 		check( str_contains( html_entity_decode( $e->getMessage(), ENT_QUOTES ), '"Strawberry, 4oz" is used twice' ), true, 'repeated pair refused' );
 	}
 	check( (string) get_post_meta( $st4, VARCONV_PARENT_META, true ), '', 'nothing made after a refusal' );
 
-	$id = $cleanup[] = varconv_create_grid( $tag . ' Lube', 'Flavor', 'Size', $tag, array(
+	$id = $cleanup[] = varconv_create_grid( $tag . ' Lube', 'Flavor', 'Size', array(
 		$st4  => array( 'Strawberry', '4oz' ),
 		$st8  => array( 'Strawberry', '8oz' ),
 		$ch4  => array( 'Cherry', '4oz' ),
@@ -53,6 +53,7 @@ try {
 	) );
 	$parent = wc_get_product( $id );
 	check( $parent->is_type( 'variable' ), true, 'variable product made' );
+	check( $parent->get_sku( 'edit' ), '', 'no parent SKU' );
 	$attributes = array_values( $parent->get_attributes() );
 	check( array_map( static fn( $a ) => $a->get_name(), $attributes ), array( 'Flavor', 'Size' ), 'two attributes, groups first' );
 	check( $attributes[0]->get_options(), array( 'Strawberry', 'Cherry' ), 'each flavor once' );
@@ -78,7 +79,7 @@ try {
 	check( wc_get_product( $ch16 )->get_catalog_visibility(), 'visible', 'undo shows the products again' );
 
 	// The single-attribute create still works as before.
-	$single = $cleanup[] = varconv_create( $tag . ' Lube Cherry', 'Size', '', array( $ch4 => '4oz', $ch8 => '8oz' ) );
+	$single = $cleanup[] = varconv_create( $tag . ' Lube Cherry', 'Size', array( $ch4 => '4oz', $ch8 => '8oz' ) );
 	check( array_keys( wc_get_product( $single )->get_attributes() ), array( 'size' ), 'single attribute product' );
 	varconv_undo( $single );
 	array_pop( $cleanup );

@@ -154,7 +154,7 @@ try {
 		$simples[ $s->save() ] = $label;
 	}
 	$cleanup = array_merge( $cleanup, array_keys( $simples ) );
-	$combined = varconv_create( 'VC Test Mug', 'Color', '', $simples );
+	$combined = varconv_create( 'VC Test Mug', 'Color', $simples );
 	$cleanup[] = $combined;
 	check( in_array( $combined, varconv_variables( '', 1, 100 )['ids'], true ), true, 'combined product listed on Split tab' );
 	throws( static fn() => varconv_split_product( $combined, array( wc_get_product( $combined )->get_children()[0] => 'X' ) ), 'Undo it instead', 'combined product refused' );

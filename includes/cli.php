@@ -14,8 +14,8 @@ class Varconv_CLI_Command {
 
 	/**
 	 * Creates a variable product from groups the scan proposes, as the admin page's Create would with the proposed
-	 * name, attribute, SKU and labels. Members unchecked on the admin page are left out. Groups that need a label
-	 * are skipped for review on the admin page; a parent SKU already in use is left empty.
+	 * name, attribute and labels. Members unchecked on the admin page are left out. Groups that need a label
+	 * are skipped for review on the admin page.
 	 *
 	 * ## OPTIONS
 	 *

@@ -97,7 +97,7 @@ try {
 		$members[ $simple->save() ] = $label;
 	}
 	$cleanup = array_merge( $cleanup, array_keys( $members ) );
-	$made = varconv_create( 'VC Spelling Sock', 'color', '', $members );
+	$made = varconv_create( 'VC Spelling Sock', 'color', $members );
 	$cleanup[] = $made;
 	check( array_keys( wc_get_product( $made )->get_attributes() ), array( 'colour' ), 'combine writes Colour' );
 

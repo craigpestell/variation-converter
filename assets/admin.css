@@ -60,7 +60,6 @@
 .varconv-fields { display: grid; grid-template-columns: minmax(240px, 2fr) minmax(140px, 1fr) minmax(140px, 1fr); gap: 16px; margin-bottom: 14px; }
 .varconv-fields label > span:first-child { display: block; font-weight: 600; margin-bottom: 4px; }
 .varconv-fields input { width: 100%; }
-.varconv-sku-note { display: block; color: #b32d2e; font-weight: 400; margin-top: 2px; }
 .varconv-cats { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0 0 14px; }
 .varconv-cats legend { font-weight: 600; margin-bottom: 4px; }
 .varconv-prefix { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 8px; }

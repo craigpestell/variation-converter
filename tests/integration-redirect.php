@@ -30,7 +30,7 @@ try {
 	$unrelated = array_key_first( $ids );
 	check( varconv_combined_url( $unrelated ), '', 'no redirect before a combine' );
 
-	$parent_id = varconv_create( 'VC Redirect Candle', 'Scent', '', $ids );
+	$parent_id = varconv_create( 'VC Redirect Candle', 'Scent', $ids );
 	$base = (string) get_permalink( $parent_id );
 	$keys = array_keys( $ids );
 	check( varconv_combined_url( $keys[0] ), add_query_arg( 'attribute_scent', rawurlencode( 'Sea Salt' ), $base ), 'first member goes to its option' );

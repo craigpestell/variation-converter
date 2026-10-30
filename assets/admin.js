@@ -1,6 +1,6 @@
 /*
  * The Combine tab: open a group's review card under its row, create, undo and skip without a reload, Select by
- * SKU, drag to reorder, the live count and price, remembered unchecked products, the taken-SKU warning, starting the
+ * SKU, drag to reorder, the live count and price, remembered unchecked products, starting the
  * Create bulk action, and following its progress on every tab. Every link and form also works without this script.
  * Undo asks first everywhere. Set one name previews each new name.
  */
@@ -291,8 +291,8 @@
 	}
 
 	/*
-	 * After a create. Part of a group: reload, opening what is left of it, since its warnings, SKU buttons and
-	 * suggested SKU have changed. The whole group: mark its row created in place.
+	 * After a create. Part of a group: reload, opening what is left of it, since its warnings and SKU buttons
+	 * have changed. The whole group: mark its row created in place.
 	 */
 	function created( card, data ) {
 		if ( data.members.length < rows( card ).length ) {
@@ -656,7 +656,6 @@
 		}
 	} );
 
-	var skuTimer = null;
 	document.addEventListener( 'input', function ( event ) {
 		var input = event.target;
 		var card = input.closest( 'form.varconv-card' );
@@ -671,18 +670,6 @@
 			card.querySelector( '.varconv-group-attribute-name' ).textContent = input.value;
 		} else if ( input.matches( '.varconv-group-label, input[name$="[label]"]' ) ) {
 			drawGrid( card );
-		} else if ( input.matches( '.varconv-parent-sku' ) ) {
-			window.clearTimeout( skuTimer );
-			skuTimer = window.setTimeout( function () {
-				var note = card.querySelector( '.varconv-sku-note' );
-				var data = new window.FormData();
-				data.append( 'action', 'varconv_sku' );
-				data.append( '_wpnonce', settings.nonce );
-				data.append( 'sku', input.value.trim() );
-				post( data ).then( function ( response ) {
-					note.textContent = response.success ? response.data.message : '';
-				} );
-			}, 400 );
 		}
 	} );
 

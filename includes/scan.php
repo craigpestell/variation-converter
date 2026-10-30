@@ -175,10 +175,10 @@ function varconv_size_order( array $members ): array {
 }
 
 /**
- * The variable product's SKU: the family when every member's SKU starts with it ("D0212-00 CD", "D0212-03 CD" ->
+ * A group's shared SKU, shown in the list and searched (the variable product itself gets no SKU): the family when every member's SKU starts with it ("D0212-00 CD", "D0212-03 CD" ->
  * "D0212", not "D0212-0"), otherwise what the SKUs have in common.
  */
-function varconv_parent_sku( string $family, array $members ): string {
+function varconv_group_sku( string $family, array $members ): string {
 	$skus = array_map( static fn( $m ) => strtoupper( trim( (string) $m['sku'] ) ), $members );
 	$common = varconv_common_prefix( $skus );
 	return '' !== $family && str_starts_with( $common . '-', $family . '-' ) ? $family : $common;
@@ -388,7 +388,7 @@ function varconv_scan( array $products, array $dismissed = array(), array $brand
 				'name'      => $collection['base'],
 				'brand'     => varconv_brand( $collection ),
 				'attribute' => $attribute,
-				'sku'       => varconv_parent_sku( $family, $collection['members'] ),
+				'sku'       => varconv_group_sku( $family, $collection['members'] ),
 				'members'   => $collection['members'],
 				'notes'     => varconv_notes( $collection['members'], $duplicates, $names ),
 			);
@@ -401,7 +401,7 @@ function varconv_scan( array $products, array $dismissed = array(), array $brand
 /**
  * A collection from products the admin picked (Products > All Products > "Combine into variable product"), whatever
  * their SKUs: the words every name starts with are its name, the rest of each name is its label (its SKU when nothing
- * is left), and the SKUs' common start is its parent SKU.
+ * is left), and the SKUs' common start is its shared SKU.
  *
  * @param array<int,array{id:int,sku:string,name:string,price?:string,cats?:int[],brands?:string[]}> $products
  * @return array{key:string,family:string,name:string,brand:string,attribute:string,sku:string,members:array,notes:array<string,string>,manual:bool}
@@ -428,7 +428,7 @@ function varconv_manual( array $products ): array {
 		'name'      => '' !== $name ? $name : (string) ( $products[0]['name'] ?? '' ),
 		'brand'     => varconv_brand( array( 'members' => $members ) ),
 		'attribute' => varconv_attribute( array_column( $members, 'label' ) ),
-		'sku'       => varconv_parent_sku( '', $members ),
+		'sku'       => varconv_group_sku( '', $members ),
 		'members'   => $members,
 		'notes'     => varconv_notes( $members, varconv_duplicate_skus( $products ) ),
 		'manual'    => true,
@@ -442,7 +442,7 @@ const VARCONV_GRID_MAX = 20;
  * Several groups as one product with two attributes ("Combine groups into one product"): Lube Strawberry (4oz, 8oz)
  * and Lube Cherry (4oz, 8oz, 16oz) make Lube, with a Flavor per group and the groups' own attribute, Size, per
  * member. The words every group name starts with are the name, the rest of each group's name is the group's label
- * (its parent SKU when nothing is left). Only the pairs that exist become variations.
+ * (its shared SKU when nothing is left). Only the pairs that exist become variations.
  *
  * @param array<int,array> $collections Groups as varconv_scan() makes them, in the order the admin listed them.
  * @return array The collection, as varconv_manual() makes it, plus group_attribute, grid (the groups' keys) and a
@@ -490,7 +490,7 @@ function varconv_grid( array $collections ): array {
 		'brand'           => varconv_brand( array( 'members' => $members ) ),
 		'group_attribute' => $group_attribute,
 		'attribute'       => $attribute,
-		'sku'             => varconv_parent_sku( '', array_map( static fn( $c ) => array( 'sku' => (string) $c['sku'] ), $collections ) ),
+		'sku'             => varconv_group_sku( '', array_map( static fn( $c ) => array( 'sku' => (string) $c['sku'] ), $collections ) ),
 		'members'         => $members,
 		'notes'           => $notes,
 		'manual'          => true,

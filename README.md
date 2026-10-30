@@ -36,10 +36,10 @@ Take a database backup before converting many products at once. Undo is there, b
 1. Go to **Products > Variation Converter**. On the **Combine** tab, type a product name or SKU in **Find the products to combine** and click **Search**.
 2. The results show the suggested groups that match and, below them, **Products not in a group**: matching products the scan didn't group.
 3. Tick the groups and products that are one product and click **Combine into one product**. One group opens on its own. Products, or one group with extra products, open as one product with one attribute. Two or more groups open as one product with two attributes (see below).
-4. Check the product name, the attribute (for example Color or Size), the parent SKU and the label of each variant ("Black", "Blue"). Untick any product that doesn't belong. Drag rows to change their order; the first product gives the new product its image and description.
+4. Check the product name, the attribute (for example Color or Size) and the label of each variant ("Black", "Blue"). Untick any product that doesn't belong. Drag rows to change their order; the first product gives the new product its image and description.
 5. Click **Create variable product**. If a group isn't really one product, click **Skip, not variants** so it stops appearing. **Back to search results** takes you back to your search for the next one.
 
-![A group open for review: product name, attribute, parent SKU and one row per variant.](site/images/combine-card.webp)
+![A group open for review: product name, attribute and one row per variant.](site/images/combine-card.webp)
 
 **Working through a long list.** The **Ready** view shows groups with no warnings. **Needs review** shows groups with a warning, such as different prices, different categories, missing or repeated labels, long labels, or two products with the same SKU. **Skipped** lists the groups you skipped; you can restore them. Without a search, the tab lists every suggested group. Filter by brand, group size or warning, tick groups and click **Create a product for each group** to create them all (it runs in the background), or use **Bulk actions** to skip or restore many at once.
 
@@ -56,7 +56,7 @@ Take a database backup before converting many products at once. Undo is there, b
 
 Whatever follows the shared words becomes the variant label. The plugin guesses the attribute (Color, Size, Flavor, Scent or Volume, otherwise Option); you can change it. Each group gets one attribute; to make a product with two, combine groups (below). Results are kept for 30 minutes, so click **Scan again** after you change products.
 
-**What the new product gets.** Each variation takes its original's SKU, regular and sale price, sale dates, stock settings, weight, dimensions and image. The variable product takes the first product's descriptions, image, categories, tags, tax and shipping class, and adds the other products' images to its gallery. When the products are in different categories, you choose the new product's categories in the group. If WooCommerce fails to save any part, the partial product is removed.
+**What the new product gets.** Each variation takes its original's SKU, regular and sale price, sale dates, stock settings, weight, dimensions and image. The variable product takes the first product's descriptions, image, categories, tags, tax and shipping class, and adds the other products' images to its gallery. It has no SKU of its own. When the products are in different categories, you choose the new product's categories in the group. If WooCommerce fails to save any part, the partial product is removed.
 
 **What happens to the originals.** They are hidden from your shop and search, not deleted. Past orders still point to them. Their old URLs redirect (301) to the variable product with that option selected. Reviews are not copied. Each SKU now exists twice, on the hidden original and on the variation, so that Undo can restore everything. Once you are sure you will keep the new product, you can delete the hidden originals yourself.
 
@@ -105,7 +105,7 @@ wp varconv undo --all --yes          # undo everything, without asking
 
 `combine` options: `--limit=<n>` creates at most n groups; `--min-size=<n>` only takes groups of at least n products (default 2); `--skip` leaves out groups with these warnings: `dupes`, `label`, `long`, `price`, `cats`.
 
-Groups are created as suggested, without products you unticked on the admin page. Groups with a missing or repeated label are skipped for you to fix on the admin page. If the suggested parent SKU is already in use, the product is created without one. Only one bulk run, from WP-CLI or the admin page, can create products at a time.
+Groups are created as suggested, without products you unticked on the admin page. Groups with a missing or repeated label are skipped for you to fix on the admin page. Only one bulk run, from WP-CLI or the admin page, can create products at a time.
 
 ## For developers
 
