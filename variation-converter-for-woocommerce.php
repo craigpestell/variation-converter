@@ -2,7 +2,7 @@
 /**
  * Plugin Name:       Variation Converter for WooCommerce
  * Description:       Finds groups of simple WooCommerce products that are really one product in several variants ("Classic Tee Black", "Classic Tee Blue") and, for each group you approve, makes one variable product, or splits a variable product into one simple product per variation. The originals are hidden, not deleted, and Undo brings them back.
- * Version:           0.12.3
+ * Version:           0.13.0
  * Requires at least: 6.5
  * Requires PHP:      7.4
  * Requires Plugins:  woocommerce
@@ -18,7 +18,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 define( 'VARCONV_FILE', __FILE__ );
-define( 'VARCONV_VERSION', '0.12.3' );
+define( 'VARCONV_VERSION', '0.13.0' );
 
 require_once __DIR__ . '/includes/scan.php';
 require_once __DIR__ . '/includes/create.php';
@@ -50,6 +50,10 @@ add_action(
 		}
 	}
 );
+
+// A variation and its hidden original share a SKU and GTIN; let either be edited and saved later.
+add_filter( 'wc_product_has_unique_sku', 'varconv_twin_sku', 20, 3 );
+add_filter( 'wc_product_has_global_unique_id', 'varconv_twin_gtin', 20, 3 );
 
 if ( defined( 'WP_CLI' ) && WP_CLI ) {
 	require_once __DIR__ . '/includes/cli.php';

@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 0.12.3
+Stable tag: 0.13.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -139,6 +139,10 @@ Questions about using the plugin go in the support forum here on wordpress.org. 
 4. The History tab with one-click Undo.
 
 == Changelog ==
+
+= 0.13.0 =
+* Each variation also takes its simple product's description, GTIN (UPC, EAN, ISBN), low stock threshold, virtual and downloadable settings, tax and shipping class where they differ, and its public custom fields. Split copies the GTIN, low stock threshold, download limits and public fields back.
+* Fix: after combining or splitting, a variation and its hidden original can be edited and saved again. WooCommerce refused them as duplicates because they share a SKU and GTIN; a duplicate on any other product is still refused. Thanks to Joan Llorca for finding this.
 
 = 0.12.3 =
 * After a whole group is combined, the Combine tab reloads with the notice above the list and the group gone from it.

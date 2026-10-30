@@ -454,6 +454,75 @@ function varconv_undo( int $parent_id ): int {
 }
 
 /**
+ * The products one combine or split made or kept, given any of them: the variable product, its variations and the
+ * simple products. Empty for a product no conversion here touched.
+ *
+ * @return int[]
+ */
+function varconv_conversion_ids( int $id ): array {
+	$post = get_post( $id );
+	if ( ! $post ) {
+		return array();
+	}
+	$parent = 'product_variation' === $post->post_type ? (int) $post->post_parent : $id;
+	$combined = (int) get_post_meta( $id, VARCONV_PARENT_META, true ) ?: ( '' !== (string) get_post_meta( $parent, VARCONV_META, true ) ? $parent : 0 );
+	$split = (int) get_post_meta( $id, VARCONV_SPLIT_FROM_META, true ) ?: ( '' !== (string) get_post_meta( $parent, VARCONV_SPLIT_META, true ) ? $parent : 0 );
+	$variable = $combined ?: $split;
+	if ( ! $variable ) {
+		return array();
+	}
+	$simples = (array) json_decode( (string) get_post_meta( $variable, $combined ? VARCONV_META : VARCONV_SPLIT_META, true ), true );
+	$children = get_posts(
+		array(
+			'post_type'   => 'product_variation',
+			'post_parent' => $variable,
+			'post_status' => 'any',
+			'numberposts' => -1,
+			'fields'      => 'ids',
+		)
+	);
+	return array_values( array_unique( array_map( 'intval', array_merge( array( $variable ), $simples, $children ) ) ) );
+}
+
+/**
+ * Whether a SKU or GTIN WooCommerce found on another product is held only by products of the same conversion, as
+ * every variation shares one with its hidden simple product. Then the product saves: editing a variation or its
+ * original after combining (or splitting) would otherwise fail as a duplicate. Duplicates outside the conversion
+ * are still refused. Filters wc_product_has_unique_sku and wc_product_has_global_unique_id.
+ *
+ * @param bool       $found      Whether WooCommerce found the value on another product.
+ * @param int|string $product_id The product being saved.
+ * @param string     $value      The SKU or GTIN.
+ */
+function varconv_twin_duplicate( $found, $product_id, $value, string $column ): bool {
+	$own = $found ? varconv_conversion_ids( (int) $product_id ) : array();
+	if ( ! $own ) {
+		return (bool) $found;
+	}
+	global $wpdb;
+	// The same lookup WooCommerce makes, listing the holders instead of stopping at the first. $column is sku or global_unique_id.
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	$holders = $wpdb->get_col( $wpdb->prepare(
+		"SELECT p.ID FROM {$wpdb->posts} p JOIN {$wpdb->wc_product_meta_lookup} l ON l.product_id = p.ID
+		WHERE p.post_type IN ( 'product', 'product_variation' ) AND p.post_status != 'trash' AND l.%i = %s AND l.product_id <> %d",
+		'sku' === $column ? 'sku' : 'global_unique_id',
+		wp_slash( (string) $value ),
+		(int) $product_id
+	) );
+	return (bool) array_diff( array_map( 'intval', $holders ), $own );
+}
+
+/** varconv_twin_duplicate() for SKUs. */
+function varconv_twin_sku( $found, $product_id, $sku ): bool {
+	return varconv_twin_duplicate( $found, $product_id, (string) $sku, 'sku' );
+}
+
+/** varconv_twin_duplicate() for GTINs (UPC, EAN, ISBN). */
+function varconv_twin_gtin( $found, $product_id, $gtin ): bool {
+	return varconv_twin_duplicate( $found, $product_id, (string) $gtin, 'global_unique_id' );
+}
+
+/**
  * Each variation of a variable product with its simple product among $simple_ids: by the twin ID a combine or split
  * records, then by SKU for conversions made before it did. Products neither of those pairs are left out.
  *
