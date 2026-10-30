@@ -148,7 +148,8 @@ function varconv_unwrap( string $label ): string {
 
 /**
  * Where a size label goes in size order (XS before S before M), or null when it is not a size this knows. Labels
- * with a number sort by it ("8oz" before "12oz").
+ * that start with a number sort by it ("8oz" before "12oz"), with a decimal comma or point ("1,5 L"), a fraction
+ * ("1/2 in") and lengths, volumes and weights in one scale ("500 ml" before "1 L", "90 cm" before "1.2 m").
  */
 function varconv_size_rank( string $label ): ?float {
 	$sizes = array( 'xxs', 'xs', 's', 'm', 'l', 'xl', 'xxl', 'xxxl' );
@@ -161,7 +162,17 @@ function varconv_size_rank( string $label ): ?float {
 	if ( isset( $words[ $key ] ) ) {
 		return (float) $words[ $key ];
 	}
-	return preg_match( '/^(\d+(?:\.\d+)?)/', $key, $m ) ? 100 + (float) $m[1] : null;
+	if ( ! preg_match( '/^(\d+(?:[.,]\d+)?)(?:\s*\/\s*(\d+))?\s*([\p{L}"]*)/u', $key, $m ) ) {
+		return null;
+	}
+	// "1,5" is one and a half; "1,000" is a thousand.
+	$number = (float) ( preg_match( '/,\d{3}$/', $m[1] ) ? str_replace( ',', '', $m[1] ) : str_replace( ',', '.', $m[1] ) );
+	if ( ! empty( $m[2] ) ) {
+		$number /= (float) $m[2];
+	}
+	// In millimeters, milliliters and grams.
+	$units = array( 'mm' => 1, 'cm' => 10, 'm' => 1000, 'in' => 25.4, '"' => 25.4, 'ml' => 1, 'cl' => 10, 'dl' => 100, 'l' => 1000, 'mg' => 0.001, 'g' => 1, 'kg' => 1000 );
+	return 100 + $number * ( $units[ $m[3] ] ?? 1 );
 }
 
 /** Members in size order when every label is a size varconv_size_rank() knows; otherwise as they were. */
@@ -377,11 +388,8 @@ function varconv_scan( array $products, array $dismissed = array(), array $brand
 				continue;
 			}
 			usort( $collection['members'], 'varconv_member_order' );
-			$labels = array_map( static fn( $m ) => $m['label'], $collection['members'] );
-			$attribute = varconv_attribute( $labels );
-			if ( 'Size' === $attribute ) {
-				$collection['members'] = varconv_size_order( $collection['members'] );
-			}
+			$collection['members'] = varconv_size_order( $collection['members'] );
+			$attribute = varconv_attribute( array_map( static fn( $m ) => $m['label'], $collection['members'] ) );
 			$out[] = array(
 				'key'       => $key,
 				'family'    => $family,
@@ -419,6 +427,7 @@ function varconv_manual( array $products ): array {
 		$label = varconv_trim( implode( ' ', array_slice( $words[ $i ], $n ) ) );
 		$members[] = $p + array( 'label' => '' === $label ? trim( (string) $p['sku'] ) : $label );
 	}
+	$members = varconv_size_order( $members );
 	$ids = array_map( static fn( $m ) => (int) $m['id'], $members );
 	sort( $ids );
 	$name = varconv_trim( implode( ' ', array_slice( $words[0] ?? array(), 0, $n ) ) );

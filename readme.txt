@@ -143,6 +143,7 @@ Questions about using the plugin go in the support forum here on wordpress.org. 
 = 0.13.0 =
 * Each variation also takes its simple product's description, GTIN (UPC, EAN, ISBN), low stock threshold, virtual and downloadable settings, tax and shipping class where they differ, and its public custom fields. Split copies the GTIN, low stock threshold, download limits and public fields back.
 * Fix: after combining or splitting, a variation and its hidden original can be edited and saved again. WooCommerce refused them as duplicates because they share a SKU and GTIN; a duplicate on any other product is still refused. Thanks to Joan Llorca for finding this.
+* Variants that start with a number go in number order in every group, including ones you combine from search: decimal commas ("1,5 L"), fractions ("1/2 in") and mixed units ("500 ml" before "1 L", "90 cm" before "1.2 m", "250 g" before "1 kg"). Thanks to Joan Llorca for the idea.
 
 = 0.12.3 =
 * After a whole group is combined, the Combine tab reloads with the notice above the list and the group gone from it.

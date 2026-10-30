@@ -152,6 +152,11 @@ expect( $scan[0]['attribute'], 'Size', 'size attribute' );
 expect( varconv_unwrap( '[Blue]' ), 'Blue', 'unwrap' );
 expect( varconv_unwrap( 'Blue (Matte)' ), 'Blue (Matte)', 'unwrap keeps inner brackets' );
 expect( varconv_size_order( array( array( 'label' => '12oz' ), array( 'label' => '8oz' ) ) ), array( array( 'label' => '8oz' ), array( 'label' => '12oz' ) ), 'number order' );
+$order = static fn( array $labels ): array => array_column( varconv_size_order( array_map( static fn( $l ) => array( 'label' => $l ), $labels ) ), 'label' );
+expect( $order( array( '1 L', '500 ml', '1,5 L', '75 cl' ) ), array( '500 ml', '75 cl', '1 L', '1,5 L' ), 'volumes in one scale, decimal comma' );
+expect( $order( array( '1.2 m', '90 cm', '3/4 in', '1/2 in' ) ), array( '1/2 in', '3/4 in', '90 cm', '1.2 m' ), 'lengths and fractions' );
+expect( $order( array( '1 kg', '250g', '1,000 g' ) ), array( '250g', '1 kg', '1,000 g' ), 'weights; a thousands comma' );
+expect( $order( array( '10 Elementos', '5 Elementos', '20 Elementos' ) ), array( '5 Elementos', '10 Elementos', '20 Elementos' ), 'counts in any language' );
 expect( varconv_size_order( array( array( 'label' => 'L' ), array( 'label' => 'Red' ) ) ), array( array( 'label' => 'L' ), array( 'label' => 'Red' ) ), 'mixed labels keep order' );
 expect( varconv_duplicate_skus( array( $p( 2, 'a 1', 'x' ), $p( 1, 'A  1', 'y' ), $p( 3, 'B', 'z' ) ) ), array( 'A 1' => array( 1, 2 ) ), 'duplicate SKUs' );
 
@@ -197,6 +202,7 @@ $manual = varconv_manual( array(
 expect( $manual['name'], 'Velvet Wand', 'manual name' );
 expect( array_column( $manual['members'], 'label' ), array( 'Pink', 'AB-2', 'Purple' ), 'manual labels, SKU order, SKU when no label' );
 expect( $manual['attribute'], 'Color', 'manual attribute' );
+expect( array_column( varconv_manual( array( $p( 41, 'K-1', 'Kettle 1,5 L' ), $p( 42, 'K-2', 'Kettle 500 ml' ), $p( 43, 'K-3', 'Kettle 1 L' ) ) )['members'], 'label' ), array( '500 ml', '1 L', '1,5 L' ), 'manual labels in size order' );
 expect( $manual['sku'], '', 'manual group SKU empty when SKUs share nothing' );
 expect( 1 === preg_match( '/^m[0-9a-f]{11}$/', $manual['key'] ), true, 'manual key' );
 expect( varconv_manual( array( $p( 32, 'AB-2', 'B' ), $p( 31, 'AB-1', 'A' ) ) )['key'], varconv_manual( array( $p( 31, 'AB-1', 'A' ), $p( 32, 'AB-2', 'B' ) ) )['key'], 'manual key ignores order' );
