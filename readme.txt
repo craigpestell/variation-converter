@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 0.5.1
+Stable tag: 0.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -126,7 +126,7 @@ Questions about using the plugin go in the support forum here on wordpress.org. 
 
 == Changelog ==
 
-= Unreleased =
+= 0.6.0 =
 * New bulk action, Combine groups into one product: several groups become one variable product with two attributes (for example Flavor and Size), with a grid of the pairs that exist.
 
 = 0.5.1 =
@@ -173,6 +173,9 @@ Questions about using the plugin go in the support forum here on wordpress.org. 
 * First public version: detect groups of simple products, review them, merge each into a variable product, split variable products into simple products, and undo either.
 
 == Upgrade Notice ==
+
+= 0.6.0 =
+Combine several groups into one variable product with two attributes, such as Flavor and Size.
 
 = 0.4.0 =
 Bulk create now keeps running in the background when you leave the page.
