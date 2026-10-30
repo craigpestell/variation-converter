@@ -36,7 +36,8 @@ function varconv_combine_ids(): array {
 /** The card for the products picked in Products > All Products. */
 function varconv_render_manual( array $ids ): void {
 	$found = varconv_products_by_id( $ids );
-	echo '<p><a href="' . esc_url( varconv_url() ) . '">&larr; ' . esc_html__( 'All suggested groups', 'variation-converter-for-woocommerce' ) . '</a></p>';
+	$f = varconv_filters( $_GET );
+	varconv_back_link( $f );
 	echo '<p class="varconv-lead">' . esc_html__( 'Combine the products you selected into one variable product. Check the name, attribute and labels, then create it.', 'variation-converter-for-woocommerce' ) . '</p>';
 	if ( $found['refused'] ) {
 		printf(
@@ -60,9 +61,9 @@ function varconv_render_manual( array $ids ): void {
 		<?php endforeach; ?>
 	</datalist>
 	<table class="wp-list-table widefat fixed striped table-view-list varconv-list-table">
-		<thead><?php varconv_list_headers( varconv_filters( array() ), false ); ?></thead>
+		<thead><?php varconv_list_headers( $f, false ); ?></thead>
 		<tbody>
-			<?php varconv_render_group( varconv_with_free_sku( varconv_manual( $found['products'] ) ), array(), varconv_filters( array() ), 1, true ); ?>
+			<?php varconv_render_group( varconv_with_free_sku( varconv_manual( $found['products'] ) ), array(), $f, 1, true ); ?>
 		</tbody>
 	</table>
 	<?php

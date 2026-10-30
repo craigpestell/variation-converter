@@ -7,6 +7,19 @@
 .varconv .nav-tab .count { display: inline-block; min-width: 18px; padding: 0 6px; margin-left: 4px; border-radius: 9px; background: #dcdcde; color: #3c434a; font-size: 11px; line-height: 18px; text-align: center; font-weight: 600; }
 .varconv .nav-tab-active .count { background: #2271b1; color: #fff; }
 
+/* Combine: search first */
+.varconv-find { margin: 16px 0 8px; padding: 16px 20px; background: #fff; border: 1px solid #c3c4c7; border-left: 4px solid #2271b1; max-width: 900px; }
+.varconv-find-label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+.varconv-find-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.varconv-find-row input[type="search"] { flex: 1 1 320px; max-width: 520px; min-height: 36px; font-size: 15px; }
+.varconv-find-row .button { min-height: 36px; }
+.varconv-find .description { display: block; margin-top: 8px; }
+.varconv-list-title { font-size: 1.15em; margin: 20px 0 4px; }
+.varconv-list-title .count { color: #646970; font-weight: 400; }
+.varconv-do-wrap .varconv-picked { display: inline-block; margin-left: 6px; line-height: 30px; color: #646970; }
+.varconv-loose-table .column-sku { width: 160px; }
+.varconv-loose-table .column-price { width: 140px; }
+
 /* Combine list table */
 .varconv-list-table .column-products { width: 110px; }
 .varconv-list-table .column-sku { width: 120px; }

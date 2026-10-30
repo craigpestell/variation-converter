@@ -434,7 +434,68 @@
 		} );
 	}
 
+	function loosePicks() {
+		return Array.prototype.slice.call( document.querySelectorAll( '.varconv-pick-loose' ) ).filter( function ( p ) {
+			return p.checked;
+		} );
+	}
+
+	/* The Combine and Create buttons: bulk.submit() sends no submitter, so the action goes in a hidden field. */
+	function setDo( value ) {
+		var field = bulk.querySelector( 'input[name="do"]' );
+		if ( ! field ) {
+			field = document.createElement( 'input' );
+			field.type = 'hidden';
+			field.name = 'do';
+			bulk.appendChild( field );
+		}
+		field.value = value;
+		field.disabled = ! value;
+	}
+
+	function runDo( action ) {
+		if ( 'create' === action ) {
+			setDo( 'create' );
+			runBulk( 'create' );
+			return;
+		}
+		var groups = allPicked() ? JSON.parse( bulk.dataset.keys ).length : picks().filter( function ( p ) {
+			return p.checked;
+		} ).length;
+		if ( groups + loosePicks().length < 1 ) {
+			var progress = document.querySelector( '.varconv-progress' );
+			progress.hidden = false;
+			progress.innerHTML = text( strings.noPicks );
+			progress.scrollIntoView( { block: 'nearest' } );
+			return;
+		}
+		setDo( 'combine' );
+		bulk.submit();
+	}
+
+	/* How many groups and products are checked, beside the Combine button. */
+	function updatePicked() {
+		var groups = allPicked() ? JSON.parse( bulk.dataset.keys ).length : picks().filter( function ( p ) {
+			return p.checked;
+		} ).length;
+		var products = loosePicks().length;
+		var parts = [];
+		if ( groups ) {
+			parts.push( format( 1 === groups ? strings.groupOne : strings.groupMany, groups ) );
+		}
+		if ( products ) {
+			parts.push( format( 1 === products ? strings.productOne : strings.productMany, products ) );
+		}
+		var label = parts.length ? format( strings.picked, parts.join( ', ' ) ) : '';
+		document.querySelectorAll( '.varconv-picked' ).forEach( function ( el ) {
+			el.textContent = label;
+		} );
+	}
+
 	function bulkButtons( disabled ) {
+		document.querySelectorAll( '.varconv-do' ).forEach( function ( b ) {
+			b.disabled = disabled;
+		} );
 		document.querySelectorAll( '.varconv-bulk-apply' ).forEach( function ( b ) {
 			b.disabled = disabled;
 		} );
@@ -525,8 +586,12 @@
 		if ( form.matches( 'form.varconv-card' ) ) {
 			event.preventDefault();
 			submitCard( form, !! ( event.submitter && 'dismiss' === event.submitter.name ) );
+		} else if ( form === bulk && event.submitter && event.submitter.matches( '.varconv-do' ) ) {
+			event.preventDefault();
+			runDo( event.submitter.value );
 		} else if ( form === bulk ) {
 			event.preventDefault();
+			setDo( '' );
 			var which = event.submitter && 'bottom' === event.submitter.value ? 'bulk_action2' : 'bulk_action';
 			var select = document.querySelector( '[name="' + which + '"]' );
 			var action = select ? select.value : '';
@@ -577,6 +642,13 @@
 				all.checked = false;
 			}
 			updateBulk();
+		} else if ( input.matches( '.varconv-pick-loose-all' ) ) {
+			document.querySelectorAll( '.varconv-pick-loose' ).forEach( function ( p ) {
+				p.checked = input.checked;
+			} );
+		}
+		if ( bulk && input.matches( '.varconv-pick, .varconv-pick-page, .varconv-pick-all, .varconv-pick-loose, .varconv-pick-loose-all' ) ) {
+			updatePicked();
 		}
 	} );
 

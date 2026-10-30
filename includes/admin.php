@@ -71,6 +71,17 @@ function varconv_assets(): void {
 			'undone'    => __( 'Undone. The simple products are visible again; scan again to see them as a group.', 'variation-converter-for-woocommerce' ),
 			'noAction'  => __( 'Choose a bulk action first.', 'variation-converter-for-woocommerce' ),
 			'noGroups'  => __( 'Select at least one group first.', 'variation-converter-for-woocommerce' ),
+			'noPicks'   => __( 'Tick the groups and products to combine first.', 'variation-converter-for-woocommerce' ),
+			/* translators: %s: what is checked, such as "2 groups, 1 product". */
+			'picked'    => __( 'Selected: %s', 'variation-converter-for-woocommerce' ),
+			/* translators: %d: number of groups checked. */
+			'groupOne'  => __( '%d group', 'variation-converter-for-woocommerce' ),
+			/* translators: %d: number of groups checked. */
+			'groupMany' => __( '%d groups', 'variation-converter-for-woocommerce' ),
+			/* translators: %d: number of products checked. */
+			'productOne' => __( '%d product', 'variation-converter-for-woocommerce' ),
+			/* translators: %d: number of products checked. */
+			'productMany' => __( '%d products', 'variation-converter-for-woocommerce' ),
 			'stopping'  => __( 'Stopping after the group being created now...', 'variation-converter-for-woocommerce' ),
 			'stopFailed' => __( 'Could not stop the bulk create. Reload the page and try again.', 'variation-converter-for-woocommerce' ),
 			'notSold'   => __( 'Not sold', 'variation-converter-for-woocommerce' ),
@@ -216,13 +227,19 @@ function varconv_handle_bulk(): void {
 		wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'variation-converter-for-woocommerce' ), 403 );
 	}
 	check_admin_referer( 'varconv_bulk' );
+	// The Combine and Create buttons name their action; Bulk actions uses its menu.
 	$which = isset( $_POST['which'] ) && 'bottom' === $_POST['which'] ? 'bulk_action2' : 'bulk_action';
-	$action = isset( $_POST[ $which ] ) ? sanitize_key( wp_unslash( $_POST[ $which ] ) ) : 'create';
+	$action = isset( $_POST['do'] ) ? sanitize_key( wp_unslash( $_POST['do'] ) ) : ( isset( $_POST[ $which ] ) ? sanitize_key( wp_unslash( $_POST[ $which ] ) ) : 'create' );
 	if ( ! empty( $_POST['all'] ) ) {
 		wp_parse_str( isset( $_POST['filters'] ) ? sanitize_text_field( wp_unslash( $_POST['filters'] ) ) : '', $filters );
 		$keys = array_column( varconv_filtered( varconv_candidates(), varconv_filters( $filters ) ), 'key' );
 	} else {
 		$keys = isset( $_POST['keys'] ) && is_array( $_POST['keys'] ) ? array_map( 'sanitize_key', wp_unslash( $_POST['keys'] ) ) : array();
+	}
+	// Products in no group, picked from the search results; only Combine uses them.
+	$ids = isset( $_POST['ids'] ) && is_array( $_POST['ids'] ) ? array_values( array_filter( array_map( 'absint', wp_unslash( $_POST['ids'] ) ) ) ) : array();
+	if ( 'combine' === $action || 'grid' === $action ) {
+		varconv_handle_combine( $keys, $ids );
 	}
 	if ( ! $keys || '' === $action ) {
 		varconv_back( array() );
@@ -237,19 +254,50 @@ function varconv_handle_bulk(): void {
 		varconv_restore( $keys );
 		varconv_back( array( 'varconv_done' => 'restored', 'varconv_count' => count( $keys ) ) );
 	}
-	if ( 'grid' === $action ) {
-		if ( count( $keys ) < 2 || count( $keys ) > VARCONV_GRID_MAX ) {
-			/* translators: %d: most groups that can be combined at once. */
-			varconv_fail( sprintf( __( 'Select between 2 and %d groups to combine into one product.', 'variation-converter-for-woocommerce' ), VARCONV_GRID_MAX ), array() );
-		}
-		varconv_back( array( 'grid' => implode( ',', $keys ) ) );
-	}
 	try {
 		$counts = varconv_bulk_create( $keys );
 	} catch ( RuntimeException $e ) {
 		varconv_fail( $e->getMessage(), array() );
 	}
 	varconv_back( array( 'varconv_done' => 'bulk', 'varconv_made' => $counts['made'], 'varconv_skip' => $counts['skip'], 'varconv_failed_count' => $counts['failed'] ) );
+}
+
+/**
+ * "Combine into one product" on the checked groups and products: one group opens its card; one group with products,
+ * or products alone, open a card for those products; two or more groups open the two-attribute card, where each
+ * product is a group of its own.
+ *
+ * @param string[] $keys Groups' keys.
+ * @param int[]    $ids  Products in no group.
+ */
+function varconv_handle_combine( array $keys, array $ids ): void {
+	$keys = array_values( array_unique( $keys ) );
+	$ids = array_values( array_unique( $ids ) );
+	if ( 1 === count( $keys ) && ! $ids ) {
+		varconv_back( array( 'open' => $keys[0] ), 'varconv-' . $keys[0] );
+	}
+	if ( count( $keys ) + count( $ids ) < 2 ) {
+		varconv_fail( __( 'Select at least two groups or products to combine into one product.', 'variation-converter-for-woocommerce' ), array() );
+	}
+	if ( count( $keys ) <= 1 ) {
+		$members = array();
+		if ( $keys ) {
+			$by_key = array_column( varconv_candidates()['collections'], null, 'key' );
+			$excluded = array_map( 'intval', varconv_excluded()[ $keys[0] ] ?? array() );
+			foreach ( $by_key[ $keys[0] ]['members'] ?? array() as $m ) {
+				if ( ! in_array( (int) $m['id'], $excluded, true ) ) {
+					$members[] = (int) $m['id'];
+				}
+			}
+		}
+		varconv_back( array( 'combine' => implode( ',', array_merge( $members, $ids ) ) ) );
+	}
+	$all = array_merge( $keys, array_map( static fn( $id ) => 'p' . $id, $ids ) );
+	if ( count( $all ) > VARCONV_GRID_MAX ) {
+		/* translators: %d: most groups and products that can be combined at once. */
+		varconv_fail( sprintf( __( 'Select at most %d groups and products to combine into one product.', 'variation-converter-for-woocommerce' ), VARCONV_GRID_MAX ), array() );
+	}
+	varconv_back( array( 'grid' => implode( ',', $all ) ) );
 }
 
 add_action( 'admin_post_varconv_undo', 'varconv_handle_undo' );
