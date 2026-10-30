@@ -60,6 +60,11 @@
 .varconv-fields { display: grid; grid-template-columns: minmax(240px, 2fr) minmax(140px, 1fr) minmax(140px, 1fr); gap: 16px; margin-bottom: 14px; }
 .varconv-fields label > span:first-child { display: block; font-weight: 600; margin-bottom: 4px; }
 .varconv-fields input { width: 100%; }
+.varconv-attr-pair { grid-column: span 2; display: flex; align-items: flex-end; gap: 8px; }
+.varconv-attr-pair > label { flex: 1; min-width: 0; }
+.varconv-fields .varconv-swap-value { width: auto; }
+.varconv-swap.button { padding: 0 6px; margin-bottom: 1px; }
+.varconv-swap .dashicons { line-height: 28px; }
 .varconv-cats { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0 0 14px; }
 .varconv-cats legend { font-weight: 600; margin-bottom: 4px; }
 .varconv-prefix { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 8px; }
@@ -106,6 +111,7 @@ p.varconv-notes { color: #996800; margin: 4px 0 0; }
 	.varconv-table-wrap { overflow-x: auto; width: 0; min-width: 100%; }
 	.varconv-members { min-width: 640px; }
 	.varconv-fields { grid-template-columns: 1fr; }
+	.varconv-attr-pair { grid-column: auto; }
 	.varconv-list-table .varconv-review-inner { margin-left: 0; }
 	.wp-list-table tr.varconv-review > td { display: table-cell; width: auto !important; padding: 0 !important; }
 	.wp-list-table tr.varconv-review > td::before { content: none; }

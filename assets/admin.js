@@ -673,6 +673,21 @@
 		}
 	} );
 
+	/* Groups combined into one product: the swap button flips which attribute the product page shows first. */
+	document.addEventListener( 'click', function ( event ) {
+		var swap = event.target.closest( '.varconv-swap' );
+		if ( ! swap ) {
+			return;
+		}
+		var pair = swap.closest( '.varconv-attr-pair' );
+		var fields = pair.querySelectorAll( ':scope > label' );
+		pair.insertBefore( fields[ 1 ], fields[ 0 ] );
+		pair.appendChild( fields[ 0 ] );
+		var value = pair.querySelector( '.varconv-swap-value' );
+		value.value = '1' === value.value ? '0' : '1';
+		swap.setAttribute( 'aria-pressed', '1' === value.value ? 'true' : 'false' );
+	} );
+
 	document.addEventListener( 'click', function ( event ) {
 		var stop = event.target.closest( '.varconv-job-stop' );
 		if ( stop ) {
