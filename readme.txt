@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 0.7.0
+Stable tag: 0.8.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -140,10 +140,12 @@ Questions about using the plugin go in the support forum here on wordpress.org. 
 
 == Changelog ==
 
+= 0.8.0 =
+* Attribute names in one spelling: choose British and Canadian (Colour, Flavour) or American (Color, Flavor) on the History tab, and products made here use it whatever was typed. Rename puts products already spelled the other way into that spelling, with their variations. Also `wp varconv spelling`.
+
 = 0.7.0 =
 * The Combine tab puts search first, and search also finds products that are in no group, so you can combine them by hand.
 * New buttons above the list: Combine into one product, and Create a product for each group. They replace those two Bulk actions entries.
-* Attribute names in one spelling: choose British and Canadian (Colour, Flavour) or American (Color, Flavor) on the History tab, and products made here use it whatever was typed. Rename puts products already spelled the other way into that spelling, with their variations. Also `wp varconv spelling`.
 
 = 0.6.0 =
 * New bulk action, Combine groups into one product: several groups become one variable product with two attributes (for example Flavor and Size), with a grid of the pairs that exist.

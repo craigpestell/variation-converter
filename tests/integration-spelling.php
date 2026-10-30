@@ -78,9 +78,11 @@ try {
 	$store = WC_Data_Store::load( 'product' );
 	check( $store->find_matching_product_variation( $tee, array( 'attribute_colour' => 'Blue', 'attribute_size' => 'S' ) ), $tee->get_children()[1], 'variation matches' );
 
+	// The bulk run covers the whole store, so the demo catalog's products count too.
+	$before = varconv_misspelled_products();
 	$result = varconv_respell_all();
-	check( $result['done'], 1, 'lube renamed by the bulk run' );
-	check( count( $result['failed'] ), 1, 'both spellings refused' );
+	check( $result['done'] + count( $result['failed'] ), count( $before ), 'every product spelled the other way tried' );
+	check( count( $result['failed'] ) >= 1, true, 'both spellings refused' );
 	check( array_keys( wc_get_product( $b )->get_attributes() ), array( 'flavour' ), 'lube renamed' );
 	check( array_keys( wc_get_product( $c )->get_attributes() ), array( 'color', 'colour' ), 'both spellings left alone' );
 	check( array_values( array_intersect( varconv_misspelled_products(), $cleanup ) ), array( $c ), 'only the clash left' );
