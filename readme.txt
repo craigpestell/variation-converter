@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 0.8.0
+Stable tag: 0.9.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -139,6 +139,9 @@ Questions about using the plugin go in the support forum here on wordpress.org. 
 4. The History tab with one-click Undo.
 
 == Changelog ==
+
+= 0.9.0 =
+* Set one name: tick products on the Combine tab (or choose "Set one name for variants" in Products > All Products) and give them one shared name, each followed by its color, size or other variant, so they are listed together and can be combined into one variable product. The new names are previewed as you type, URLs stay the same, and Undo rename puts the old names back.
 
 = 0.8.0 =
 * Attribute names in one spelling: choose British and Canadian (Colour, Flavour) or American (Color, Flavor) on the History tab, and products made here use it whatever was typed. Rename puts products already spelled the other way into that spelling, with their variations. Also `wp varconv spelling`.

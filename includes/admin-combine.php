@@ -240,6 +240,7 @@ function varconv_combine_buttons(): void {
 	<div class="alignleft actions varconv-do-wrap">
 		<button class="button button-primary varconv-do" form="varconv-bulk" name="do" value="combine"><?php esc_html_e( 'Combine into one product', 'variation-converter-for-woocommerce' ); ?></button>
 		<button class="button varconv-do" form="varconv-bulk" name="do" value="create"><?php esc_html_e( 'Create a product for each group', 'variation-converter-for-woocommerce' ); ?></button>
+		<button class="button varconv-do" form="varconv-bulk" name="do" value="rename" title="<?php esc_attr_e( 'Give the checked products one name, each followed by its color, size or other variant, so they group together', 'variation-converter-for-woocommerce' ); ?>"><?php esc_html_e( 'Set one name', 'variation-converter-for-woocommerce' ); ?></button>
 		<span class="varconv-picked" aria-live="polite"></span>
 	</div>
 	<?php

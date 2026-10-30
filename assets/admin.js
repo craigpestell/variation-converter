@@ -2,7 +2,7 @@
  * The Combine tab: open a group's review card under its row, create, undo and skip without a reload, Select by
  * SKU, drag to reorder, the live count and price, remembered unchecked products, the taken-SKU warning, starting the
  * Create bulk action, and following its progress on every tab. Every link and form also works without this script.
- * Undo asks first everywhere.
+ * Undo asks first everywhere. Set one name previews each new name.
  */
 ( function () {
 	var settings = window.varconv || null;
@@ -469,7 +469,7 @@
 			progress.scrollIntoView( { block: 'nearest' } );
 			return;
 		}
-		setDo( 'combine' );
+		setDo( action );
 		bulk.submit();
 	}
 
@@ -771,4 +771,17 @@
 	}
 	document.addEventListener( 'click', closeWarnPick );
 	document.addEventListener( 'keydown', closeWarnPick );
+
+	// Set one name: each row's new name follows the shared name and its own variant as they are typed.
+	document.addEventListener( 'input', function ( event ) {
+		var form = event.target.closest( 'form.varconv-rename' );
+		if ( ! form ) {
+			return;
+		}
+		var name = form.querySelector( '[name="name"]' ).value;
+		form.querySelectorAll( 'tbody tr' ).forEach( function ( row ) {
+			var variant = row.querySelector( '.varconv-rename-variant' ).value;
+			row.querySelector( '.varconv-rename-preview' ).textContent = ( name + ' ' + variant ).replace( /\s+/g, ' ' ).trim();
+		} );
+	} );
 }() );
