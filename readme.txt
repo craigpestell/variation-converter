@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 0.13.0
+Stable tag: 0.14.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -139,6 +139,10 @@ Questions about using the plugin go in the support forum here on wordpress.org. 
 4. The History tab with one-click Undo.
 
 == Changelog ==
+
+= 0.14.0 =
+* Variants that start with a number go in number order in every group, including ones you combine from search: decimal commas ("1,5 L"), fractions ("1/2 in") and mixed units ("500 ml" before "1 L", "90 cm" before "1.2 m", "250 g" before "1 kg"). Thanks to Joan Llorca for the idea.
+* History has checkboxes and an Undo checked button, to undo many conversions at once. One that can't be undone is reported and the rest carry on. Thanks to Joan Llorca for the idea.
 
 = 0.13.0 =
 * Each variation also takes its simple product's description, GTIN (UPC, EAN, ISBN), low stock threshold, virtual and downloadable settings, tax and shipping class where they differ, and its public custom fields. Split copies the GTIN, low stock threshold, download limits and public fields back.

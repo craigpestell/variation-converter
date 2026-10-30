@@ -124,7 +124,7 @@ function varconv_render_split(): void {
 		</tr></thead>
 		<tbody>
 		<?php if ( ! $found['ids'] ) : ?>
-			<tr class="no-items"><td colspan="5">
+			<tr class="no-items"><td colspan="6">
 				<?php
 				if ( '' !== $search ) {
 					/* translators: %s: search text. */
@@ -301,8 +301,21 @@ function varconv_render_history(): void {
 	/* translators: %s: number of conversions. */
 	varconv_tablenav( count( $rows ), $paged, VARCONV_PER_PAGE, $args, sprintf( _n( '%s item', '%s items', count( $rows ), 'variation-converter-for-woocommerce' ), number_format_i18n( count( $rows ) ) ) );
 	?>
+	<?php if ( $shown ) : ?>
+		<?php // The rows' checkboxes belong to this form by its id, as each row also holds its own Undo form. ?>
+		<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" id="varconv-undo-checked" class="varconv-confirm varconv-undo-checked" data-confirm="<?php esc_attr_e( 'Undo every checked conversion? Combined products are deleted and their simple products shown again; simple products made by a split are deleted and the variable product shown again.', 'variation-converter-for-woocommerce' ); ?>">
+			<input type="hidden" name="action" value="varconv_undo_checked">
+			<input type="hidden" name="tab" value="history">
+			<?php if ( '' !== $search ) : ?>
+				<input type="hidden" name="s" value="<?php echo esc_attr( $search ); ?>">
+			<?php endif; ?>
+			<?php wp_nonce_field( 'varconv_undo_checked' ); ?>
+			<button class="button"><?php esc_html_e( 'Undo checked', 'variation-converter-for-woocommerce' ); ?></button>
+		</form>
+	<?php endif; ?>
 	<table class="wp-list-table widefat fixed striped table-view-list varconv-history">
 		<thead><tr>
+			<td class="manage-column column-cb check-column"><input type="checkbox" id="varconv-history-all" form="varconv-undo-checked" aria-label="<?php esc_attr_e( 'Check all on this page', 'variation-converter-for-woocommerce' ); ?>"></td>
 			<th scope="col" class="column-primary"><?php esc_html_e( 'Product', 'variation-converter-for-woocommerce' ); ?></th>
 			<th scope="col" class="column-change"><?php esc_html_e( 'Change', 'variation-converter-for-woocommerce' ); ?></th>
 			<th scope="col"><?php esc_html_e( 'Products', 'variation-converter-for-woocommerce' ); ?></th>
@@ -320,6 +333,7 @@ function varconv_render_history(): void {
 			$ids = json_decode( (string) get_post_meta( $id, $combined ? VARCONV_META : VARCONV_SPLIT_META, true ), true ) ?: array();
 			?>
 			<tr>
+				<th scope="row" class="check-column"><input type="checkbox" name="products[]" value="<?php echo (int) $id; ?>" form="varconv-undo-checked" aria-label="<?php echo esc_attr( get_post_field( 'post_title', $id, 'raw' ) ); ?>"></th>
 				<td class="column-primary">
 					<strong><a class="row-title" href="<?php echo esc_url( (string) get_edit_post_link( $id ) ); ?>"><?php echo esc_html( get_post_field( 'post_title', $id, 'raw' ) ); ?></a></strong>
 					<div class="row-actions">
