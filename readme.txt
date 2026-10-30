@@ -141,6 +141,7 @@ Questions about using the plugin go in the support forum here on wordpress.org. 
 == Changelog ==
 
 = 0.14.0 =
+* When combining groups into one product with two attributes, either attribute can be removed, leaving a product with the other alone. Create waits until every checked product has its own label.
 * Variants that start with a number go in number order in every group, including ones you combine from search: decimal commas ("1,5 L"), fractions ("1/2 in") and mixed units ("500 ml" before "1 L", "90 cm" before "1.2 m", "250 g" before "1 kg"). Thanks to Joan Llorca for the idea.
 * History has checkboxes and an Undo checked button, to undo many conversions at once. One that can't be undone is reported and the rest carry on. Thanks to Joan Llorca for the idea.
 

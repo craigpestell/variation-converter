@@ -64,6 +64,8 @@
 .varconv-attr-pair > label { flex: 1; min-width: 0; }
 .varconv-swap.button { padding: 0 6px; margin-bottom: 1px; }
 .varconv-swap .dashicons { line-height: 28px; }
+.varconv-remove-attribute.button-link { color: #646970; margin: 0 0 5px -4px; }
+.varconv-remove-attribute.button-link:hover, .varconv-remove-attribute.button-link:focus { color: #b32d2e; }
 .varconv-cats { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0 0 14px; }
 .varconv-cats legend { font-weight: 600; margin-bottom: 4px; }
 .varconv-prefix { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 8px; }

@@ -202,6 +202,7 @@
 		remember( card, changed );
 		refresh( card );
 		drawGrid( card );
+		checkLabels( card );
 	}
 
 	/* Opens or closes a group's card under its row. */
@@ -618,6 +619,7 @@
 			remember( card, [ input.closest( 'tr' ) ] );
 			refresh( card );
 			drawGrid( card );
+			checkLabels( card );
 		} else if ( input.matches( '.varconv-check-all' ) ) {
 			setUsed( card, rows( card ).filter( shown ), input.checked );
 		} else if ( input.matches( '.varconv-pick-page' ) ) {
@@ -664,16 +666,12 @@
 			card.querySelector( '.varconv-group-attribute-name' ).textContent = input.value;
 		} else if ( input.matches( '.varconv-group-label, input[name$="[label]"]' ) ) {
 			drawGrid( card );
+			checkLabels( card );
 		}
 	} );
 
 	/* Groups combined into one product: the swap button swaps the two attributes' names and each product's labels. */
-	document.addEventListener( 'click', function ( event ) {
-		var swap = event.target.closest( '.varconv-swap' );
-		var card = swap && swap.closest( 'form.varconv-card' );
-		if ( ! card ) {
-			return;
-		}
+	function swapAttributes( card ) {
 		var flip = function ( a, b ) {
 			var value = a.value;
 			a.value = b.value;
@@ -687,7 +685,71 @@
 		rows( card ).forEach( function ( row ) {
 			flip( row.querySelector( '.varconv-group-label' ), row.querySelector( 'input[name$="[label]"]' ) );
 		} );
-		drawGrid( card );
+	}
+
+	/* Removing one of the two attributes leaves a card for one attribute: the other's name and labels. */
+	function removeAttribute( card, which ) {
+		if ( 'second' === which ) {
+			swapAttributes( card );
+		}
+		var pair = card.querySelector( '.varconv-attr-pair' );
+		var kept = card.querySelector( '.varconv-attribute' ).closest( 'label' );
+		kept.querySelector( 'span' ).textContent = strings.attribute;
+		pair.replaceWith( kept );
+		card.querySelector( '.varconv-group-attribute-name' ).closest( 'th' ).remove();
+		card.querySelectorAll( '.varconv-group-label' ).forEach( function ( input ) {
+			input.closest( 'td' ).remove();
+		} );
+		var box = card.querySelector( '.varconv-grid' );
+		if ( box ) {
+			box.remove();
+		}
+		delete card.dataset.grid;
+		card.dataset.single = '1';
+		kept.querySelector( 'input' ).focus();
+		checkLabels( card );
+	}
+
+	/* With one attribute left, each checked product needs its own label; Create waits until they differ. */
+	function checkLabels( card ) {
+		if ( ! card || ! card.dataset.single ) {
+			return;
+		}
+		var seen = {};
+		var twice = [];
+		rows( card ).filter( used ).forEach( function ( row ) {
+			var label = row.querySelector( 'input[name$="[label]"]' ).value.trim();
+			var key = label.toLowerCase();
+			if ( '' !== label && seen[ key ] && -1 === twice.indexOf( seen[ key ] ) ) {
+				twice.push( seen[ key ] );
+			}
+			seen[ key ] = seen[ key ] || label;
+		} );
+		var warning = card.querySelector( '.varconv-label-warning' );
+		if ( ! warning ) {
+			warning = notice( 'warning', '' );
+			warning.classList.add( 'varconv-label-warning' );
+			card.querySelector( '.varconv-card-message' ).after( warning );
+		}
+		warning.innerHTML = twice.length ? text( format( strings.labelsTwice, twice.map( function ( label ) {
+			return '"' + label + '"';
+		} ).join( ', ' ) ) ) : '';
+		warning.hidden = ! twice.length;
+		card.querySelector( '.varconv-create' ).disabled = !! twice.length;
+	}
+
+	document.addEventListener( 'click', function ( event ) {
+		var button = event.target.closest( '.varconv-swap, .varconv-remove-attribute' );
+		var card = button && button.closest( 'form.varconv-card' );
+		if ( ! card ) {
+			return;
+		}
+		if ( button.matches( '.varconv-swap' ) ) {
+			swapAttributes( card );
+			drawGrid( card );
+		} else {
+			removeAttribute( card, button.dataset.which );
+		}
 	} );
 
 	document.addEventListener( 'click', function ( event ) {
