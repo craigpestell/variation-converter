@@ -851,3 +851,33 @@ function varconv_validate( string $name, string $attribute, array $members, bool
 	}
 	return $errors;
 }
+
+/**
+ * Where "Set one name" starts for the checked products: the words every title starts with are the name, and the rest
+ * of each title is its variant. With no word in common the name and variants are empty, so a name typed in is not
+ * followed by each whole old title.
+ *
+ * @param array<int,string> $titles Product ID => title.
+ * @return array{name:string,variants:array<int,string>}
+ */
+function varconv_rename_start( array $titles ): array {
+	$words = array_map( 'varconv_words', $titles );
+	$first = $words ? reset( $words ) : array();
+	$n = count( $first );
+	foreach ( $words as $w ) {
+		$n = min( $n, varconv_common_words( $first, $w ) );
+	}
+	$variants = array();
+	foreach ( $words as $id => $w ) {
+		$variants[ $id ] = $n ? varconv_trim( implode( ' ', array_slice( $w, $n ) ) ) : '';
+	}
+	return array(
+		'name'     => varconv_trim( implode( ' ', array_slice( $first, 0, $n ) ) ),
+		'variants' => $variants,
+	);
+}
+
+/** A product's new title: the shared name, then its variant if it has one. */
+function varconv_renamed( string $name, string $variant ): string {
+	return trim( (string) preg_replace( '/\s+/u', ' ', $name . ' ' . $variant ) );
+}

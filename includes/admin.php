@@ -17,6 +17,7 @@ const VARCONV_PER_PAGE = 25;
 require_once __DIR__ . '/admin-combine.php';
 require_once __DIR__ . '/ajax.php';
 require_once __DIR__ . '/admin-products.php';
+require_once __DIR__ . '/admin-rename.php';
 require_once __DIR__ . '/admin-split.php';
 
 add_action( 'admin_menu', 'varconv_menu', 60 );
@@ -241,6 +242,9 @@ function varconv_handle_bulk(): void {
 	if ( 'combine' === $action || 'grid' === $action ) {
 		varconv_handle_combine( $keys, $ids );
 	}
+	if ( 'rename' === $action ) {
+		varconv_handle_rename_picks( $keys, $ids );
+	}
 	if ( ! $keys || '' === $action ) {
 		varconv_back( array() );
 	}
@@ -280,16 +284,7 @@ function varconv_handle_combine( array $keys, array $ids ): void {
 		varconv_fail( __( 'Select at least two groups or products to combine into one product.', 'variation-converter-for-woocommerce' ), array() );
 	}
 	if ( count( $keys ) <= 1 ) {
-		$members = array();
-		if ( $keys ) {
-			$by_key = array_column( varconv_candidates()['collections'], null, 'key' );
-			$excluded = array_map( 'intval', varconv_excluded()[ $keys[0] ] ?? array() );
-			foreach ( $by_key[ $keys[0] ]['members'] ?? array() as $m ) {
-				if ( ! in_array( (int) $m['id'], $excluded, true ) ) {
-					$members[] = (int) $m['id'];
-				}
-			}
-		}
+		$members = $keys ? varconv_group_member_ids( $keys[0] ) : array();
 		varconv_back( array( 'combine' => implode( ',', array_merge( $members, $ids ) ) ) );
 	}
 	$all = array_merge( $keys, array_map( static fn( $id ) => 'p' . $id, $ids ) );
@@ -298,6 +293,19 @@ function varconv_handle_combine( array $keys, array $ids ): void {
 		varconv_fail( sprintf( __( 'Select at most %d groups and products to combine into one product.', 'variation-converter-for-woocommerce' ), VARCONV_GRID_MAX ), array() );
 	}
 	varconv_back( array( 'grid' => implode( ',', $all ) ) );
+}
+
+/** The IDs of a scan group's products, without those unchecked in its card. @return int[] */
+function varconv_group_member_ids( string $key ): array {
+	$by_key = array_column( varconv_candidates()['collections'], null, 'key' );
+	$excluded = array_map( 'intval', varconv_excluded()[ $key ] ?? array() );
+	$ids = array();
+	foreach ( $by_key[ $key ]['members'] ?? array() as $m ) {
+		if ( ! in_array( (int) $m['id'], $excluded, true ) ) {
+			$ids[] = (int) $m['id'];
+		}
+	}
+	return $ids;
 }
 
 add_action( 'admin_post_varconv_undo', 'varconv_handle_undo' );
@@ -426,7 +434,7 @@ function varconv_render(): void {
 		'split'   => null,
 		'history' => count( varconv_created() ) + count( varconv_split_list() ),
 	);
-	if ( 'combine' === $tab && ! varconv_combine_ids() ) {
+	if ( 'combine' === $tab && ! varconv_combine_ids() && ! varconv_rename_ids() ) {
 		$scan = varconv_candidates();
 		$counts['combine'] = count( $scan['collections'] );
 	}
@@ -461,6 +469,8 @@ function varconv_render(): void {
 			varconv_render_split();
 		} elseif ( 'history' === $tab ) {
 			varconv_render_history();
+		} elseif ( varconv_rename_ids() ) {
+			varconv_render_rename( varconv_rename_ids() );
 		} elseif ( varconv_combine_ids() ) {
 			varconv_render_manual( varconv_combine_ids() );
 		} elseif ( varconv_grid_keys() ) {
@@ -575,6 +585,14 @@ function varconv_notice(): void {
 			$skip   = isset( $_GET['varconv_skip'] ) ? absint( wp_unslash( $_GET['varconv_skip'] ) ) : 0;
 			$failed = isset( $_GET['varconv_failed_count'] ) ? absint( wp_unslash( $_GET['varconv_failed_count'] ) ) : 0;
 			printf( '<div class="notice notice-%s"><p>%s</p></div>', $failed ? 'warning' : 'success', wp_kses_post( varconv_bulk_summary( $made, $skip, $failed ) ) );
+			break;
+		case 'renamed':
+			varconv_renamed_notice();
+			break;
+		case 'rename_undone':
+			$count = isset( $_GET['varconv_count'] ) ? absint( wp_unslash( $_GET['varconv_count'] ) ) : 0;
+			/* translators: %d: number of products. */
+			printf( '<div class="notice notice-success"><p>%s</p></div>', esc_html( sprintf( _n( 'Put back the old name of %d product.', 'Put back the old names of %d products.', $count, 'variation-converter-for-woocommerce' ), $count ) ) );
 			break;
 		case 'spelling':
 			printf( '<div class="notice notice-success"><p>%s</p></div>', esc_html__( 'Saved the spelling.', 'variation-converter-for-woocommerce' ) );
