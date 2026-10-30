@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 0.11.0
+Stable tag: 0.12.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -140,6 +140,9 @@ Questions about using the plugin go in the support forum here on wordpress.org. 
 
 == Changelog ==
 
+= 0.12.0 =
+* Removed Set one name (added in 0.9.0). Combine into one product already sets the new product's name and each variation's label, so renaming the simple products first is not needed.
+
 = 0.11.0 =
 * Combining groups into one product with two attributes: a swap button between the two attribute fields picks which one the product page shows first.
 
@@ -204,8 +207,8 @@ Questions about using the plugin go in the support forum here on wordpress.org. 
 
 == Upgrade Notice ==
 
-= 0.10.0 =
-New variable products get no SKU of their own; their variations keep their SKUs. Products you already made are unchanged.
+= 0.12.0 =
+Set one name is removed; Combine into one product names the product and its variations. New variable products get no SKU of their own, and a swap button sets which of two attributes comes first.
 
 = 0.7.0 =
 The Combine tab starts with a search. Combine into one product and Create a product for each group are now buttons above the list, not Bulk actions.

@@ -282,12 +282,4 @@ $grid = varconv_grid( array(
 ) );
 expect( array( $grid['name'], array_column( $grid['members'], 'group' ), array_column( $grid['members'], 'label' ) ), array( 'Syrup', array( 'Vanilla', 'Vanilla', 'Hazelnut' ), array( '250ml', '750ml', '750ml' ) ), 'a loose product joins a grid as its own group' );
 
-// Set one name: the shared start of the titles, and the rest of each as its variant.
-$start = varconv_rename_start( array( 4 => 'Classic Tee Black', 7 => 'Classic tee Navy Blue', 9 => 'Classic Tee' ) );
-expect( $start, array( 'name' => 'Classic Tee', 'variants' => array( 4 => 'Black', 7 => 'Navy Blue', 9 => '' ) ), 'rename start splits off the shared name' );
-$start = varconv_rename_start( array( 1 => 'Cherry Lube 4 oz', 2 => 'Lube Cherry 8oz' ) );
-expect( $start, array( 'name' => '', 'variants' => array( 1 => '', 2 => '' ) ), 'rename start with nothing shared is empty' );
-expect( varconv_renamed( ' Cherry  Lube ', '8 oz' ), 'Cherry Lube 8 oz', 'renamed title adds the variant' );
-expect( varconv_renamed( 'Cherry Lube', '' ), 'Cherry Lube', 'renamed title without a variant' );
-
 echo "Variant collection scan tests passed.\n";
