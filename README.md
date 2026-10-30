@@ -1,12 +1,14 @@
 # Variation Converter for WooCommerce
 
-Many stores list one simple product per color or size: "Classic Tee Black", "Classic Tee Blue", "Classic Tee Red". Variation Converter finds those groups and turns each one you approve into a single variable product. It also works the other way, splitting a variable product into separate simple products.
+Many stores list one simple product per color or size: "Classic Tee Black", "Classic Tee Blue", "Classic Tee Red". Search for the product, tick the groups and products that belong together, and Variation Converter turns them into a single variable product. It has already grouped most of them for you. It also works the other way, splitting a variable product into separate simple products.
 
-![The Combine tab listing proposed groups, each with a product count, parent SKU, price range, attribute and status.](site/images/combine-list.webp)
+![The Combine tab after searching for Barista Syrup: two suggested groups and one product not in a group, ticked, with the Combine into one product button.](site/images/search.webp)
 
 **What it does**
 
+- Finds the products to combine with one search, showing the groups it suggests and the products it didn't group.
 - Scans your catalog and suggests groups of simple products that are variants of one product.
+- Combines products into one attribute (Color), or several groups into two (Flavor and Size).
 - Lets you check and edit each group before anything changes.
 - Creates one variable product per group, with a variation for each original product.
 - Splits a variable product into one simple product per variation.
@@ -31,20 +33,21 @@ Take a database backup before converting many products at once. Undo is there, b
 
 ## Combine simple products into a variable product
 
-1. Go to **Products > Variation Converter**. The **Combine** tab lists the groups the plugin found.
-2. Click a group to open it.
-3. Check the product name, the attribute (for example Color or Size), the parent SKU and the label of each variant ("Black", "Blue"). Untick any product that doesn't belong. Drag rows to change their order; the first product gives the new product its image and description.
-4. Click **Create variable product**. If the group isn't really one product, click **Skip, not variants** so it stops appearing.
+1. Go to **Products > Variation Converter**. On the **Combine** tab, type a product name or SKU in **Find the products to combine** and click **Search**.
+2. The results show the suggested groups that match and, below them, **Products not in a group**: matching products the scan didn't group.
+3. Tick the groups and products that are one product and click **Combine into one product**. One group opens on its own. Products, or one group with extra products, open as one product with one attribute. Two or more groups open as one product with two attributes (see below).
+4. Check the product name, the attribute (for example Color or Size), the parent SKU and the label of each variant ("Black", "Blue"). Untick any product that doesn't belong. Drag rows to change their order; the first product gives the new product its image and description.
+5. Click **Create variable product**. If a group isn't really one product, click **Skip, not variants** so it stops appearing. **Back to search results** takes you back to your search for the next one.
 
 ![A group open for review: product name, attribute, parent SKU and one row per variant.](site/images/combine-card.webp)
 
-**Working through a long list.** The **Ready** view shows groups with no warnings. **Needs review** shows groups with a warning, such as different prices, different categories, missing or repeated labels, long labels, or two products with the same SKU. **Skipped** lists the groups you skipped; you can restore them. You can also search, filter by brand, group size or warning, and use **Bulk actions** to create or skip many groups at once.
+**Working through a long list.** The **Ready** view shows groups with no warnings. **Needs review** shows groups with a warning, such as different prices, different categories, missing or repeated labels, long labels, or two products with the same SKU. **Skipped** lists the groups you skipped; you can restore them. Without a search, the tab lists every suggested group. Filter by brand, group size or warning, tick groups and click **Create a product for each group** to create them all (it runs in the background), or use **Bulk actions** to skip or restore many at once.
 
-**Combining groups into one product with two attributes.** When each group is one flavor or color of the same product, for example Barista Syrup Vanilla (250ml, 750ml) and Barista Syrup Caramel (250ml, 750ml, 1L), tick the groups, choose **Combine groups into one product** from the bulk actions and click **Apply**. One card opens with two attributes: one from the groups (Flavor: Vanilla, Caramel) and the groups' own (Volume). The words the group names share become the product name, and the rest of each group's name its label; you can change all of them. A grid shows which product becomes each pair. Pairs that no product has, such as Vanilla 1L, get no variation, so shoppers see them as unavailable. Undo works as for any combine.
+**Combining groups into one product with two attributes.** When each group is one flavor or color of the same product, for example Barista Syrup Vanilla (250ml, 750ml) and Barista Syrup Caramel (250ml, 750ml, 1L), search for "Barista Syrup", tick the groups and any matching products not in a group (such as Barista Syrup Hazelnut 750ml, which becomes a group of its own), and click **Combine into one product**. One card opens with two attributes: one from the groups (Flavor: Vanilla, Caramel) and the groups' own (Volume). The words the group names share become the product name, and the rest of each group's name its label; you can change all of them. A grid shows which product becomes each pair. Pairs that no product has, such as Vanilla 1L, get no variation, so shoppers see them as unavailable. Undo works as for any combine.
 
 ![Two groups combined into one product: two attribute columns and the grid of pairs, with one pair not sold.](site/images/combine-grid.webp)
 
-**Combining products the plugin didn't group.** In **Products > All Products**, tick the products, choose **Combine into variable product** from the bulk actions, and click **Apply**. Their SKUs don't need to match.
+**Combining products the plugin didn't group.** Search for them on the Combine tab, where they show under **Products not in a group**. Or, in **Products > All Products**, tick the products, choose **Combine into variable product** from the bulk actions, and click **Apply**. Their SKUs don't need to match.
 
 **How groups are found.** Only published simple products that have a SKU and are shown in the catalog are scanned. Products without a SKU are never suggested. Products are grouped when:
 

@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Variation Converter for WooCommerce</title>
-<meta name="description" content="A free WordPress plugin that merges near-duplicate WooCommerce simple products into one variable product, or splits a variable product into simple ones. Preview first, undo in one click.">
+<meta name="description" content="A free WordPress plugin: search for a WooCommerce product, tick its variants and combine them into one variable product, or split a variable product into simple ones. Preview first, undo in one click.">
 <meta property="og:title" content="Variation Converter for WooCommerce">
-<meta property="og:description" content="Merge near-duplicate simple products into a variable product, or split a variable product into simple ones. Preview first, undo in one click.">
+<meta property="og:description" content="Search for a product, tick its variants and combine them into one variable product, or split a variable product into simple ones. Preview first, undo in one click.">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://variation-converter.bizrocket.ca/images/combine-list.png">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
@@ -31,7 +31,7 @@
 	<div class="wrap">
 		<p class="eyebrow">Free WordPress plugin for WooCommerce</p>
 		<h1>Turn a pile of near-duplicate products into one variable product.</h1>
-		<p class="lead">Variation Converter finds the simple products in your catalog that are really one product in several colors, sizes or scents, and merges each group into a variable product. It splits variable products back into simple ones too. You preview every change, and Undo puts everything back.</p>
+		<p class="lead">Search for a product, tick the groups and products that are really one product in several colors, sizes or scents, and click <b>Combine into one product</b>. Variation Converter has already grouped most of them for you. It splits variable products back into simple ones too. You preview every change, and Undo puts everything back.</p>
 		<div class="actions">
 			<a class="button" href="https://wordpress.org/plugins/variation-converter-for-woocommerce/">Get it on WordPress.org</a>
 			<a class="button button-ghost" href="https://github.com/craigpestell/variation-converter">View on GitHub</a>
@@ -40,7 +40,7 @@
 	</div>
 	<div class="wrap">
 		<figure class="shot shot-hero">
-			<img src="images/combine-list.webp" width="1120" height="738" alt="The Combine tab listing proposed groups such as Classic Crew Tee and Soy Candle, each with a product count, parent SKU, price range, attribute and status.">
+			<img src="images/search.webp" width="1120" height="828" alt="The Combine tab after searching for Barista Syrup: two suggested groups, Caramel and Vanilla, and one product not in a group, Hazelnut 750ml, all ticked, with the Combine into one product button.">
 		</figure>
 	</div>
 </section>
@@ -59,14 +59,24 @@
 		<ol class="steps">
 			<li>
 				<div class="step-text">
-					<h3>It finds the groups</h3>
-					<p>Go to <b>Products &gt; Variation Converter</b>. The plugin scans your published simple products and groups the ones whose SKUs share a family (TEE100-BLK, TEE100-NAV) and whose names start with the same words. Each group shows a guessed attribute, a suggested parent SKU, and notes on anything worth a second look: different prices, different categories, duplicate labels.</p>
+					<h3>Search for the product</h3>
+					<p>Go to <b>Products &gt; Variation Converter</b> and type a name or SKU in <b>Find the products to combine</b>. You see the groups the plugin has already found for it, grouped by SKU family (TEE100-BLK, TEE100-NAV) and shared name, and below them any matching products it didn't group. Each group shows a guessed attribute, a suggested parent SKU, and notes on anything worth a second look: different prices, different categories, duplicate labels.</p>
+				</div>
+			</li>
+			<li>
+				<div class="step-text">
+					<h3>Tick what belongs together</h3>
+					<p>Tick the groups and products that are one product and click <b>Combine into one product</b>. Products, or one group plus a few strays, make a product with one attribute, such as Color. Two or more groups make a product with two attributes, such as Flavor and Size, with a grid of the pairs you actually sell.</p>
+				</div>
+				<figure class="shot">
+					<img src="images/combine-grid.webp" width="1078" height="1076" alt="Barista Syrup combined from the Caramel and Vanilla groups and a Hazelnut product: one row per product with its Color and Volume, and a grid showing which pairs are sold.">
+				</figure>
 				</div>
 			</li>
 			<li>
 				<div class="step-text">
 					<h3>You review and adjust</h3>
-					<p>Open a group to see each product, the variant label read from its name, its SKU, price and stock. Rename the product, change the attribute, fix labels, drag to reorder, or untick anything that doesn't belong. Nothing changes until you click Create.</p>
+					<p>Check each product, the variant label read from its name, its SKU, price and stock. Rename the product, change the attribute, fix labels, drag to reorder, or untick anything that doesn't belong. Nothing changes until you click Create.</p>
 				</div>
 				<figure class="shot">
 					<img src="images/combine-card.webp" width="1076" height="390" alt="A group being reviewed: product name Classic Crew Tee, attribute Color, parent SKU TEE100, and four rows labeled Black, Heather Grey, Navy and White with their SKUs, prices and stock.">
@@ -109,14 +119,16 @@
 		<h2>What you get</h2>
 		<ul class="grid">
 			<li><h3>Both directions</h3><p>Merge simple products into a variable product, or split a variable product into simple products.</p></li>
-			<li><h3>Finds the groups for you</h3><p>Grouped by SKU family and shared name, sorted and filterable, with Ready, Needs review and Skipped views.</p></li>
+			<li><h3>Search first</h3><p>Type a product name and see every group and stray product that matches, ready to tick and combine.</p></li>
+			<li><h3>Suggests the groups for you</h3><p>Grouped by SKU family and shared name, sorted and filterable, with Ready, Needs review and Skipped views.</p></li>
+			<li><h3>One or two attributes</h3><p>Combine products into one attribute, such as Color, or whole groups into two, such as Flavor and Size.</p></li>
 			<li><h3>Review before anything changes</h3><p>Rename, change the attribute, fix labels and leave products out. Skip a group that isn't really variants.</p></li>
 			<li><h3>Keeps your data</h3><p>SKUs, prices, sale dates, stock, weight, dimensions and images move to the variations.</p></li>
 			<li><h3>Non-destructive</h3><p>Originals are hidden, never deleted. Their orders, reviews and links stay as they were.</p></li>
 			<li><h3>Old links keep working</h3><p>A combined product's old URL sends a 301 to the variable product with that option chosen.</p></li>
 			<li><h3>One-click Undo</h3><p>Every conversion can be reversed from History, in either direction.</p></li>
 			<li><h3>All or nothing</h3><p>If WooCommerce fails to save any part of a new product, the partial product is removed.</p></li>
-			<li><h3>Bulk when you're ready</h3><p>Create many groups at once from the list, or select products in <b>All Products</b> and choose "Combine into variable product".</p></li>
+			<li><h3>Bulk when you're ready</h3><p>Tick many groups and click <b>Create a product for each group</b>, or select products in <b>All Products</b> and choose "Combine into variable product".</p></li>
 			<li><h3>Lightweight</h3><p>No settings page, no scripts or styles on your storefront, no external services, nothing stored beyond a few options and product meta fields.</p></li>
 		</ul>
 	</div>
@@ -157,7 +169,7 @@ wp varconv undo --all --yes</code></pre>
 		</details>
 		<details>
 			<summary>Can a product have more than one attribute, like color and size?</summary>
-			<p>Yes, two. Each group the scan finds gets one attribute, such as Size. When several groups are flavors or colors of the same product, tick them and choose <b>Combine groups into one product</b>. You get one variable product with two attributes, such as Flavor and Size, and a grid shows which pairs are sold.</p>
+			<p>Yes, two. Each group the scan finds gets one attribute, such as Size. When several groups are flavors or colors of the same product, search for it, tick the groups and any matching products not in a group, and click <b>Combine into one product</b>. You get one variable product with two attributes, such as Flavor and Size, and a grid shows which pairs are sold.</p>
 		</details>
 		<details>
 			<summary>Why are there two products with the same SKU after a conversion?</summary>

@@ -9,7 +9,7 @@ Stable tag: 0.7.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Merge near-duplicate simple products into a variable product, or split a variable product into simple ones. Preview first, undo in one click.
+Search for a product, tick its variants and combine them into one variable product. Or split a variable product into simple ones. Undo anytime.
 
 == Description ==
 
@@ -17,22 +17,30 @@ Lots of WooCommerce stores start out with one simple product per color or size: 
 
 Fixing that by hand means building a variable product, re-entering every SKU, price, stock level and image, and then hiding the old products. Variation Converter does it for you.
 
-It scans your catalog, finds the simple products that are really one product in several variants, and shows you each group. You check it, adjust anything you like, and click once. You get one variable product with a variation for each original. The originals are hidden, not deleted, and Undo puts everything back the way it was.
+Search for the product, for example "Classic Tee". Variation Converter shows the groups it has already found for that name, and any matching products it didn't group. Tick the ones that are one product and click **Combine into one product**. You check the new product before anything is created, then get one variable product with a variation for each original. The originals are hidden, not deleted, and Undo puts everything back the way it was.
+
+Groups that are colors or flavors of the same product combine too. Tick "Syrup Vanilla" (250ml, 750ml) and "Syrup Caramel" (250ml, 750ml, 1L) and you get one Syrup with two attributes, Flavor and Size.
+
+Got thousands of products? The plugin scans your whole catalog and suggests every group up front, so you can also work down the list, or tick many groups and click **Create a product for each group**.
 
 It works the other way too. If a variable product would sell better as separate listings, or you're moving to a setup that needs one product per variant, Variation Converter splits it into simple products the same way: preview, one click, and Undo.
 
 = How it works =
 
-1. Go to **Products > Variation Converter**. The plugin scans your published simple products.
-2. Each proposed group shows its members, the variant label it read from each name ("Black", "Blue", "Red"), a guessed attribute (Color, Size, Flavor, Scent or Volume) and a suggested parent SKU.
-3. Untick any product that doesn't belong, and edit the product name, attribute or labels.
-4. Click **Create variable product**. Or click **Not a collection** to dismiss the group so it stops appearing.
+1. Go to **Products > Variation Converter**. On the **Combine** tab, type a product name or SKU in **Find the products to combine** and click **Search**.
+2. The results show the suggested groups that match and, below them, **Products not in a group**: matching products the scan didn't group.
+3. Tick the groups and products that are one product, and click **Combine into one product**. Products, or one group with extra products, become a product with one attribute, such as Color. Two or more groups become a product with two attributes, such as Flavor and Size.
+4. Check the product name, the attribute, the parent SKU and the label of each variant ("Black", "Blue", "Red"). Untick anything that doesn't belong, then click **Create variable product**.
 5. Changed your mind? The **History** tab has an **Undo** button for every product the plugin made.
+
+Without a search, the Combine tab lists every suggested group, with **Ready** and **Needs review** views. Open one to check it, tick several and click **Create a product for each group**, or mark a group **Skip, not variants** so it stops appearing.
 
 = Features =
 
 * **Both directions.** Merge simple products into a variable product, or split a variable product into simple products.
-* **Finds the groups for you.** Products are grouped when their SKUs share a family (SE1421-01, SE1421-03) and their names share a beginning. You don't have to pick products one by one.
+* **Search first.** Type a product name and see every group and stray product that matches, ready to tick and combine.
+* **Suggests the groups for you.** Products are grouped when their SKUs share a family (SE1421-01, SE1421-03) and their names share a beginning, so most of the picking is already done.
+* **One or two attributes.** Combine products into one attribute (Color), or whole groups into two (Flavor and Size), with a grid of the pairs that exist.
 * **Review before anything changes.** Nothing is created until you approve a group. You can rename it, change the attribute, fix labels and leave products out.
 * **Flags the things worth a second look:** different prices, different categories, duplicate labels, or labels long enough to suggest these aren't really variants.
 * **Keeps your data.** Each variation takes its original's SKU, regular and sale price, sale dates, stock settings, weight, dimensions and image. The variable product takes the first member's description, images, categories, tags, tax and shipping class, plus every member's image in its gallery.
@@ -57,7 +65,7 @@ A variable product the plugin made by merging offers Undo instead of a split, so
 
 1. Make sure WooCommerce is installed and active.
 2. In your WordPress admin, go to **Plugins > Add New**, search for "Variation Converter", then install and activate it. Or upload the `variation-converter-for-woocommerce` folder to `/wp-content/plugins/` and activate it on the **Plugins** screen.
-3. Go to **Products > Variation Converter** to see the proposed groups, or open the **Split** tab to split a variable product.
+3. Go to **Products > Variation Converter** and search for a product on the **Combine** tab, or open the **Split** tab to split a variable product.
 
 You need a user role that can manage WooCommerce products (Shop Manager or Administrator).
 
@@ -77,6 +85,8 @@ They stay with the original simple products. Past orders still point to them, an
 
 Two things must match: the SKUs share a family (for example SE1421-01 CL and SE1421-03 CL, or D1701-12 and D1701-14), and the product names start with the same words. Whatever follows the shared words becomes the variant label. You review every group before anything is created.
 
+If it missed a product, search for it. It shows up under **Products not in a group**, and you can tick it along with the group it belongs to.
+
 = My products don't have SKUs. Will it work? =
 
 Not yet. Grouping relies on SKUs, so products without one are never proposed. Only published, visible simple products are scanned. Name-only matching is being considered for a future version.
@@ -91,7 +101,7 @@ Scan results are cached for 30 minutes. Click **Scan again** to refresh them.
 
 = Can a product have more than one attribute, like color and size? =
 
-Yes, from two or more groups. Each group the scan finds gets one attribute, say Size. When each group is one flavor or color of the same product (Syrup Vanilla in 250ml and 750ml, Syrup Caramel in 250ml, 750ml and 1L), tick the groups and choose **Combine groups into one product** from the bulk actions. You get one variable product with two attributes, Flavor and Size, and a variation for each product. A grid shows which pairs exist; pairs no product has, such as Vanilla 1L, are not sold.
+Yes, two. Each group the scan finds gets one attribute, say Size. When each group is one flavor or color of the same product (Syrup Vanilla in 250ml and 750ml, Syrup Caramel in 250ml, 750ml and 1L), search for "Syrup", tick the groups and any matching products not in a group (such as Syrup Hazelnut 750ml), and click **Combine into one product**. You get one variable product with two attributes, Flavor and Size, and a variation for each product. A grid shows which pairs exist; pairs no product has, such as Vanilla 1L, are not sold.
 
 = It guessed the wrong attribute. Can I change it? =
 
@@ -119,8 +129,8 @@ Questions about using the plugin go in the support forum here on wordpress.org. 
 
 == Screenshots ==
 
-1. Proposed groups, each with its members, labels, attribute and notes.
-2. Editing a group before creating the variable product.
+1. Searching the Combine tab: the suggested groups that match, products not in a group, and Combine into one product.
+2. Two groups and a product combined into one product with two attributes, with the grid of pairs that exist.
 3. Splitting a variable product into simple products.
 4. The History tab with one-click Undo.
 
@@ -177,6 +187,9 @@ Questions about using the plugin go in the support forum here on wordpress.org. 
 * First public version: detect groups of simple products, review them, merge each into a variable product, split variable products into simple products, and undo either.
 
 == Upgrade Notice ==
+
+= 0.7.0 =
+The Combine tab starts with a search. Combine into one product and Create a product for each group are now buttons above the list, not Bulk actions.
 
 = 0.6.0 =
 Combine several groups into one variable product with two attributes, such as Flavor and Size.
