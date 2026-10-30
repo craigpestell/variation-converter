@@ -226,8 +226,9 @@ function varconv_split_product( int $parent_id, array $names ): array {
 		}
 	}
 	$created = array();
-	// The simple products reuse the variations' SKUs, which WooCommerce otherwise refuses as duplicates.
+	// The simple products reuse the variations' SKUs and GTINs, which WooCommerce otherwise refuses as duplicates.
 	add_filter( 'wc_product_has_unique_sku', '__return_false', 99 );
+	add_filter( 'wc_product_has_global_unique_id', '__return_false', 99 );
 	try {
 		foreach ( $sources as $i => [ $variation, $name ] ) {
 			$inherit = static fn( string $field ) => '' !== (string) $variation->{"get_$field"}( 'edit' ) ? $variation->{"get_$field"}( 'edit' ) : $parent->{"get_$field"}( 'edit' );
@@ -236,6 +237,19 @@ function varconv_split_product( int $parent_id, array $names ): array {
 			$simple->set_status( 'publish' );
 			$simple->set_menu_order( $parent->get_menu_order( 'edit' ) + $i );
 			$simple->set_sku( $variation->get_sku( 'edit' ) );
+			if ( method_exists( $variation, 'get_global_unique_id' ) ) {
+				$simple->set_global_unique_id( $variation->get_global_unique_id( 'edit' ) );
+			}
+			$simple->set_low_stock_amount( $variation->get_low_stock_amount( 'edit' ) );
+			$simple->set_download_limit( $variation->get_download_limit( 'edit' ) );
+			$simple->set_download_expiry( $variation->get_download_expiry( 'edit' ) );
+			// The variation's public custom fields (a barcode plugin's, for example), as Combine gives them.
+			foreach ( $variation->get_meta_data() as $entry ) {
+				$data = $entry->get_data();
+				if ( '' !== (string) $data['key'] && '_' !== $data['key'][0] ) {
+					$simple->update_meta_data( $data['key'], $data['value'] );
+				}
+			}
 			$simple->set_regular_price( $variation->get_regular_price( 'edit' ) );
 			$simple->set_sale_price( $variation->get_sale_price( 'edit' ) );
 			$simple->set_date_on_sale_from( $variation->get_date_on_sale_from( 'edit' ) );
@@ -285,6 +299,7 @@ function varconv_split_product( int $parent_id, array $names ): array {
 		}
 	} catch ( Throwable $e ) {
 		remove_filter( 'wc_product_has_unique_sku', '__return_false', 99 );
+		remove_filter( 'wc_product_has_global_unique_id', '__return_false', 99 );
 		foreach ( $created as $id ) {
 			wp_delete_post( $id, true );
 		}
@@ -292,6 +307,7 @@ function varconv_split_product( int $parent_id, array $names ): array {
 		throw new RuntimeException( esc_html( sprintf( __( 'Not split: %s', 'variation-converter-for-woocommerce' ), $e->getMessage() ) ), 0, $e ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- $e is the previous exception, not output.
 	}
 	remove_filter( 'wc_product_has_unique_sku', '__return_false', 99 );
+	remove_filter( 'wc_product_has_global_unique_id', '__return_false', 99 );
 
 	$parent->update_meta_data( VARCONV_HIDDEN_META, $parent->get_catalog_visibility( 'edit' ) );
 	$parent->update_meta_data( VARCONV_SPLIT_META, wp_json_encode( $created ) );

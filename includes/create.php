@@ -177,7 +177,7 @@ function varconv_created(): array {
 
 /**
  * Makes a published variable product from simple products: one variation per member, in the order given, with the
- * member's SKU, prices, stock, weight and image. The product takes the first member's descriptions, categories,
+ * member's SKU, prices, stock, weight and image, and the rest varconv_copy_to_variation() copies. The product takes the first member's descriptions, categories,
  * tags and other taxonomies, but no SKU of its own, and is dated just after its newest member so the shop order
  * barely moves. The members are then hidden from the catalog and search.
  *
@@ -205,6 +205,57 @@ function varconv_create_grid( string $name, string $group_attribute, string $att
 	$members = array_map( static fn( $pair ) => array( (string) ( $pair[0] ?? '' ), (string) ( $pair[1] ?? '' ) ), $members );
 	$errors = varconv_validate_grid( $name, $group_attribute, $attribute_name, $members );
 	return varconv_make( $name, array( $group_attribute, $attribute_name ), $members, $categories, $errors );
+}
+
+/**
+ * Gives a new variation the rest of what its simple product holds that a variation can hold: its description, GTIN
+ * (UPC, EAN, ISBN), low stock threshold, virtual and downloadable settings and downloads, its tax class and
+ * shipping class where they differ from the variable product's, and its public custom fields (meta keys that don't
+ * start with an underscore, such as a barcode plugin's). A variation can't hold a name, short description,
+ * categories, tags, gallery, attributes, upsells or reviews; those stay with the variable product, and the simple
+ * product keeps them all for Undo.
+ *
+ * @param WC_Product $simple The simple product.
+ * @param WC_Product_Variation $variation The new, unsaved variation.
+ * @param WC_Product_Variable $parent The variable product.
+ */
+function varconv_copy_to_variation( $simple, $variation, $parent ) {
+	$variation->set_description( $simple->get_description( 'edit' ) );
+	if ( method_exists( $simple, 'get_global_unique_id' ) ) {
+		$variation->set_global_unique_id( $simple->get_global_unique_id( 'edit' ) );
+	}
+	$variation->set_low_stock_amount( $simple->get_low_stock_amount( 'edit' ) );
+	$variation->set_virtual( $simple->get_virtual( 'edit' ) );
+	$variation->set_downloadable( $simple->get_downloadable( 'edit' ) );
+	$variation->set_downloads( $simple->get_downloads( 'edit' ) );
+	$variation->set_download_limit( $simple->get_download_limit( 'edit' ) );
+	$variation->set_download_expiry( $simple->get_download_expiry( 'edit' ) );
+	// "parent" and 0 mean "same as the variable product", so a variation only records a class of its own.
+	$tax_class = $simple->get_tax_class( 'edit' );
+	$variation->set_tax_class( $tax_class === $parent->get_tax_class( 'edit' ) ? 'parent' : $tax_class );
+	$shipping = (int) $simple->get_shipping_class_id( 'edit' );
+	$variation->set_shipping_class_id( $shipping === (int) $parent->get_shipping_class_id( 'edit' ) ? 0 : $shipping );
+
+	/**
+	 * Filters the custom fields a simple product's variation takes, as meta key => value. By default every public
+	 * custom field (a key that doesn't start with an underscore); add private keys or remove keys here.
+	 *
+	 * @param array<string,mixed> $meta The fields to copy.
+	 * @param WC_Product $simple The simple product.
+	 * @param WC_Product_Variation $variation The new variation.
+	 */
+	$meta = array();
+	foreach ( $simple->get_meta_data() as $entry ) {
+		$data = $entry->get_data();
+		if ( '' !== (string) $data['key'] && '_' !== $data['key'][0] && ! array_key_exists( $data['key'], $meta ) ) {
+			$meta[ $data['key'] ] = $data['value'];
+		}
+	}
+	foreach ( (array) apply_filters( 'varconv_variation_meta', $meta, $simple, $variation ) as $key => $value ) {
+		if ( is_string( $key ) && '' !== $key && 0 !== strpos( $key, '_varconv' ) ) {
+			$variation->update_meta_data( $key, $value );
+		}
+	}
 }
 
 /**
@@ -246,8 +297,9 @@ function varconv_make( string $name, array $attribute_names, array $members, arr
 
 	$first = $sources[0][0];
 	$parent_id = 0;
-	// The variations reuse the members' SKUs, which WooCommerce otherwise refuses as duplicates.
+	// The variations reuse the members' SKUs and GTINs, which WooCommerce otherwise refuses as duplicates.
 	add_filter( 'wc_product_has_unique_sku', '__return_false', 99 );
+	add_filter( 'wc_product_has_global_unique_id', '__return_false', 99 );
 	try {
 		$attributes = array();
 		foreach ( $attribute_names as $i => $attribute_name ) {
@@ -318,6 +370,7 @@ function varconv_make( string $name, array $attribute_names, array $members, arr
 			$variation->set_width( $simple->get_width( 'edit' ) );
 			$variation->set_height( $simple->get_height( 'edit' ) );
 			$variation->set_image_id( $simple->get_image_id( 'edit' ) );
+			varconv_copy_to_variation( $simple, $variation, $parent );
 			$variation->update_meta_data( VARCONV_TWIN_META, (string) $simple->get_id() );
 			if ( ! $variation->save() ) {
 				/* translators: %d: product ID. */
@@ -327,6 +380,7 @@ function varconv_make( string $name, array $attribute_names, array $members, arr
 		WC_Product_Variable::sync( $parent_id );
 	} catch ( Throwable $e ) {
 		remove_filter( 'wc_product_has_unique_sku', '__return_false', 99 );
+		remove_filter( 'wc_product_has_global_unique_id', '__return_false', 99 );
 		if ( $parent_id ) {
 			varconv_delete( $parent_id );
 		}
@@ -334,6 +388,7 @@ function varconv_make( string $name, array $attribute_names, array $members, arr
 		throw new RuntimeException( esc_html( sprintf( __( 'Not created: %s', 'variation-converter-for-woocommerce' ), $e->getMessage() ) ), 0, $e ); // phpcs:ignore WordPress.Security.EscapeOutput.ExceptionNotEscaped -- $e is the previous exception, not output.
 	}
 	remove_filter( 'wc_product_has_unique_sku', '__return_false', 99 );
+	remove_filter( 'wc_product_has_global_unique_id', '__return_false', 99 );
 
 	foreach ( $sources as [ $simple ] ) {
 		$simple->update_meta_data( VARCONV_HIDDEN_META, $simple->get_catalog_visibility( 'edit' ) );
