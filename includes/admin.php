@@ -320,6 +320,35 @@ function varconv_handle_undo(): void {
 	varconv_back( array( 'varconv_done' => 'undone', 'varconv_restored' => $restored ) );
 }
 
+add_action( 'admin_post_varconv_undo_checked', 'varconv_handle_undo_checked' );
+function varconv_handle_undo_checked(): void {
+	if ( ! current_user_can( VARCONV_CAP ) ) {
+		wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'variation-converter-for-woocommerce' ), 403 );
+	}
+	check_admin_referer( 'varconv_undo_checked' );
+	$ids = isset( $_POST['products'] ) ? array_map( 'absint', (array) wp_unslash( $_POST['products'] ) ) : array();
+	if ( ! $ids ) {
+		varconv_fail( __( 'Check at least one conversion to undo.', 'variation-converter-for-woocommerce' ), array() );
+	}
+	// Not while a bulk create is making products from the same simple products.
+	if ( varconv_job_running( varconv_job() ) || ! varconv_lock() ) {
+		varconv_fail( __( 'A bulk create is running. Undo when it has finished.', 'variation-converter-for-woocommerce' ), array() );
+	}
+	try {
+		$result = varconv_undo_many( $ids );
+	} finally {
+		varconv_unlock();
+	}
+	// Scan again now, so the page this returns to can show the Combine tab's count.
+	varconv_candidates();
+	$args = array( 'varconv_done' => 'undone_checked', 'varconv_count' => $result['undone'] );
+	if ( $result['errors'] ) {
+		/* translators: 1: number of conversions undone, 2: why the others were not, one reason after another. */
+		varconv_fail( sprintf( __( 'Undid %1$d. Not undone: %2$s', 'variation-converter-for-woocommerce' ), $result['undone'], implode( ' ', $result['errors'] ) ), $args );
+	}
+	varconv_back( $args );
+}
+
 add_action( 'admin_post_varconv_spelling', 'varconv_handle_spelling' );
 function varconv_handle_spelling(): void {
 	if ( ! current_user_can( VARCONV_CAP ) ) {
@@ -602,6 +631,14 @@ function varconv_notice(): void {
 					_n( 'Deleted the variable product; %d simple product is visible again.', 'Deleted the variable product; %d simple products are visible again.', $restored, 'variation-converter-for-woocommerce' ),
 					$restored
 				) )
+			);
+			break;
+		case 'undone_checked':
+			$count = isset( $_GET['varconv_count'] ) ? absint( wp_unslash( $_GET['varconv_count'] ) ) : 0;
+			printf(
+				'<div class="notice notice-success"><p>%s</p></div>',
+				/* translators: %d: number of conversions undone. */
+				esc_html( sprintf( _n( 'Undid %d conversion. Its products are back as they were.', 'Undid %d conversions. Their products are back as they were.', $count, 'variation-converter-for-woocommerce' ), $count ) )
 			);
 			break;
 		case 'split':

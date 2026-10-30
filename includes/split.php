@@ -119,6 +119,36 @@ function varconv_history( string $search = '' ): array {
 }
 
 /**
+ * Undoes several conversions from History, newest first, each as its own Undo would. One that fails is reported and
+ * the rest carry on.
+ *
+ * @param int[] $ids Variable products combined or split here.
+ * @return array{undone:int,errors:string[]}
+ */
+function varconv_undo_many( array $ids ): array {
+	$ids = array_unique( array_map( 'intval', $ids ) );
+	$kinds = array_column( varconv_history(), 'kind', 'id' );
+	$out = array( 'undone' => 0, 'errors' => array() );
+	foreach ( array_diff( $ids, array_keys( $kinds ) ) as $id ) {
+		/* translators: %d: product ID. */
+		$out['errors'][] = sprintf( __( 'Product %d is not in History.', 'variation-converter-for-woocommerce' ), $id );
+	}
+	foreach ( array_intersect_key( $kinds, array_flip( $ids ) ) as $id => $kind ) {
+		try {
+			if ( 'combined' === $kind ) {
+				varconv_undo( $id );
+			} else {
+				varconv_split_undo( $id );
+			}
+			++$out['undone'];
+		} catch ( RuntimeException $e ) {
+			$out['errors'][] = varconv_message( $e );
+		}
+	}
+	return $out;
+}
+
+/**
  * A variation's attribute values as shown to shoppers ("Black", "Large"); an empty value is one set to "Any".
  *
  * @return string[]
