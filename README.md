@@ -40,6 +40,10 @@ Take a database backup before converting many products at once. Undo is there, b
 
 **Working through a long list.** The **Ready** view shows groups with no warnings. **Needs review** shows groups with a warning, such as different prices, different categories, missing or repeated labels, long labels, or two products with the same SKU. **Skipped** lists the groups you skipped; you can restore them. You can also search, filter by brand, group size or warning, and use **Bulk actions** to create or skip many groups at once.
 
+**Combining groups into one product with two attributes.** When each group is one flavor or color of the same product, for example Barista Syrup Vanilla (250ml, 750ml) and Barista Syrup Caramel (250ml, 750ml, 1L), tick the groups, choose **Combine groups into one product** from the bulk actions and click **Apply**. One card opens with two attributes: one from the groups (Flavor: Vanilla, Caramel) and the groups' own (Volume). The words the group names share become the product name, and the rest of each group's name its label; you can change all of them. A grid shows which product becomes each pair. Pairs that no product has, such as Vanilla 1L, get no variation, so shoppers see them as unavailable. Undo works as for any combine.
+
+![Two groups combined into one product: two attribute columns and the grid of pairs, with one pair not sold.](site/images/combine-grid.webp)
+
 **Combining products the plugin didn't group.** In **Products > All Products**, tick the products, choose **Combine into variable product** from the bulk actions, and click **Apply**. Their SKUs don't need to match.
 
 **How groups are found.** Only published simple products that have a SKU and are shown in the catalog are scanned. Products without a SKU are never suggested. Products are grouped when:
@@ -47,7 +51,7 @@ Take a database backup before converting many products at once. Undo is there, b
 - their SKUs belong to one family, such as `SE1421-01` and `SE1421-03`, and
 - their names start with the same words. A brand name at the start doesn't count.
 
-Whatever follows the shared words becomes the variant label. The plugin guesses the attribute (Color, Size, Flavor, Scent or Volume, otherwise Option); you can change it. Each variable product gets one attribute. Results are kept for 30 minutes, so click **Scan again** after you change products.
+Whatever follows the shared words becomes the variant label. The plugin guesses the attribute (Color, Size, Flavor, Scent or Volume, otherwise Option); you can change it. Each group gets one attribute; to make a product with two, combine groups (below). Results are kept for 30 minutes, so click **Scan again** after you change products.
 
 **What the new product gets.** Each variation takes its original's SKU, regular and sale price, sale dates, stock settings, weight, dimensions and image. The variable product takes the first product's descriptions, image, categories, tags, tax and shipping class, and adds the other products' images to its gallery. When the products are in different categories, you choose the new product's categories in the group. If WooCommerce fails to save any part, the partial product is removed.
 

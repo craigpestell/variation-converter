@@ -241,6 +241,7 @@ function varconv_bulk_menu( array $f, string $which ): void {
 		? array( 'restore' => __( 'Restore to the list', 'variation-converter-for-woocommerce' ) )
 		: array(
 			'create' => __( 'Create variable products', 'variation-converter-for-woocommerce' ),
+			'grid'   => __( 'Combine groups into one product', 'variation-converter-for-woocommerce' ),
 			'skip'   => __( 'Skip, not variants', 'variation-converter-for-woocommerce' ),
 		);
 	?>
@@ -502,7 +503,7 @@ function varconv_render_group( array $c, array $excluded, array $f, int $paged, 
 		<td class="column-products" data-colname="<?php esc_attr_e( 'Products', 'variation-converter-for-woocommerce' ); ?>"><?php echo esc_html( $count ); ?></td>
 		<td class="column-sku" data-colname="<?php esc_attr_e( 'Parent SKU', 'variation-converter-for-woocommerce' ); ?>"><span class="varconv-mono"><?php echo esc_html( $c['sku'] ); ?></span></td>
 		<td class="column-price" data-colname="<?php esc_attr_e( 'Price', 'variation-converter-for-woocommerce' ); ?>"><?php echo esc_html( varconv_price_range( $picked ) ); ?></td>
-		<td class="column-attr" data-colname="<?php esc_attr_e( 'Attribute', 'variation-converter-for-woocommerce' ); ?>"><?php echo esc_html( $c['attribute'] ); ?></td>
+		<td class="column-attr" data-colname="<?php esc_attr_e( 'Attribute', 'variation-converter-for-woocommerce' ); ?>"><?php echo esc_html( empty( $c['grid'] ) ? $c['attribute'] : $c['group_attribute'] . ' × ' . $c['attribute'] ); ?></td>
 		<td class="column-status" data-colname="<?php esc_attr_e( 'Status', 'variation-converter-for-woocommerce' ); ?>">
 			<?php if ( $skipped ) : ?>
 				<span class="varconv-badge varconv-badge-skipped"><?php esc_html_e( 'Skipped', 'variation-converter-for-woocommerce' ); ?></span>
@@ -533,6 +534,7 @@ function varconv_render_group( array $c, array $excluded, array $f, int $paged, 
 function varconv_render_card( array $c, array $checked, ?array $posted, array $f, int $paged, bool $skipped = false ): void {
 	$members = $c['members'];
 	$manual = ! empty( $c['manual'] );
+	$grid = ! empty( $c['grid'] );
 	if ( $posted ) {
 		// The order the admin had set.
 		$order = array_flip( array_map( 'intval', array_keys( (array) $posted['order'] ) ) );
@@ -540,6 +542,7 @@ function varconv_render_card( array $c, array $checked, ?array $posted, array $f
 	}
 	$name = $posted['name'] ?? $c['name'];
 	$attribute = $posted['attribute'] ?? $c['attribute'];
+	$group_attribute = $posted['group_attribute'] ?? $c['group_attribute'] ?? '';
 	$sku = $posted['sku'] ?? $c['sku'];
 	$cat_ids = array();
 	$cat_sets = array();
@@ -556,12 +559,14 @@ function varconv_render_card( array $c, array $checked, ?array $posted, array $f
 	$notes = $c['notes'];
 	$cancel = varconv_url( array_merge( varconv_filter_args( $f ), array_filter( array( 'paged' => $paged > 1 ? $paged : '' ) ) ) );
 	?>
-	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="varconv-card" data-key="<?php echo esc_attr( $c['key'] ); ?>"<?php echo $manual ? ' data-manual="1"' : ''; ?>>
+	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="varconv-card" data-key="<?php echo esc_attr( $c['key'] ); ?>"<?php echo $manual ? ' data-manual="1"' : ''; ?><?php echo $grid ? ' data-grid="1"' : ''; ?>>
 		<input type="hidden" name="action" value="varconv_create">
 		<input type="hidden" name="key" value="<?php echo esc_attr( $c['key'] ); ?>">
 		<input type="hidden" name="filters" value="<?php echo esc_attr( http_build_query( varconv_filter_args( $f ) ) ); ?>">
 		<input type="hidden" name="paged" value="<?php echo (int) $paged; ?>">
-		<?php if ( $manual ) : ?>
+		<?php if ( $grid ) : ?>
+			<input type="hidden" name="grid" value="<?php echo esc_attr( implode( ',', array_map( 'sanitize_key', $c['grid'] ) ) ); ?>">
+		<?php elseif ( $manual ) : ?>
 			<input type="hidden" name="combine" value="<?php echo esc_attr( implode( ',', array_map( static fn( $m ) => (int) $m['id'], $c['members'] ) ) ); ?>">
 		<?php endif; ?>
 		<?php wp_nonce_field( 'varconv_create_' . $c['key'] ); ?>
@@ -572,7 +577,12 @@ function varconv_render_card( array $c, array $checked, ?array $posted, array $f
 		</div>
 		<div class="varconv-fields">
 			<label class="name"><span><?php esc_html_e( 'Product name', 'variation-converter-for-woocommerce' ); ?></span> <input type="text" name="name" value="<?php echo esc_attr( $name ); ?>" required></label>
-			<label><span><?php esc_html_e( 'Attribute', 'variation-converter-for-woocommerce' ); ?></span> <input type="text" name="attribute" class="varconv-attribute" value="<?php echo esc_attr( $attribute ); ?>" list="varconv-attributes" required></label>
+			<?php if ( $grid ) : ?>
+				<label><span><?php esc_html_e( 'Attribute from the groups', 'variation-converter-for-woocommerce' ); ?></span> <input type="text" name="group_attribute" class="varconv-group-attribute" value="<?php echo esc_attr( $group_attribute ); ?>" list="varconv-attributes" required></label>
+				<label><span><?php esc_html_e( 'Attribute within each group', 'variation-converter-for-woocommerce' ); ?></span> <input type="text" name="attribute" class="varconv-attribute" value="<?php echo esc_attr( $attribute ); ?>" list="varconv-attributes" required></label>
+			<?php else : ?>
+				<label><span><?php esc_html_e( 'Attribute', 'variation-converter-for-woocommerce' ); ?></span> <input type="text" name="attribute" class="varconv-attribute" value="<?php echo esc_attr( $attribute ); ?>" list="varconv-attributes" required></label>
+			<?php endif; ?>
 			<label><span><?php esc_html_e( 'Parent SKU', 'variation-converter-for-woocommerce' ); ?></span> <input type="text" name="sku" class="varconv-parent-sku" value="<?php echo esc_attr( $sku ); ?>">
 				<span class="varconv-sku-note" aria-live="polite"></span>
 			</label>
@@ -625,6 +635,9 @@ function varconv_render_card( array $c, array $checked, ?array $posted, array $f
 					<td class="varconv-check"><input type="checkbox" class="varconv-check-all" aria-label="<?php esc_attr_e( 'Check all products', 'variation-converter-for-woocommerce' ); ?>" <?php checked( ! in_array( false, $checked, true ) ); ?>></td>
 					<th class="handle"><span class="screen-reader-text"><?php esc_html_e( 'Order', 'variation-converter-for-woocommerce' ); ?></span></th>
 					<th class="thumb"><span class="screen-reader-text"><?php esc_html_e( 'Image', 'variation-converter-for-woocommerce' ); ?></span></th>
+					<?php if ( $grid ) : ?>
+						<th class="col-label"><span class="varconv-group-attribute-name"><?php echo esc_html( $group_attribute ); ?></span></th>
+					<?php endif; ?>
 					<th class="col-label"><span class="varconv-attribute-name"><?php echo esc_html( $attribute ); ?></span></th>
 					<th class="col-sku"><?php esc_html_e( 'SKU', 'variation-converter-for-woocommerce' ); ?></th>
 					<th><?php esc_html_e( 'Current title', 'variation-converter-for-woocommerce' ); ?></th>
@@ -639,6 +652,7 @@ function varconv_render_card( array $c, array $checked, ?array $posted, array $f
 					<?php
 					$id = (int) $m['id'];
 					$label = $posted['members'][ $id ] ?? $posted['labels'][ $id ] ?? $m['label'];
+					$group = $posted['groups'][ $id ] ?? (string) ( $m['group'] ?? '' );
 					$title = varconv_plain( (string) ( $m['title'] ?? $m['name'] ) );
 					$image = (int) get_post_thumbnail_id( $id );
 					?>
@@ -656,6 +670,10 @@ function varconv_render_card( array $c, array $checked, ?array $posted, array $f
 							<button type="button" class="varconv-down varconv-move" aria-label="<?php echo esc_attr( sprintf( __( 'Move %s down', 'variation-converter-for-woocommerce' ), $m['sku'] ) ); ?>">&darr;</button>
 						</td>
 						<td class="thumb"><?php echo varconv_thumb_html( $image, 32, $title ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped where it is built. ?></td>
+						<?php if ( $grid ) : ?>
+							<?php /* translators: 1: attribute name, e.g. Flavor, 2: product SKU. */ ?>
+							<td class="col-label"><input type="text" name="members[<?php echo (int) $id; ?>][group]" class="varconv-group-label" value="<?php echo esc_attr( $group ); ?>" aria-label="<?php echo esc_attr( sprintf( __( '%1$s for SKU %2$s', 'variation-converter-for-woocommerce' ), $group_attribute, $m['sku'] ) ); ?>"></td>
+						<?php endif; ?>
 						<?php /* translators: 1: attribute name, e.g. Color, 2: product SKU. */ ?>
 						<td class="col-label"><input type="text" name="members[<?php echo (int) $id; ?>][label]" value="<?php echo esc_attr( $label ); ?>" aria-label="<?php echo esc_attr( sprintf( __( '%1$s for SKU %2$s', 'variation-converter-for-woocommerce' ), $attribute, $m['sku'] ) ); ?>"></td>
 						<td class="col-sku"><a class="varconv-mono" href="<?php echo esc_url( (string) get_edit_post_link( $id ) ); ?>"><?php echo esc_html( $m['sku'] ); ?></a></td>
@@ -670,6 +688,10 @@ function varconv_render_card( array $c, array $checked, ?array $posted, array $f
 				</tbody>
 			</table>
 		</div>
+		<?php if ( $grid ) : ?>
+			<?php // Filled by assets/admin.js from the rows above: which pairs exist, and which are not sold. ?>
+			<div class="varconv-grid" aria-live="polite" hidden></div>
+		<?php endif; ?>
 		<div class="varconv-review-foot">
 			<span class="varconv-muted"><?php esc_html_e( 'Drag to reorder. The first product gives the new product its image and description.', 'variation-converter-for-woocommerce' ); ?></span>
 			<?php if ( ! $manual && ! $skipped ) : ?>
@@ -705,6 +727,7 @@ function varconv_posted_group(): array {
 	$order = isset( $_POST['order'] ) && is_array( $_POST['order'] ) ? array_map( 'absint', array_keys( map_deep( wp_unslash( $_POST['order'] ), 'sanitize_text_field' ) ) ) : array_map( 'absint', array_keys( $rows ) );
 	$members = array();
 	$labels = array();
+	$groups = array();
 	// In the order the rows were shown, which the admin may have changed.
 	foreach ( $order as $id ) {
 		$row = $rows[ $id ] ?? null;
@@ -712,6 +735,9 @@ function varconv_posted_group(): array {
 			continue;
 		}
 		$labels[ $id ] = (string) ( $row['label'] ?? '' );
+		if ( isset( $row['group'] ) ) {
+			$groups[ $id ] = (string) $row['group'];
+		}
 		if ( ! empty( $row['use'] ) ) {
 			$members[ $id ] = $labels[ $id ];
 		}
@@ -719,6 +745,9 @@ function varconv_posted_group(): array {
 	$group = array(
 		'name'       => isset( $_POST['name'] ) ? sanitize_text_field( wp_unslash( $_POST['name'] ) ) : '',
 		'attribute'  => isset( $_POST['attribute'] ) ? sanitize_text_field( wp_unslash( $_POST['attribute'] ) ) : '',
+		// Only when groups are combined into one product, with two attributes.
+		'group_attribute' => isset( $_POST['group_attribute'] ) ? sanitize_text_field( wp_unslash( $_POST['group_attribute'] ) ) : null,
+		'groups'     => $groups,
 		'sku'        => isset( $_POST['sku'] ) ? sanitize_text_field( wp_unslash( $_POST['sku'] ) ) : '',
 		'members'    => $members,
 		'categories' => isset( $_POST['categories'] ) && is_array( $_POST['categories'] ) ? array_map( 'absint', wp_unslash( $_POST['categories'] ) ) : array(),
@@ -731,6 +760,13 @@ function varconv_posted_group(): array {
 
 /** Creates the posted group. @throws RuntimeException When it cannot be made. */
 function varconv_create_posted( array $group ): int {
+	if ( null !== ( $group['group_attribute'] ?? null ) ) {
+		$pairs = array();
+		foreach ( $group['members'] as $id => $label ) {
+			$pairs[ $id ] = array( (string) ( $group['groups'][ $id ] ?? '' ), $label );
+		}
+		return varconv_create_grid( $group['name'], $group['group_attribute'], $group['attribute'], $group['sku'], $pairs, $group['categories'] );
+	}
 	return varconv_create( $group['name'], $group['attribute'], $group['sku'], $group['members'], $group['categories'] );
 }
 
@@ -752,4 +788,46 @@ function varconv_created_html( int $id ): string {
 	<?php
 	varconv_undo_form( 'varconv_undo', $id, __( 'Undo conversion', 'variation-converter-for-woocommerce' ) );
 	return (string) ob_get_clean();
+}
+
+/** The keys of the groups "Combine groups into one product" passed, if any. @return string[] */
+function varconv_grid_keys(): array {
+	$list = isset( $_GET['grid'] ) ? sanitize_text_field( wp_unslash( $_GET['grid'] ) ) : '';
+	return array_slice( array_values( array_unique( array_filter( array_map( 'sanitize_key', explode( ',', $list ) ) ) ) ), 0, VARCONV_GRID_MAX );
+}
+
+/** The card for groups combined into one product with two attributes ("Combine groups into one product"). */
+function varconv_render_grid( array $keys ): void {
+	$scan = varconv_candidates();
+	$by_key = array_column( $scan['collections'], null, 'key' );
+	$collections = array_values( array_filter( array_map( static fn( $key ) => $by_key[ $key ] ?? null, $keys ) ) );
+	echo '<p><a href="' . esc_url( varconv_url() ) . '">&larr; ' . esc_html__( 'All suggested groups', 'variation-converter-for-woocommerce' ) . '</a></p>';
+	echo '<p class="varconv-lead">' . esc_html__( 'Combine these groups into one variable product with two attributes: one from the groups (for example Flavor) and one within each group (for example Size). Each product becomes the variation for its pair of labels; pairs that no product has are not sold. Check the names and labels, then create it.', 'variation-converter-for-woocommerce' ) . '</p>';
+	if ( count( $collections ) < count( $keys ) ) {
+		echo '<div class="notice notice-warning inline"><p>' . esc_html__( 'Some of the selected groups are no longer in the scan, because they were created, skipped or changed. They are left out.', 'variation-converter-for-woocommerce' ) . '</p></div>';
+	}
+	if ( count( $collections ) < 2 ) {
+		echo '<div class="varconv-empty"><p>' . esc_html__( 'Select at least two groups to combine into one product.', 'variation-converter-for-woocommerce' ) . '</p></div>';
+		return;
+	}
+	$grid = varconv_grid( $collections );
+	// Products unchecked in a group start unchecked here too.
+	$excluded = array();
+	foreach ( $collections as $c ) {
+		$excluded = array_merge( $excluded, varconv_excluded()[ $c['key'] ] ?? array() );
+	}
+	?>
+	<datalist id="varconv-attributes">
+		<?php foreach ( array( 'Color', 'Size', 'Flavor', 'Scent', 'Volume', 'Style' ) as $option ) : ?>
+			<option><?php echo esc_html( $option ); ?></option>
+		<?php endforeach; ?>
+	</datalist>
+	<table class="wp-list-table widefat fixed striped table-view-list varconv-list-table">
+		<thead><?php varconv_list_headers( varconv_filters( array() ), false ); ?></thead>
+		<tbody>
+			<?php varconv_render_group( varconv_with_free_sku( $grid ), $excluded, varconv_filters( array() ), 1, true ); ?>
+		</tbody>
+	</table>
+	<?php
+	delete_transient( 'varconv_posted_' . get_current_user_id() );
 }

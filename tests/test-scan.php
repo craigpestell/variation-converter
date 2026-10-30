@@ -231,4 +231,32 @@ expect( varconv_sku_bands( array( 'KN5-01-00', 'KN5-01-01', 'KN5-02-00', 'KN5-02
 expect( varconv_sku_bands( array( 'SE1421-00', 'SE1421-01', 'SE1421-03' ) ), array(), 'no bands when SKUs differ only at the end' );
 expect( varconv_sku_bands( array( 'A1', 'A2' ) ), array(), 'no bands for two products' );
 
+// Groups combined into one product with two attributes.
+$m = static fn( int $id, string $sku, string $label ) => array( 'id' => $id, 'sku' => $sku, 'name' => '', 'price' => '9.99', 'cats' => array( 5 ), 'label' => $label );
+$strawberry = array( 'key' => 'aaa', 'name' => 'Glide Lube Strawberry', 'sku' => 'GL-ST', 'attribute' => 'Volume', 'members' => array( $m( 1, 'GL-ST-4', '4oz' ), $m( 2, 'GL-ST-8', '8oz' ) ) );
+$cherry = array( 'key' => 'bbb', 'name' => 'Glide Lube Cherry', 'sku' => 'GL-CH', 'attribute' => 'Volume', 'members' => array( $m( 3, 'GL-CH-4', '4oz' ), $m( 4, 'GL-CH-8', '8oz' ), $m( 5, 'GL-CH-16', '16oz' ) ) );
+$grid = varconv_grid( array( $strawberry, $cherry ) );
+expect( $grid['name'], 'Glide Lube', 'grid name is the shared words' );
+expect( $grid['group_attribute'], 'Flavor', 'grid attribute from the group labels' );
+expect( $grid['attribute'], 'Volume', 'grid keeps the groups\' attribute' );
+expect( $grid['sku'], 'GL', 'grid parent SKU' );
+expect( array_column( $grid['members'], 'group' ), array( 'Strawberry', 'Strawberry', 'Cherry', 'Cherry', 'Cherry' ), 'grid group labels' );
+expect( array_column( $grid['members'], 'label' ), array( '4oz', '8oz', '4oz', '8oz', '16oz' ), 'grid member labels' );
+expect( $grid['grid'], array( 'aaa', 'bbb' ), 'grid group keys' );
+expect( isset( $grid['notes']['repeat'] ), false, 'a label in every group is not a repeat' );
+expect( $grid['manual'], true, 'grid is not a scan group' );
+expect( 'g' === $grid['key'][0] && $grid['key'] === varconv_grid( array( $strawberry, $cherry ) )['key'], true, 'grid key is stable' );
+$plain = varconv_grid( array( $strawberry, array_merge( $strawberry, array( 'key' => 'ccc' ) ) ) );
+expect( isset( $plain['notes']['repeat'], $plain['notes']['label'] ), true, 'same pair twice and same group label are warned' );
+$same = varconv_grid( array( array_merge( $strawberry, array( 'attribute' => 'Flavor' ) ), array_merge( $cherry, array( 'attribute' => 'Flavor' ) ) ) );
+expect( $same['group_attribute'], 'Option', 'the two attributes never share a name' );
+$bare = varconv_grid( array( array_merge( $strawberry, array( 'name' => 'Glide Lube' ) ), $cherry ) );
+expect( $bare['members'][0]['group'], 'GL-ST', 'a group with no words left is labelled by its SKU' );
+
+expect( varconv_validate_grid( 'Glide Lube', 'Flavor', 'Volume', array( 1 => array( 'Strawberry', '4oz' ), 3 => array( 'Cherry', '4oz' ) ) ), array(), 'grid labels may repeat across groups' );
+expect( varconv_validate_grid( 'Glide Lube', 'Flavor', 'Volume', array( 1 => array( 'Cherry', '4oz' ), 3 => array( 'cherry', '4OZ' ) ) ), array( '"cherry, 4OZ" is used twice.' ), 'grid pair used twice' );
+expect( varconv_validate_grid( 'Glide Lube', 'Size', 'size', array( 1 => array( 'A', '4oz' ), 3 => array( 'B', '4oz' ) ) ), array( 'The two attributes need different names.' ), 'grid attributes differ' );
+expect( varconv_validate_grid( 'Glide Lube', '', 'Volume', array( 1 => array( '', '4oz' ), 3 => array( 'B|C', '8oz' ) ) ), array( 'Both attributes need a name (Flavor, Size, ...).', 'Product 1 needs a label for both attributes.', 'Labels cannot contain "|" (product 3).' ), 'grid missing names and labels' );
+expect( varconv_validate( 'Mug', 'Color', array( 1 => 'Red', 2 => 'red' ) ), array( 'Label "red" is used twice.' ), 'single attribute still refuses a repeat' );
+
 echo "Variant collection scan tests passed.\n";
