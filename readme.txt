@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 0.9.0
+Stable tag: 0.10.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -140,6 +140,9 @@ Questions about using the plugin go in the support forum here on wordpress.org. 
 
 == Changelog ==
 
+= 0.10.0 =
+* Variable products made by the plugin no longer get a SKU of their own; each variation keeps its original's SKU. The Parent SKU field is gone from the combine card, and the list's SKU column is now called SKU family.
+
 = 0.9.0 =
 * Set one name: tick products on the Combine tab (or choose "Set one name for variants" in Products > All Products) and give them one shared name, each followed by its color, size or other variant, so they are listed together and can be combined into one variable product. The new names are previewed as you type, URLs stay the same, and Undo rename puts the old names back.
 
@@ -197,6 +200,9 @@ Questions about using the plugin go in the support forum here on wordpress.org. 
 * First public version: detect groups of simple products, review them, merge each into a variable product, split variable products into simple products, and undo either.
 
 == Upgrade Notice ==
+
+= 0.10.0 =
+New variable products get no SKU of their own; their variations keep their SKUs. Products you already made are unchanged.
 
 = 0.7.0 =
 The Combine tab starts with a search. Combine into one product and Create a product for each group are now buttons above the list, not Bulk actions.
