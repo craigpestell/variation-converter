@@ -591,6 +591,83 @@ function varconv_matching( array $collections, string $search ): array {
 	} ) );
 }
 
+/**
+ * The products no group holds, for search: id, SKU, title and price only, to keep the cached scan small.
+ *
+ * @param array $products    The products that were scanned.
+ * @param array $collections Every group, suggested or skipped.
+ * @return array<int,array{id:int,sku:string,title:string,price:string}>
+ */
+function varconv_loose( array $products, array $collections ): array {
+	$grouped = array();
+	foreach ( $collections as $c ) {
+		foreach ( $c['members'] as $m ) {
+			$grouped[ (int) $m['id'] ] = true;
+		}
+	}
+	$loose = array();
+	foreach ( $products as $p ) {
+		if ( ! isset( $grouped[ (int) $p['id'] ] ) ) {
+			$loose[] = array(
+				'id'    => (int) $p['id'],
+				'sku'   => (string) $p['sku'],
+				'title' => (string) ( $p['title'] ?? $p['name'] ),
+				'price' => (string) ( $p['price'] ?? '' ),
+			);
+		}
+	}
+	usort( $loose, static fn( $a, $b ) => strnatcasecmp( $a['title'], $b['title'] ) );
+	return $loose;
+}
+
+/** The loose products whose title or SKU holds $search; none for an empty search. */
+function varconv_loose_matching( array $loose, string $search ): array {
+	$search = trim( $search );
+	if ( '' === $search ) {
+		return array();
+	}
+	return array_values( array_filter( $loose, static fn( $p ) => false !== stripos( $p['title'] . ' ' . $p['sku'], $search ) ) );
+}
+
+/**
+ * One loose product as a group of its own, to combine with groups into one product with two attributes. When its
+ * name ends with a label the other groups use ("Syrup Hazelnut 750ml" beside groups of 250ml and 750ml), that is its
+ * label and the rest is the group's name; otherwise its SKU is the label, as in varconv_manual().
+ *
+ * @param array    $product As varconv_products() makes it.
+ * @param string[] $labels  The labels the other groups' members have.
+ */
+function varconv_single_group( array $product, array $labels ): array {
+	$name = (string) $product['name'];
+	$label = '';
+	usort( $labels, static fn( $a, $b ) => strlen( $b ) <=> strlen( $a ) );
+	foreach ( $labels as $candidate ) {
+		$candidate = trim( (string) $candidate );
+		$cut = strlen( $name ) - strlen( $candidate );
+		if ( '' === $candidate || $cut <= 0 || 0 !== strcasecmp( substr( $name, $cut ), $candidate ) ) {
+			continue;
+		}
+		// A whole word at the end, with something before it.
+		$rest = substr( $name, 0, $cut );
+		if ( preg_match( '/[\s\-,\/(]$/u', $rest ) && '' !== varconv_trim( $rest ) ) {
+			$label = $candidate;
+			$name = varconv_trim( $rest );
+			break;
+		}
+	}
+	return array(
+		'key'       => 'p' . (int) $product['id'],
+		'family'    => '',
+		'name'      => $name,
+		'brand'     => varconv_brand( array( 'members' => array( $product ) ) ),
+		'attribute' => '',
+		'sku'       => trim( (string) $product['sku'] ),
+		'members'   => array( $product + array( 'label' => '' !== $label ? $label : trim( (string) $product['sku'] ) ) ),
+		'notes'     => array(),
+		'manual'    => true,
+	);
+}
+
 /** The lowest regular price among a collection's members (0 without prices). */
 function varconv_low_price( array $c ): float {
 	$prices = array_filter( array_map( static fn( $m ) => (float) ( $m['price'] ?? 0 ), $c['members'] ), static fn( $p ) => $p > 0 );

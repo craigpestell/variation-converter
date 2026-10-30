@@ -1,4 +1,4 @@
-// Browser walkthrough of "Combine groups into one product", saving screenshots for PRs and the docs. Needs two groups
+// Browser walkthrough of "Combine into one product" on two groups, saving screenshots for PRs and the docs. Needs two groups
 // that are one product in two attributes, which the demo catalog doesn't have; add them first:
 //   harness/wp-harness reset && harness/wp-harness eval tests/seed-grid.php
 //   harness/wp-harness browse tests/browser-grid.mjs --out shots
@@ -8,8 +8,7 @@ export default async function ({ page, go, shot, problems }) {
 	await go('edit.php?post_type=product&page=varconv');
 	await row('Barista Syrup Vanilla').locator('.varconv-pick').check();
 	await row('Barista Syrup Caramel').locator('.varconv-pick').check();
-	await page.selectOption('[name="bulk_action"]', 'grid');
-	await Promise.all([page.waitForNavigation(), page.locator('.varconv-bulk-apply').first().click()]);
+	await Promise.all([page.waitForNavigation(), page.locator('.varconv-do[value="combine"]').first().click()]);
 	console.log('url:', page.url().replace(/.*\?/, '?'));
 	const card = page.locator('form.varconv-card[data-grid]');
 	const values = async (sel) => card.locator(sel).evaluateAll(els => els.map(e => e.value));

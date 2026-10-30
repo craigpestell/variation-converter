@@ -47,8 +47,7 @@ export default async function ({ page, go, shot, problems }) {
 	// Bulk create with JS ends on the notice
 	await go('edit.php?post_type=product&page=varconv');
 	await row('Northwind Tote').locator('.varconv-pick').check();
-	await page.selectOption('[name="bulk_action"]', 'create');
-	await Promise.all([page.waitForNavigation({ timeout: 20000 }), page.locator('.varconv-bulk-apply').first().click()]);
+	await Promise.all([page.waitForNavigation({ timeout: 20000 }), page.locator('.varconv-do[value="create"]').first().click()]);
 	console.log('bulk notice:', await page.locator('.notice-success, .notice-warning').first().innerText());
 	console.log('scan again on history:', await (async () => { await go('edit.php?post_type=product&page=varconv&tab=history'); return page.locator('.varconv-rescan').count(); })());
 	console.log('combine count on history:', await page.locator('.nav-tab .count').first().innerText());

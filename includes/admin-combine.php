@@ -234,16 +234,23 @@ function varconv_list_headers( array $f, bool $list ): void {
 	<?php
 }
 
+/** The two ways to turn the checked groups and products into products, with how many are checked. */
+function varconv_combine_buttons(): void {
+	?>
+	<div class="alignleft actions varconv-do-wrap">
+		<button class="button button-primary varconv-do" form="varconv-bulk" name="do" value="combine"><?php esc_html_e( 'Combine into one product', 'variation-converter-for-woocommerce' ); ?></button>
+		<button class="button varconv-do" form="varconv-bulk" name="do" value="create"><?php esc_html_e( 'Create a product for each group', 'variation-converter-for-woocommerce' ); ?></button>
+		<span class="varconv-picked" aria-live="polite"></span>
+	</div>
+	<?php
+}
+
 /** The bulk actions menu for the view; the bottom one names its select apart, as WordPress does. */
 function varconv_bulk_menu( array $f, string $which ): void {
 	$name = 'top' === $which ? 'bulk_action' : 'bulk_action2';
 	$actions = 'skipped' === $f['view']
 		? array( 'restore' => __( 'Restore to the list', 'variation-converter-for-woocommerce' ) )
-		: array(
-			'create' => __( 'Create variable products', 'variation-converter-for-woocommerce' ),
-			'grid'   => __( 'Combine groups into one product', 'variation-converter-for-woocommerce' ),
-			'skip'   => __( 'Skip, not variants', 'variation-converter-for-woocommerce' ),
-		);
+		: array( 'skip' => __( 'Skip, not variants', 'variation-converter-for-woocommerce' ) );
 	?>
 	<div class="alignleft actions bulkactions">
 		<label for="varconv-<?php echo esc_attr( $name ); ?>" class="screen-reader-text"><?php esc_html_e( 'Select bulk action', 'variation-converter-for-woocommerce' ); ?></label>
@@ -312,26 +319,40 @@ function varconv_render_combine(): void {
 	$skipped = 'skipped' === $f['view'];
 	$keep = array_diff_key( varconv_filter_args( $f ), array( 's' => 1, 'brand' => 1, 'min' => 1, 'warn' => 1 ) );
 	?>
-	<p class="varconv-lead"><?php esc_html_e( 'Groups of simple products that look like one product in several variants. Nothing changes until you create a group, and every change can be undone from History. Ready groups have no warnings and can be created as suggested; Needs review groups have something to check first, named in the Status column.', 'variation-converter-for-woocommerce' ); ?></p>
-
-	<ul class="subsubsub">
-		<?php $tips = varconv_view_tips(); ?>
-		<?php foreach ( varconv_views() as $key => $label ) : ?>
-			<li><a href="<?php echo esc_url( varconv_url( array_filter( array( 'view' => $key ) ) ) ); ?>"<?php echo $key === $f['view'] ? ' class="current" aria-current="page"' : ''; ?><?php echo isset( $tips[ $key ] ) ? ' title="' . esc_attr( $tips[ $key ] ) . '"' : ''; ?>><?php echo esc_html( $label ); ?> <span class="count">(<?php echo (int) $counts[ $key ]; ?>)</span></a><?php echo 'skipped' === $key ? '' : ' |'; ?></li>
-		<?php endforeach; ?>
-	</ul>
-	<form method="get" class="search-form">
+	<form method="get" class="varconv-find" role="search">
 		<input type="hidden" name="post_type" value="product">
 		<input type="hidden" name="page" value="<?php echo esc_attr( VARCONV_PAGE ); ?>">
 		<?php foreach ( array_diff_key( varconv_filter_args( $f ), array( 's' => 1 ) ) as $name => $value ) : ?>
 			<input type="hidden" name="<?php echo esc_attr( $name ); ?>" value="<?php echo esc_attr( (string) $value ); ?>">
 		<?php endforeach; ?>
-		<p class="search-box">
-			<label class="screen-reader-text" for="varconv-search"><?php esc_html_e( 'Search groups', 'variation-converter-for-woocommerce' ); ?></label>
-			<input type="search" id="varconv-search" name="s" value="<?php echo esc_attr( $f['s'] ); ?>">
-			<button class="button"><?php esc_html_e( 'Search groups', 'variation-converter-for-woocommerce' ); ?></button>
-		</p>
+		<label for="varconv-search" class="varconv-find-label"><?php esc_html_e( 'Find the products to combine', 'variation-converter-for-woocommerce' ); ?></label>
+		<span class="varconv-find-row">
+			<input type="search" id="varconv-search" name="s" value="<?php echo esc_attr( $f['s'] ); ?>" placeholder="<?php esc_attr_e( 'Product name or SKU, for example Classic Tee', 'variation-converter-for-woocommerce' ); ?>">
+			<button class="button button-primary"><?php esc_html_e( 'Search', 'variation-converter-for-woocommerce' ); ?></button>
+			<?php if ( '' !== $f['s'] ) : ?>
+				<a href="<?php echo esc_url( varconv_url( array_diff_key( varconv_filter_args( $f ), array( 's' => 1 ) ) ) ); ?>" class="varconv-clear"><?php esc_html_e( 'Clear search', 'variation-converter-for-woocommerce' ); ?></a>
+			<?php endif; ?>
+		</span>
+		<span class="description"><?php esc_html_e( 'Tick the groups and products that are one product, then click Combine into one product. Nothing changes until you create it, and History can undo every change.', 'variation-converter-for-woocommerce' ); ?></span>
 	</form>
+
+	<h2 class="varconv-list-title">
+		<?php
+		if ( '' !== $f['s'] ) {
+			/* translators: %s: what was searched for. */
+			echo esc_html( sprintf( __( 'Suggested groups matching "%s"', 'variation-converter-for-woocommerce' ), $f['s'] ) );
+		} else {
+			esc_html_e( 'Suggested groups', 'variation-converter-for-woocommerce' );
+		}
+		?>
+	</h2>
+	<ul class="subsubsub">
+		<?php $tips = varconv_view_tips(); ?>
+		<?php foreach ( varconv_views() as $key => $label ) : ?>
+			<li><a href="<?php echo esc_url( varconv_url( array_filter( array( 'view' => $key, 's' => $f['s'] ) ) ) ); ?>"<?php echo $key === $f['view'] ? ' class="current" aria-current="page"' : ''; ?><?php echo isset( $tips[ $key ] ) ? ' title="' . esc_attr( $tips[ $key ] ) . '"' : ''; ?>><?php echo esc_html( $label ); ?> <span class="count">(<?php echo (int) $counts[ $key ]; ?>)</span></a><?php echo 'skipped' === $key ? '' : ' |'; ?></li>
+		<?php endforeach; ?>
+	</ul>
+	<br class="clear">
 
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" id="varconv-bulk" data-keys="<?php echo esc_attr( (string) wp_json_encode( array_column( $groups, 'key' ) ) ); ?>">
 		<input type="hidden" name="action" value="varconv_bulk">
@@ -339,6 +360,9 @@ function varconv_render_combine(): void {
 		<?php wp_nonce_field( 'varconv_bulk' ); ?>
 	</form>
 	<div class="tablenav top">
+		<?php if ( ! $skipped ) : ?>
+			<?php varconv_combine_buttons(); ?>
+		<?php endif; ?>
 		<?php varconv_bulk_menu( $f, 'top' ); ?>
 		<form method="get" class="alignleft actions varconv-filters">
 			<input type="hidden" name="post_type" value="product">
@@ -386,8 +410,8 @@ function varconv_render_combine(): void {
 				</fieldset>
 			</details>
 			<button class="button"><?php esc_html_e( 'Filter', 'variation-converter-for-woocommerce' ); ?></button>
-			<?php if ( $filtered ) : ?>
-				<a href="<?php echo esc_url( varconv_url( $keep ) ); ?>" class="varconv-clear"><?php esc_html_e( 'Clear filters', 'variation-converter-for-woocommerce' ); ?></a>
+			<?php if ( '' !== $f['brand'] || 2 !== $f['min'] || '' !== $f['warn'] ) : ?>
+				<a href="<?php echo esc_url( varconv_url( array_merge( $keep, array_filter( array( 's' => $f['s'] ) ) ) ) ); ?>" class="varconv-clear"><?php esc_html_e( 'Clear filters', 'variation-converter-for-woocommerce' ); ?></a>
 			<?php endif; ?>
 		</form>
 		<?php varconv_list_pages( $total, $products, $paged, $pages, $f ); ?>
@@ -429,13 +453,83 @@ function varconv_render_combine(): void {
 		<br class="clear">
 	</div>
 	<?php
+	if ( ! $skipped ) {
+		varconv_render_loose( varconv_loose_matching( (array) ( $scan['loose'] ?? array() ), $f['s'] ), $f );
+	}
 	// The refill after a failed Create is shown once.
 	delete_transient( 'varconv_posted_' . get_current_user_id() );
 }
 
+/** Most products in no group a search lists. */
+const VARCONV_LOOSE_MAX = 50;
+
+/**
+ * The products in no group that match the search, to tick and combine with each other or with groups.
+ *
+ * @param array $loose As varconv_loose() keeps them.
+ */
+function varconv_render_loose( array $loose, array $f ): void {
+	if ( '' === $f['s'] ) {
+		return;
+	}
+	$shown = array_slice( $loose, 0, VARCONV_LOOSE_MAX );
+	?>
+	<h2 class="varconv-list-title"><?php esc_html_e( 'Products not in a group', 'variation-converter-for-woocommerce' ); ?> <span class="count">(<?php echo (int) count( $loose ); ?>)</span></h2>
+	<?php if ( ! $loose ) : ?>
+		<p class="description">
+			<?php
+			/* translators: %s: what was searched for. */
+			echo esc_html( sprintf( __( 'Every simple product matching "%s" is in a group above. Only published simple products with a SKU, shown in the catalog, can be combined.', 'variation-converter-for-woocommerce' ), $f['s'] ) );
+			?>
+		</p>
+		<?php
+		return;
+	endif;
+	?>
+	<p class="description"><?php esc_html_e( 'The scan did not group these. Tick them to combine them with each other or with the groups above. A product picked with two or more groups becomes a group of its own.', 'variation-converter-for-woocommerce' ); ?></p>
+	<table class="wp-list-table widefat fixed striped table-view-list varconv-loose-table">
+		<thead>
+			<tr>
+				<td class="manage-column column-cb check-column"><input type="checkbox" class="varconv-pick-loose-all" aria-label="<?php esc_attr_e( 'Select all these products', 'variation-converter-for-woocommerce' ); ?>"></td>
+				<th scope="col" class="manage-column column-primary"><?php esc_html_e( 'Product', 'variation-converter-for-woocommerce' ); ?></th>
+				<th scope="col" class="manage-column column-sku"><?php esc_html_e( 'SKU', 'variation-converter-for-woocommerce' ); ?></th>
+				<th scope="col" class="manage-column column-price"><?php esc_html_e( 'Price', 'variation-converter-for-woocommerce' ); ?></th>
+			</tr>
+		</thead>
+		<tbody>
+			<?php foreach ( $shown as $p ) : ?>
+				<tr>
+					<th scope="row" class="check-column">
+						<?php /* translators: %s: product name. */ ?>
+						<input type="checkbox" class="varconv-pick-loose" form="varconv-bulk" name="ids[]" value="<?php echo (int) $p['id']; ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Select %s', 'variation-converter-for-woocommerce' ), $p['title'] ) ); ?>">
+					</th>
+					<td class="column-primary"><a href="<?php echo esc_url( (string) get_edit_post_link( $p['id'] ) ); ?>"><?php echo esc_html( $p['title'] ); ?></a></td>
+					<td class="column-sku" data-colname="<?php esc_attr_e( 'SKU', 'variation-converter-for-woocommerce' ); ?>"><span class="varconv-mono"><?php echo esc_html( $p['sku'] ); ?></span></td>
+					<td class="column-price" data-colname="<?php esc_attr_e( 'Price', 'variation-converter-for-woocommerce' ); ?>"><?php echo esc_html( '' !== $p['price'] ? varconv_price_text( (float) $p['price'] ) : '' ); ?></td>
+				</tr>
+			<?php endforeach; ?>
+		</tbody>
+	</table>
+	<?php if ( count( $loose ) > count( $shown ) ) : ?>
+		<p class="description">
+			<?php
+			/* translators: 1: products listed, 2: products that match. */
+			echo esc_html( sprintf( __( 'Showing the first %1$d of %2$d products. Search for something more specific to see the rest.', 'variation-converter-for-woocommerce' ), count( $shown ), count( $loose ) ) );
+			?>
+		</p>
+	<?php endif; ?>
+	<div class="tablenav bottom">
+		<?php varconv_combine_buttons(); ?>
+		<br class="clear">
+	</div>
+	<?php
+}
+
 /** Why the list is empty, and what to do about it. */
 function varconv_render_empty( array $scan, array $f, bool $filtered ): void {
-	if ( $filtered ) {
+	if ( '' !== $f['s'] && '' === $f['brand'] && 2 === $f['min'] && '' === $f['warn'] ) {
+		esc_html_e( 'No suggested groups match this search. Products it finds that are in no group are listed below.', 'variation-converter-for-woocommerce' );
+	} elseif ( $filtered ) {
 		printf( '%s <a href="%s">%s</a>', esc_html__( 'No groups match these filters.', 'variation-converter-for-woocommerce' ), esc_url( varconv_url( array_filter( array( 'view' => $f['view'] ) ) ) ), esc_html__( 'Clear filters', 'variation-converter-for-woocommerce' ) );
 	} elseif ( 'skipped' === $f['view'] ) {
 		esc_html_e( 'No skipped groups. Groups you mark "Skip, not variants" show here, and can be restored.', 'variation-converter-for-woocommerce' );
@@ -790,7 +884,13 @@ function varconv_created_html( int $id ): string {
 	return (string) ob_get_clean();
 }
 
-/** The keys of the groups "Combine groups into one product" passed, if any. @return string[] */
+/** The link from a combine card back to the list, keeping the search and filters it came from. */
+function varconv_back_link( array $f ): void {
+	$label = '' !== $f['s'] ? __( 'Back to search results', 'variation-converter-for-woocommerce' ) : __( 'All suggested groups', 'variation-converter-for-woocommerce' );
+	echo '<p><a href="' . esc_url( varconv_url( varconv_filter_args( $f ) ) ) . '">&larr; ' . esc_html( $label ) . '</a></p>';
+}
+
+/** The keys of the groups (and p<ID> for products) "Combine into one product" passed, if any. @return string[] */
 function varconv_grid_keys(): array {
 	$list = isset( $_GET['grid'] ) ? sanitize_text_field( wp_unslash( $_GET['grid'] ) ) : '';
 	return array_slice( array_values( array_unique( array_filter( array_map( 'sanitize_key', explode( ',', $list ) ) ) ) ), 0, VARCONV_GRID_MAX );
@@ -799,15 +899,27 @@ function varconv_grid_keys(): array {
 /** The card for groups combined into one product with two attributes ("Combine groups into one product"). */
 function varconv_render_grid( array $keys ): void {
 	$scan = varconv_candidates();
+	$f = varconv_filters( $_GET );
 	$by_key = array_column( $scan['collections'], null, 'key' );
+	// Products in no group come as p<ID>, each a group of its own, labeled from the labels the groups use.
+	$ids = array_map( static fn( $key ) => (int) substr( $key, 1 ), array_filter( $keys, static fn( $key ) => (bool) preg_match( '/^p\d+$/', $key ) ) );
+	$labels = array();
+	foreach ( $keys as $key ) {
+		foreach ( $by_key[ $key ]['members'] ?? array() as $m ) {
+			$labels[ strtolower( $m['label'] ) ] = $m['label'];
+		}
+	}
+	foreach ( $ids ? varconv_products_by_id( $ids )['products'] : array() as $p ) {
+		$by_key[ 'p' . $p['id'] ] = varconv_single_group( $p, array_values( $labels ) );
+	}
 	$collections = array_values( array_filter( array_map( static fn( $key ) => $by_key[ $key ] ?? null, $keys ) ) );
-	echo '<p><a href="' . esc_url( varconv_url() ) . '">&larr; ' . esc_html__( 'All suggested groups', 'variation-converter-for-woocommerce' ) . '</a></p>';
-	echo '<p class="varconv-lead">' . esc_html__( 'Combine these groups into one variable product with two attributes: one from the groups (for example Flavor) and one within each group (for example Size). Each product becomes the variation for its pair of labels; pairs that no product has are not sold. Check the names and labels, then create it.', 'variation-converter-for-woocommerce' ) . '</p>';
+	varconv_back_link( $f );
+	echo '<p class="varconv-lead">' . esc_html__( 'Combine these groups into one variable product with two attributes: one from the groups (for example Flavor) and one within each group (for example Size). Each product becomes the variation for its pair of labels; pairs that no product has are not sold. A product you picked on its own is a group by itself. Check the names and labels, then create it.', 'variation-converter-for-woocommerce' ) . '</p>';
 	if ( count( $collections ) < count( $keys ) ) {
-		echo '<div class="notice notice-warning inline"><p>' . esc_html__( 'Some of the selected groups are no longer in the scan, because they were created, skipped or changed. They are left out.', 'variation-converter-for-woocommerce' ) . '</p></div>';
+		echo '<div class="notice notice-warning inline"><p>' . esc_html__( 'Some of the selected groups or products can no longer be combined, because they were created, skipped or changed. They are left out.', 'variation-converter-for-woocommerce' ) . '</p></div>';
 	}
 	if ( count( $collections ) < 2 ) {
-		echo '<div class="varconv-empty"><p>' . esc_html__( 'Select at least two groups to combine into one product.', 'variation-converter-for-woocommerce' ) . '</p></div>';
+		echo '<div class="varconv-empty"><p>' . esc_html__( 'Select at least two groups or products to combine into one product.', 'variation-converter-for-woocommerce' ) . '</p></div>';
 		return;
 	}
 	$grid = varconv_grid( $collections );
@@ -823,9 +935,9 @@ function varconv_render_grid( array $keys ): void {
 		<?php endforeach; ?>
 	</datalist>
 	<table class="wp-list-table widefat fixed striped table-view-list varconv-list-table">
-		<thead><?php varconv_list_headers( varconv_filters( array() ), false ); ?></thead>
+		<thead><?php varconv_list_headers( $f, false ); ?></thead>
 		<tbody>
-			<?php varconv_render_group( varconv_with_free_sku( $grid ), $excluded, varconv_filters( array() ), 1, true ); ?>
+			<?php varconv_render_group( varconv_with_free_sku( $grid ), $excluded, $f, 1, true ); ?>
 		</tbody>
 	</table>
 	<?php

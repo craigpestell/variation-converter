@@ -152,6 +152,8 @@ function varconv_candidates( bool $fresh = false ): array {
 		'collections' => array_map( 'varconv_with_free_sku', $collections ),
 		// Groups the admin skipped ("not variants"), for the list's Skipped view.
 		'skipped'     => array_map( 'varconv_with_free_sku', $skipped ),
+		// Products in no group, which search also finds so they can be combined by hand.
+		'loose'       => varconv_loose( $products, array_merge( $collections, $skipped ) ),
 	);
 	set_transient( VARCONV_SCAN_TRANSIENT, $scan, 30 * MINUTE_IN_SECONDS );
 	return $scan;

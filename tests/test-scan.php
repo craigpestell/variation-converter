@@ -259,4 +259,27 @@ expect( varconv_validate_grid( 'Glide Lube', 'Size', 'size', array( 1 => array( 
 expect( varconv_validate_grid( 'Glide Lube', '', 'Volume', array( 1 => array( '', '4oz' ), 3 => array( 'B|C', '8oz' ) ) ), array( 'Both attributes need a name (Flavor, Size, ...).', 'Product 1 needs a label for both attributes.', 'Labels cannot contain "|" (product 3).' ), 'grid missing names and labels' );
 expect( varconv_validate( 'Mug', 'Color', array( 1 => 'Red', 2 => 'red' ) ), array( 'Label "red" is used twice.' ), 'single attribute still refuses a repeat' );
 
+// Products in no group, for search, and one of them as a group of its own beside groups.
+$loose = varconv_loose(
+	array(
+		array( 'id' => 1, 'sku' => 'SY-V250', 'name' => 'Syrup Vanilla 250ml', 'title' => 'Syrup Vanilla 250ml', 'price' => '5' ),
+		array( 'id' => 2, 'sku' => 'SY-H750', 'name' => 'Syrup Hazelnut 750ml', 'title' => 'Syrup Hazelnut 750ml', 'price' => '9' ),
+		array( 'id' => 3, 'sku' => 'MUG-1', 'name' => 'Mug', 'title' => 'Mug', 'price' => '' ),
+	),
+	array( array( 'members' => array( array( 'id' => 1 ) ) ) )
+);
+expect( array_column( $loose, 'id' ), array( 3, 2 ), 'loose leaves out grouped products, sorted by title' );
+expect( array_column( varconv_loose_matching( $loose, 'syrup' ), 'id' ), array( 2 ), 'loose search by title' );
+expect( array_column( varconv_loose_matching( $loose, 'mug-1' ), 'id' ), array( 3 ), 'loose search by SKU' );
+expect( varconv_loose_matching( $loose, ' ' ), array(), 'no loose products without a search' );
+$single = varconv_single_group( array( 'id' => 2, 'sku' => 'SY-H750', 'name' => 'Syrup Hazelnut 750ml' ), array( '250ml', '750ML' ) );
+expect( array( $single['key'], $single['name'], $single['members'][0]['label'] ), array( 'p2', 'Syrup Hazelnut', '750ML' ), 'single group takes a label the groups use' );
+$single = varconv_single_group( array( 'id' => 2, 'sku' => 'SY-H750', 'name' => 'Syrup Hazelnut750ml' ), array( '750ml' ) );
+expect( array( $single['name'], $single['members'][0]['label'] ), array( 'Syrup Hazelnut750ml', 'SY-H750' ), 'single group label must be a whole word' );
+$grid = varconv_grid( array(
+	array( 'key' => 'a', 'name' => 'Syrup Vanilla', 'sku' => 'SY-V', 'attribute' => 'Size', 'members' => array( array( 'id' => 1, 'sku' => 'SY-V250', 'name' => 'Syrup Vanilla 250ml', 'label' => '250ml' ), array( 'id' => 4, 'sku' => 'SY-V750', 'name' => 'Syrup Vanilla 750ml', 'label' => '750ml' ) ) ),
+	varconv_single_group( array( 'id' => 2, 'sku' => 'SY-H750', 'name' => 'Syrup Hazelnut 750ml' ), array( '250ml', '750ml' ) ),
+) );
+expect( array( $grid['name'], array_column( $grid['members'], 'group' ), array_column( $grid['members'], 'label' ) ), array( 'Syrup', array( 'Vanilla', 'Vanilla', 'Hazelnut' ), array( '250ml', '750ml', '750ml' ) ), 'a loose product joins a grid as its own group' );
+
 echo "Variant collection scan tests passed.\n";
