@@ -659,7 +659,7 @@ function varconv_render_card( array $c, array $checked, ?array $posted, array $f
 		<input type="hidden" name="filters" value="<?php echo esc_attr( http_build_query( varconv_filter_args( $f ) ) ); ?>">
 		<input type="hidden" name="paged" value="<?php echo (int) $paged; ?>">
 		<?php if ( ! empty( $c['grid'] ) ) : ?>
-			<input type="hidden" name="grid" value=""<?php echo esc_attr( implode( ',', array_map( 'sanitize_key', $c['grid'] ) ) ); ?>">
+			<input type="hidden" name="grid" value="<?php echo esc_attr( implode( ',', array_map( 'sanitize_key', $c['grid'] ) ) ); ?>">
 		<?php elseif ( $manual ) : ?>
 			<input type="hidden" name="combine" value="<?php echo esc_attr( implode( ',', array_map( static fn( $m ) => (int) $m['id'], $c['members'] ) ) ); ?>">
 		<?php endif; ?>
