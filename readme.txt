@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 0.6.0
+Stable tag: 0.7.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -125,6 +125,10 @@ Questions about using the plugin go in the support forum here on wordpress.org. 
 4. The History tab with one-click Undo.
 
 == Changelog ==
+
+= 0.7.0 =
+* The Combine tab puts search first, and search also finds products that are in no group, so you can combine them by hand.
+* New buttons above the list: Combine into one product, and Create a product for each group. They replace those two Bulk actions entries.
 
 = 0.6.0 =
 * New bulk action, Combine groups into one product: several groups become one variable product with two attributes (for example Flavor and Size), with a grid of the pairs that exist.
