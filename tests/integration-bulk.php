@@ -49,15 +49,15 @@ try {
 
 	// Categories chosen for the new product must be the members'.
 	try {
-		varconv_create( $tag . ' Mug', 'Color', '', array( $red => 'Red', $blue => 'Blue' ), array( $cat_c ) );
+		varconv_create( $tag . ' Mug', 'Color', array( $red => 'Red', $blue => 'Blue' ), array( $cat_c ) );
 		throw new LogicException( 'foreign category accepted' );
 	} catch ( RuntimeException $e ) {
 		check( str_contains( $e->getMessage(), 'category' ), true, 'foreign category refused' );
 	}
-	$id = $cleanup[] = varconv_create( $tag . ' Mug', 'Color', '', array( $red => 'Red', $blue => 'Blue' ), array( $cat_b ) );
+	$id = $cleanup[] = varconv_create( $tag . ' Mug', 'Color', array( $red => 'Red', $blue => 'Blue' ), array( $cat_b ) );
 	check( wc_get_product( $id )->get_category_ids(), array( $cat_b ), 'chosen category' );
 	varconv_undo( $id );
-	$id = $cleanup[] = varconv_create( $tag . ' Mug', 'Color', '', array( $red => 'Red', $blue => 'Blue' ) );
+	$id = $cleanup[] = varconv_create( $tag . ' Mug', 'Color', array( $red => 'Red', $blue => 'Blue' ) );
 	check( wc_get_product( $id )->get_category_ids(), array( $cat_a ), 'first member\'s category by default' );
 	varconv_undo( $id );
 
@@ -73,18 +73,16 @@ try {
 	check( count( $find()[0]['members'] ), 3, 'checked again' );
 	check( isset( varconv_excluded()[ $group[0]['key'] ] ), false, 'empty entry removed' );
 
-	// Converting: dry run, then for real with the parent SKU taken.
+	// Converting: dry run, then for real. The variable product gets no SKU; its variations keep theirs.
 	$c = $find()[0];
 	check( varconv_convert( $c, true )['status'], 'would', 'dry run' );
 	check( count( $find() ), 1, 'dry run changed nothing' );
-	$taken = $make( $tag, 'VC Bulk SKU taker ' . $tag, array() );
 	$result = varconv_convert( $c );
 	$cleanup[] = $result['id'];
 	check( $result['status'], 'made', 'made' );
-	check( wc_get_product( $result['id'] )->get_sku(), '', 'taken parent SKU left empty' );
-	check( '' !== $result['message'], true, 'SKU note' );
+	check( wc_get_product( $result['id'] )->get_sku( 'edit' ), '', 'no parent SKU' );
+	check( count( array_filter( array_map( static fn( $v ) => wc_get_product( $v )->get_sku( 'edit' ), wc_get_product( $result['id'] )->get_children() ) ) ), 3, 'variations keep their SKUs' );
 	varconv_undo( $result['id'] );
-	wp_delete_post( $taken, true );
 
 	// A group needing a label is skipped, not created.
 	$c['members'][0]['label'] = '';

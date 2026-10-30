@@ -34,7 +34,7 @@ try {
 		$cleanup[] = $id;
 	}
 	$keys = array_keys( $ids );
-	$parent_id = varconv_create( 'VC Undo Soap', 'Scent', '', $ids );
+	$parent_id = varconv_create( 'VC Undo Soap', 'Scent', $ids );
 	$twins = varconv_twins( $parent_id, $keys );
 	check( count( $twins ), 2, 'every variation has its simple product' );
 	$variation = wc_get_product( array_search( $keys[0], $twins, true ) );

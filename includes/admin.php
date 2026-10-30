@@ -1,7 +1,7 @@
 <?php
 /**
  * Products > Variation Converter, in three tabs. Combine (admin-combine.php): the scan's groups, each opening into a
- * card to edit (name, attribute, parent SKU, categories, which products, their labels and order) and create, or skip
+ * card to edit (name, attribute, categories, which products, their labels and order) and create, or skip
  * so later scans leave it out. Split: variable products, each opening a card to make one simple product per variation. History:
  * everything converted, with Undo.
  */

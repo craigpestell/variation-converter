@@ -149,37 +149,14 @@ function varconv_candidates( bool $fresh = false ): array {
 	$scan = array(
 		'time'        => time(),
 		'products'    => count( $products ),
-		'collections' => array_map( 'varconv_with_free_sku', $collections ),
+		'collections' => $collections,
 		// Groups the admin skipped ("not variants"), for the list's Skipped view.
-		'skipped'     => array_map( 'varconv_with_free_sku', $skipped ),
+		'skipped'     => $skipped,
 		// Products in no group, which search also finds so they can be combined by hand.
 		'loose'       => varconv_loose( $products, array_merge( $collections, $skipped ) ),
 	);
 	set_transient( VARCONV_SCAN_TRANSIENT, $scan, 30 * MINUTE_IN_SECONDS );
 	return $scan;
-}
-
-/**
- * A parent SKU no product has: $sku, or else $sku-2, $sku-3 and so on, as when part of a group was created and took
- * the SKU. Empty when none of the first few is free.
- */
-function varconv_free_sku( string $sku ): string {
-	$sku = trim( $sku );
-	if ( '' === $sku || ! wc_get_product_id_by_sku( $sku ) ) {
-		return $sku;
-	}
-	for ( $n = 2; $n <= 9; $n++ ) {
-		if ( ! wc_get_product_id_by_sku( $sku . '-' . $n ) ) {
-			return $sku . '-' . $n;
-		}
-	}
-	return '';
-}
-
-/** A group with its suggested parent SKU swapped for a free one. */
-function varconv_with_free_sku( array $c ): array {
-	$c['sku'] = varconv_free_sku( (string) ( $c['sku'] ?? '' ) );
-	return $c;
 }
 
 /** A product's name for messages; a variation's parent's name, since a variation can hold the SKU. */
@@ -201,8 +178,8 @@ function varconv_created(): array {
 /**
  * Makes a published variable product from simple products: one variation per member, in the order given, with the
  * member's SKU, prices, stock, weight and image. The product takes the first member's descriptions, categories,
- * tags and other taxonomies, and is dated just after its newest member so the shop order barely moves. The
- * members are then hidden from the catalog and search.
+ * tags and other taxonomies, but no SKU of its own, and is dated just after its newest member so the shop order
+ * barely moves. The members are then hidden from the catalog and search.
  *
  * @param array<int,string> $members Simple product ID => variant label.
  * @param int[] $categories Product categories for the new product, each one of the members'; none takes the first
@@ -210,9 +187,9 @@ function varconv_created(): array {
  * @return int The new product's ID.
  * @throws RuntimeException When the collection cannot be made; nothing is left half made.
  */
-function varconv_create( string $name, string $attribute_name, string $sku, array $members, array $categories = array() ): int {
+function varconv_create( string $name, string $attribute_name, array $members, array $categories = array() ): int {
 	$errors = varconv_validate( $name, $attribute_name, $members );
-	return varconv_make( $name, array( $attribute_name ), $sku, array_map( static fn( $label ) => array( (string) $label ), $members ), $categories, $errors );
+	return varconv_make( $name, array( $attribute_name ), array_map( static fn( $label ) => array( (string) $label ), $members ), $categories, $errors );
 }
 
 /**
@@ -224,10 +201,10 @@ function varconv_create( string $name, string $attribute_name, string $sku, arra
  * @return int The new product's ID.
  * @throws RuntimeException When the product cannot be made; nothing is left half made.
  */
-function varconv_create_grid( string $name, string $group_attribute, string $attribute_name, string $sku, array $members, array $categories = array() ): int {
+function varconv_create_grid( string $name, string $group_attribute, string $attribute_name, array $members, array $categories = array() ): int {
 	$members = array_map( static fn( $pair ) => array( (string) ( $pair[0] ?? '' ), (string) ( $pair[1] ?? '' ) ), $members );
 	$errors = varconv_validate_grid( $name, $group_attribute, $attribute_name, $members );
-	return varconv_make( $name, array( $group_attribute, $attribute_name ), $sku, $members, $categories, $errors );
+	return varconv_make( $name, array( $group_attribute, $attribute_name ), $members, $categories, $errors );
 }
 
 /**
@@ -238,14 +215,13 @@ function varconv_create_grid( string $name, string $group_attribute, string $att
  * @param string[] $errors Problems already found with what was submitted.
  * @throws RuntimeException When the product cannot be made; nothing is left half made.
  */
-function varconv_make( string $name, array $attribute_names, string $sku, array $members, array $categories, array $errors ): int {
+function varconv_make( string $name, array $attribute_names, array $members, array $categories, array $errors ): int {
 	$name = trim( $name );
 	// In the store's spelling, so a typed Color doesn't sit beside the Colour other products have.
 	$attribute_names = array_map( static fn( $n ) => varconv_attribute_name( trim( (string) $n ) ), $attribute_names );
 	if ( count( array_unique( array_map( 'sanitize_title', $attribute_names ) ) ) < count( $attribute_names ) ) {
 		$errors[] = __( 'The two attributes need different names.', 'variation-converter-for-woocommerce' );
 	}
-	$sku = trim( $sku );
 	$sources = array();
 	foreach ( $members as $id => $labels ) {
 		$simple = wc_get_product( (int) $id );
@@ -263,11 +239,6 @@ function varconv_make( string $name, array $attribute_names, string $sku, array 
 	$member_cats = array_merge( array(), ...array_map( static fn( $s ) => array_map( 'intval', $s[0]->get_category_ids( 'edit' ) ), $sources ) );
 	if ( array_diff( $categories, $member_cats ) ) {
 		$errors[] = __( 'A chosen category is not one of the selected products\' categories.', 'variation-converter-for-woocommerce' );
-	}
-	$taken = '' === $sku ? 0 : (int) wc_get_product_id_by_sku( $sku );
-	if ( $taken ) {
-		/* translators: 1: SKU, 2: product name. */
-		$errors[] = sprintf( __( 'SKU %1$s is already used by "%2$s"; change it or leave it empty.', 'variation-converter-for-woocommerce' ), $sku, varconv_product_name( $taken ) );
 	}
 	if ( $errors ) {
 		throw new RuntimeException( esc_html( implode( ' ', array_unique( $errors ) ) ) );
@@ -294,7 +265,6 @@ function varconv_make( string $name, array $attribute_names, string $sku, array 
 		$parent = new WC_Product_Variable();
 		$parent->set_name( $name );
 		$parent->set_status( 'publish' );
-		$parent->set_sku( $sku );
 		$parent->set_description( $first->get_description( 'edit' ) );
 		$parent->set_short_description( $first->get_short_description( 'edit' ) );
 		$parent->set_image_id( $first->get_image_id( 'edit' ) );
@@ -546,7 +516,7 @@ function varconv_bulk_candidates( int $min = 2, array $skip = array() ): array {
 
 /**
  * One collection of a bulk run, as the scan proposed it. A collection that needs review by hand (a missing or
- * repeated label) is skipped; a parent SKU already in use is left empty.
+ * repeated label) is skipped.
  *
  * @return array{status:string,id:int,message:string} status: made, would (dry run), skip or failed.
  */
@@ -559,17 +529,11 @@ function varconv_convert( array $c, bool $dry = false ): array {
 	if ( $errors ) {
 		return array( 'status' => 'skip', 'id' => 0, 'message' => implode( ' ', $errors ) );
 	}
-	$sku = (string) $c['sku'];
-	$note = '';
-	if ( '' !== $sku && wc_get_product_id_by_sku( $sku ) ) {
-		$sku = '';
-		$note = __( 'Parent SKU in use; left empty.', 'variation-converter-for-woocommerce' );
-	}
 	if ( $dry ) {
-		return array( 'status' => 'would', 'id' => 0, 'message' => $note );
+		return array( 'status' => 'would', 'id' => 0, 'message' => '' );
 	}
 	try {
-		return array( 'status' => 'made', 'id' => varconv_create( $c['name'], $c['attribute'], $sku, $members ), 'message' => $note );
+		return array( 'status' => 'made', 'id' => varconv_create( $c['name'], $c['attribute'], $members ), 'message' => '' );
 	} catch ( RuntimeException $e ) {
 		return array( 'status' => 'failed', 'id' => 0, 'message' => varconv_message( $e ) );
 	}

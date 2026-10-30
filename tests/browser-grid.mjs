@@ -12,7 +12,7 @@ export default async function ({ page, go, shot, problems }) {
 	console.log('url:', page.url().replace(/.*\?/, '?'));
 	const card = page.locator('form.varconv-card[data-grid]');
 	const values = async (sel) => card.locator(sel).evaluateAll(els => els.map(e => e.value));
-	console.log('name:', await card.locator('[name="name"]').inputValue(), '| attributes:', await card.locator('[name="group_attribute"]').inputValue(), 'x', await card.locator('[name="attribute"]').inputValue(), '| sku:', await card.locator('.varconv-parent-sku').inputValue());
+	console.log('name:', await card.locator('[name="name"]').inputValue(), '| attributes:', await card.locator('[name="group_attribute"]').inputValue(), 'x', await card.locator('[name="attribute"]').inputValue());
 	console.log('groups:', (await values('.varconv-group-label')).join(', '), '| labels:', (await values('input[name$="[label]"]')).join(', '));
 	const grid = card.locator('.varconv-grid');
 	await grid.waitFor();

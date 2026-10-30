@@ -1,7 +1,7 @@
 <?php
 /**
  * The Combine tab without reloads (assets/admin.js): create, undo and skip a group, remember unchecked products,
- * check whether a parent SKU is taken, and start and follow the bulk create job. Each mirrors an admin-post
+ * and start and follow the bulk create job. Each mirrors an admin-post
  * handler in admin.php, which the page falls back to without scripts.
  */
 
@@ -88,25 +88,6 @@ function varconv_ajax_exclude(): void {
 	$ids = isset( $_POST['ids'] ) && is_array( $_POST['ids'] ) ? array_map( 'absint', wp_unslash( $_POST['ids'] ) ) : array();
 	varconv_set_excluded( varconv_ajax_key(), $ids, ! empty( $_POST['on'] ) );
 	wp_send_json_success();
-}
-
-/** Which product, if any, already uses a SKU, so the card can warn before Create. */
-add_action( 'wp_ajax_varconv_sku', 'varconv_ajax_sku' );
-function varconv_ajax_sku(): void {
-	varconv_ajax_check( 'varconv_ajax' );
-	$sku = isset( $_POST['sku'] ) ? sanitize_text_field( wp_unslash( $_POST['sku'] ) ) : '';
-	$id = '' === $sku ? 0 : (int) wc_get_product_id_by_sku( $sku );
-	if ( ! $id ) {
-		wp_send_json_success( array( 'message' => '' ) );
-	}
-	wp_send_json_success( array(
-		'message' => sprintf(
-			/* translators: 1: SKU, 2: product name. */
-			__( '%1$s is already used by "%2$s". Change it or leave it empty.', 'variation-converter-for-woocommerce' ),
-			$sku,
-			varconv_product_name( $id )
-		),
-	) );
 }
 
 /** "Create selected groups": starts the bulk job (includes/job.php). */

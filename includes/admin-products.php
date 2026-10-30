@@ -63,7 +63,7 @@ function varconv_render_manual( array $ids ): void {
 	<table class="wp-list-table widefat fixed striped table-view-list varconv-list-table">
 		<thead><?php varconv_list_headers( $f, false ); ?></thead>
 		<tbody>
-			<?php varconv_render_group( varconv_with_free_sku( varconv_manual( $found['products'] ) ), array(), $f, 1, true ); ?>
+			<?php varconv_render_group( varconv_manual( $found['products'] ), array(), $f, 1, true ); ?>
 		</tbody>
 	</table>
 	<?php

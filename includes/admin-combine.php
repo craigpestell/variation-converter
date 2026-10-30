@@ -226,7 +226,7 @@ function varconv_list_headers( array $f, bool $list ): void {
 		<?php endif; ?>
 		<?php $header( 'name', __( 'Group', 'variation-converter-for-woocommerce' ), 'column-primary column-name' ); ?>
 		<?php $header( '', __( 'Products', 'variation-converter-for-woocommerce' ), 'column-products' ); ?>
-		<th scope="col" class="manage-column column-sku"><?php esc_html_e( 'Parent SKU', 'variation-converter-for-woocommerce' ); ?></th>
+		<th scope="col" class="manage-column column-sku"><?php esc_html_e( 'SKU family', 'variation-converter-for-woocommerce' ); ?></th>
 		<?php $header( 'price', __( 'Price', 'variation-converter-for-woocommerce' ), 'column-price' ); ?>
 		<th scope="col" class="manage-column column-attr"><?php esc_html_e( 'Attribute', 'variation-converter-for-woocommerce' ); ?></th>
 		<th scope="col" class="manage-column column-status"><?php esc_html_e( 'Status', 'variation-converter-for-woocommerce' ); ?></th>
@@ -596,7 +596,7 @@ function varconv_render_group( array $c, array $excluded, array $f, int $paged, 
 			<button type="button" class="toggle-row"><span class="screen-reader-text"><?php esc_html_e( 'Show more details', 'variation-converter-for-woocommerce' ); ?></span></button>
 		</td>
 		<td class="column-products" data-colname="<?php esc_attr_e( 'Products', 'variation-converter-for-woocommerce' ); ?>"><?php echo esc_html( $count ); ?></td>
-		<td class="column-sku" data-colname="<?php esc_attr_e( 'Parent SKU', 'variation-converter-for-woocommerce' ); ?>"><span class="varconv-mono"><?php echo esc_html( $c['sku'] ); ?></span></td>
+		<td class="column-sku" data-colname="<?php esc_attr_e( 'SKU family', 'variation-converter-for-woocommerce' ); ?>"><span class="varconv-mono"><?php echo esc_html( $c['sku'] ); ?></span></td>
 		<td class="column-price" data-colname="<?php esc_attr_e( 'Price', 'variation-converter-for-woocommerce' ); ?>"><?php echo esc_html( varconv_price_range( $picked ) ); ?></td>
 		<td class="column-attr" data-colname="<?php esc_attr_e( 'Attribute', 'variation-converter-for-woocommerce' ); ?>"><?php echo esc_html( empty( $c['grid'] ) ? varconv_attribute_name( $c['attribute'] ) : varconv_attribute_name( $c['group_attribute'] ) . ' × ' . varconv_attribute_name( $c['attribute'] ) ); ?></td>
 		<td class="column-status" data-colname="<?php esc_attr_e( 'Status', 'variation-converter-for-woocommerce' ); ?>">
@@ -638,7 +638,6 @@ function varconv_render_card( array $c, array $checked, ?array $posted, array $f
 	$name = $posted['name'] ?? $c['name'];
 	$attribute = $posted['attribute'] ?? varconv_attribute_name( $c['attribute'] );
 	$group_attribute = $posted['group_attribute'] ?? varconv_attribute_name( $c['group_attribute'] ?? '' );
-	$sku = $posted['sku'] ?? $c['sku'];
 	$cat_ids = array();
 	$cat_sets = array();
 	foreach ( $members as $m ) {
@@ -678,9 +677,6 @@ function varconv_render_card( array $c, array $checked, ?array $posted, array $f
 			<?php else : ?>
 				<label><span><?php esc_html_e( 'Attribute', 'variation-converter-for-woocommerce' ); ?></span> <input type="text" name="attribute" class="varconv-attribute" value="<?php echo esc_attr( $attribute ); ?>" list="varconv-attributes" required></label>
 			<?php endif; ?>
-			<label><span><?php esc_html_e( 'Parent SKU', 'variation-converter-for-woocommerce' ); ?></span> <input type="text" name="sku" class="varconv-parent-sku" value="<?php echo esc_attr( $sku ); ?>">
-				<span class="varconv-sku-note" aria-live="polite"></span>
-			</label>
 		</div>
 		<?php if ( $cats_differ && $cat_ids ) : ?>
 			<fieldset class="varconv-cats">
@@ -843,7 +839,6 @@ function varconv_posted_group(): array {
 		// Only when groups are combined into one product, with two attributes.
 		'group_attribute' => isset( $_POST['group_attribute'] ) ? sanitize_text_field( wp_unslash( $_POST['group_attribute'] ) ) : null,
 		'groups'     => $groups,
-		'sku'        => isset( $_POST['sku'] ) ? sanitize_text_field( wp_unslash( $_POST['sku'] ) ) : '',
 		'members'    => $members,
 		'categories' => isset( $_POST['categories'] ) && is_array( $_POST['categories'] ) ? array_map( 'absint', wp_unslash( $_POST['categories'] ) ) : array(),
 		'labels'     => $labels,
@@ -860,9 +855,9 @@ function varconv_create_posted( array $group ): int {
 		foreach ( $group['members'] as $id => $label ) {
 			$pairs[ $id ] = array( (string) ( $group['groups'][ $id ] ?? '' ), $label );
 		}
-		return varconv_create_grid( $group['name'], $group['group_attribute'], $group['attribute'], $group['sku'], $pairs, $group['categories'] );
+		return varconv_create_grid( $group['name'], $group['group_attribute'], $group['attribute'], $pairs, $group['categories'] );
 	}
-	return varconv_create( $group['name'], $group['attribute'], $group['sku'], $group['members'], $group['categories'] );
+	return varconv_create( $group['name'], $group['attribute'], $group['members'], $group['categories'] );
 }
 
 /** Undo button for a product just made, shown in its notice and in place of its card. */
@@ -938,7 +933,7 @@ function varconv_render_grid( array $keys ): void {
 	<table class="wp-list-table widefat fixed striped table-view-list varconv-list-table">
 		<thead><?php varconv_list_headers( $f, false ); ?></thead>
 		<tbody>
-			<?php varconv_render_group( varconv_with_free_sku( $grid ), $excluded, $f, 1, true ); ?>
+			<?php varconv_render_group( $grid, $excluded, $f, 1, true ); ?>
 		</tbody>
 	</table>
 	<?php

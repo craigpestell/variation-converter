@@ -30,7 +30,7 @@ It works the other way too. If a variable product would sell better as separate 
 1. Go to **Products > Variation Converter**. On the **Combine** tab, type a product name or SKU in **Find the products to combine** and click **Search**.
 2. The results show the suggested groups that match and, below them, **Products not in a group**: matching products the scan didn't group.
 3. Tick the groups and products that are one product, and click **Combine into one product**. Products, or one group with extra products, become a product with one attribute, such as Color. Two or more groups become a product with two attributes, such as Flavor and Size.
-4. Check the product name, the attribute, the parent SKU and the label of each variant ("Black", "Blue", "Red"). Untick anything that doesn't belong, then click **Create variable product**.
+4. Check the product name, the attribute and the label of each variant ("Black", "Blue", "Red"). Untick anything that doesn't belong, then click **Create variable product**.
 5. Changed your mind? The **History** tab has an **Undo** button for every product the plugin made.
 
 Without a search, the Combine tab lists every suggested group, with **Ready** and **Needs review** views. Open one to check it, tick several and click **Create a product for each group**, or mark a group **Skip, not variants** so it stops appearing.
@@ -43,7 +43,7 @@ Without a search, the Combine tab lists every suggested group, with **Ready** an
 * **One or two attributes.** Combine products into one attribute (Color), or whole groups into two (Flavor and Size), with a grid of the pairs that exist.
 * **Review before anything changes.** Nothing is created until you approve a group. You can rename it, change the attribute, fix labels and leave products out.
 * **Flags the things worth a second look:** different prices, different categories, duplicate labels, or labels long enough to suggest these aren't really variants.
-* **Keeps your data.** Each variation takes its original's SKU, regular and sale price, sale dates, stock settings, weight, dimensions and image. The variable product takes the first member's description, images, categories, tags, tax and shipping class, plus every member's image in its gallery.
+* **Keeps your data.** Each variation takes its original's SKU, regular and sale price, sale dates, stock settings, weight, dimensions and image. The variable product takes the first member's description, images, categories, tags, tax and shipping class, plus every member's image in its gallery. It has no SKU of its own; the variations keep theirs.
 * **Non-destructive.** The products you convert from are hidden from your shop and search, never deleted. Their orders, reviews and links stay as they were.
 * **One-click Undo.** Undo removes what the plugin made and brings the originals back with the visibility they had before.
 * **All or nothing.** If WooCommerce fails to save any part of a new product, the partial product is removed and your catalog is untouched.
