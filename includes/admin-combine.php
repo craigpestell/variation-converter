@@ -637,7 +637,6 @@ function varconv_render_card( array $c, array $checked, ?array $posted, array $f
 	$name = $posted['name'] ?? $c['name'];
 	$attribute = $posted['attribute'] ?? varconv_attribute_name( $c['attribute'] );
 	$group_attribute = $posted['group_attribute'] ?? varconv_attribute_name( $c['group_attribute'] ?? '' );
-	$swap = ! empty( $posted['swap'] );
 	$cat_ids = array();
 	$cat_sets = array();
 	foreach ( $members as $m ) {
@@ -672,24 +671,11 @@ function varconv_render_card( array $c, array $checked, ?array $posted, array $f
 		<div class="varconv-fields">
 			<label class="name"><span><?php esc_html_e( 'Product name', 'variation-converter-for-woocommerce' ); ?></span> <input type="text" name="name" value="<?php echo esc_attr( $name ); ?>" required></label>
 			<?php if ( $grid ) : ?>
-				<?php
-				ob_start();
-				?>
-				<label><span><?php esc_html_e( 'Attribute from the groups', 'variation-converter-for-woocommerce' ); ?></span> <input type="text" name="group_attribute" class="varconv-group-attribute" value="<?php echo esc_attr( $group_attribute ); ?>" list="varconv-attributes" required></label>
-				<?php
-				$from_groups = ob_get_clean();
-				ob_start();
-				?>
-				<label><span><?php esc_html_e( 'Attribute within each group', 'variation-converter-for-woocommerce' ); ?></span> <input type="text" name="attribute" class="varconv-attribute" value="<?php echo esc_attr( $attribute ); ?>" list="varconv-attributes" required></label>
-				<?php
-				$within = ob_get_clean();
-				// The one on the left comes first on the product page; the swap button flips them.
-				?>
+				<?php // The first comes first on the product page; the swap button swaps the two, with every product's labels. ?>
 				<div class="varconv-attr-pair">
-					<input type="hidden" name="swap" class="varconv-swap-value" value="<?php echo $swap ? '1' : '0'; ?>">
-					<?php echo $swap ? $within : $from_groups; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped where it is built. ?>
-					<button type="button" class="button varconv-swap" aria-pressed="<?php echo $swap ? 'true' : 'false'; ?>" title="<?php esc_attr_e( 'Swap which attribute comes first on the product page', 'variation-converter-for-woocommerce' ); ?>"><span class="dashicons dashicons-leftright" aria-hidden="true"></span><span class="screen-reader-text"><?php esc_html_e( 'Swap which attribute comes first on the product page', 'variation-converter-for-woocommerce' ); ?></span></button>
-					<?php echo $swap ? $from_groups : $within; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped where it is built. ?>
+					<label><span><?php esc_html_e( 'First attribute', 'variation-converter-for-woocommerce' ); ?></span> <input type="text" name="group_attribute" class="varconv-group-attribute" value="<?php echo esc_attr( $group_attribute ); ?>" list="varconv-attributes" required></label>
+					<button type="button" class="button varconv-swap" title="<?php esc_attr_e( 'Swap the two attributes and their labels', 'variation-converter-for-woocommerce' ); ?>"><span class="dashicons dashicons-leftright" aria-hidden="true"></span><span class="screen-reader-text"><?php esc_html_e( 'Swap the two attributes and their labels', 'variation-converter-for-woocommerce' ); ?></span></button>
+					<label><span><?php esc_html_e( 'Second attribute', 'variation-converter-for-woocommerce' ); ?></span> <input type="text" name="attribute" class="varconv-attribute" value="<?php echo esc_attr( $attribute ); ?>" list="varconv-attributes" required></label>
 				</div>
 			<?php else : ?>
 				<label><span><?php esc_html_e( 'Attribute', 'variation-converter-for-woocommerce' ); ?></span> <input type="text" name="attribute" class="varconv-attribute" value="<?php echo esc_attr( $attribute ); ?>" list="varconv-attributes" required></label>
@@ -856,8 +842,6 @@ function varconv_posted_group(): array {
 		// Only when groups are combined into one product, with two attributes.
 		'group_attribute' => isset( $_POST['group_attribute'] ) ? sanitize_text_field( wp_unslash( $_POST['group_attribute'] ) ) : null,
 		'groups'     => $groups,
-		// The attribute within each group goes first on the product page.
-		'swap'       => ! empty( $_POST['swap'] ),
 		'members'    => $members,
 		'categories' => isset( $_POST['categories'] ) && is_array( $_POST['categories'] ) ? array_map( 'absint', wp_unslash( $_POST['categories'] ) ) : array(),
 		'labels'     => $labels,
@@ -874,8 +858,7 @@ function varconv_create_posted( array $group ): int {
 		foreach ( $group['members'] as $id => $label ) {
 			$pairs[ $id ] = array( (string) ( $group['groups'][ $id ] ?? '' ), $label );
 		}
-		list( $first, $second, $pairs ) = varconv_grid_order( $group['group_attribute'], $group['attribute'], $pairs, ! empty( $group['swap'] ) );
-		return varconv_create_grid( $group['name'], $first, $second, $pairs, $group['categories'] );
+		return varconv_create_grid( $group['name'], $group['group_attribute'], $group['attribute'], $pairs, $group['categories'] );
 	}
 	return varconv_create( $group['name'], $group['attribute'], $group['members'], $group['categories'] );
 }

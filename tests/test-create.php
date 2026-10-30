@@ -16,9 +16,4 @@ expect( varconv_gallery( array( array( 0, 2 ), array( 0 ), array( '7', 8 ) ) ), 
 expect( varconv_gallery( array( array( 1 ) ) ), array(), 'one image only' );
 expect( varconv_gallery( array() ), array(), 'no sources' );
 
-// Grid order: groups' attribute first, or swapped with each pair of labels turned to match.
-$pairs = array( 5 => array( 'Strawberry', '4oz' ), 6 => array( 'Cherry', '8oz' ) );
-expect( varconv_grid_order( 'Flavor', 'Size', $pairs, false ), array( 'Flavor', 'Size', $pairs ), 'groups first by default' );
-expect( varconv_grid_order( 'Flavor', 'Size', $pairs, true ), array( 'Size', 'Flavor', array( 5 => array( '4oz', 'Strawberry' ), 6 => array( '8oz', 'Cherry' ) ) ), 'swapped' );
-
 echo "Create tests passed.\n";

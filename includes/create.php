@@ -208,20 +208,6 @@ function varconv_create_grid( string $name, string $group_attribute, string $att
 }
 
 /**
- * The two attributes of groups combined into one product, in the order the product page shows them: the groups'
- * attribute first, or with $swap the attribute within each group first, each pair of labels turned to match.
- *
- * @param array<int,array{0:string,1:string}> $members Simple product ID => array( group label, label ).
- * @return array{0:string,1:string,2:array<int,array{0:string,1:string}>} First attribute, second, the pairs.
- */
-function varconv_grid_order( string $group_attribute, string $attribute, array $members, bool $swap ): array {
-	if ( ! $swap ) {
-		return array( $group_attribute, $attribute, $members );
-	}
-	return array( $attribute, $group_attribute, array_map( static fn( $pair ) => array( (string) ( $pair[1] ?? '' ), (string) ( $pair[0] ?? '' ) ), $members ) );
-}
-
-/**
  * Makes the variable product for varconv_create() and varconv_create_grid().
  *
  * @param string[] $attribute_names The variation attributes, in order.

@@ -62,7 +62,6 @@
 .varconv-fields input { width: 100%; }
 .varconv-attr-pair { grid-column: span 2; display: flex; align-items: flex-end; gap: 8px; }
 .varconv-attr-pair > label { flex: 1; min-width: 0; }
-.varconv-fields .varconv-swap-value { width: auto; }
 .varconv-swap.button { padding: 0 6px; margin-bottom: 1px; }
 .varconv-swap .dashicons { line-height: 28px; }
 .varconv-cats { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 0 0 14px; }
