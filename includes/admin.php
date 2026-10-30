@@ -62,7 +62,6 @@ function varconv_assets(): void {
 		'strings' => array(
 			/* translators: 1: products checked, 2: products in the group. */
 			'count'     => __( '%1$d of %2$d', 'variation-converter-for-woocommerce' ),
-			'created'   => __( 'Created', 'variation-converter-for-woocommerce' ),
 			'skippedBadge' => __( 'Skipped', 'variation-converter-for-woocommerce' ),
 			'working'   => __( 'Working...', 'variation-converter-for-woocommerce' ),
 			'failed'    => __( 'Something went wrong. Reload the page and try again.', 'variation-converter-for-woocommerce' ),

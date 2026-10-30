@@ -30,10 +30,10 @@ export default async function ({ page, go, shot, problems }) {
 	const open = page.locator('tr.varconv-review:not([hidden])');
 	console.log('open cards:', await open.count(), '| rows:', await open.locator('.varconv-members tbody tr').count(), '| bands:', (await open.locator('.varconv-band-pick').allTextContents()).join(', '), '| notes:', (await open.locator('.varconv-notes').allTextContents()).join(' / '));
 	await shot('after-subset');
-	// Create the rest: whole group, in place
-	await open.locator('.varconv-create').click();
-	await page.locator('.varconv-card-message .notice-success').waitFor();
-	console.log('in place:', (await page.locator('.varconv-card-message .notice-success').innerText()).split('\n')[0]);
+	// Create the rest: whole group, then the list reloads with the notice above it and without the group
+	await Promise.all([page.waitForNavigation(), open.locator('.varconv-create').click()]);
+	console.log('whole group notice:', (await page.locator('.varconv-created').first().innerText()).split('\n')[0]);
+	console.log('candle group gone:', 0 === await page.locator('tr.varconv-group-row', { hasText: 'Soy Candle' }).count(), '| open cards:', await page.locator('tr.varconv-review:not([hidden])').count());
 	// Bulk create with JS ends on the notice
 	await go('edit.php?post_type=product&page=varconv');
 	await row('Northwind Tote').locator('.varconv-pick').check();

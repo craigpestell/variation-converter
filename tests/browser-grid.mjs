@@ -29,10 +29,9 @@ export default async function ({ page, go, shot, problems }) {
 	await card.locator('.notice-error').waitFor();
 	console.log('error:', await card.locator('.notice-error').innerText());
 	await first.fill(was);
-	await card.locator('.varconv-create').click();
-	await card.locator('.varconv-card-message .notice-success').waitFor();
-	console.log('created:', (await card.locator('.varconv-card-message .notice-success').innerText()).split('\n')[0]);
-	const link = await card.locator('.varconv-card-message a').first().getAttribute('href');
+	await Promise.all([page.waitForNavigation(), card.locator('.varconv-create').click()]);
+	console.log('created:', (await page.locator('.varconv-created').innerText()).split('\n')[0], '| grid card gone:', 0 === await page.locator('form.varconv-card[data-grid]').count());
+	const link = await page.locator('.varconv-created a').first().getAttribute('href');
 	const id = new URL(link).searchParams.get('post');
 	// The product page offers both attributes.
 	await go('/?p=' + id);

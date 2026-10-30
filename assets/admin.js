@@ -275,9 +275,9 @@
 	}
 
 	/* The page again with a notice (and a group to open), so counts, prices and suggestions are fresh. */
-	function reload( params, open ) {
+	function reload( params, open, drop ) {
 		var url = new window.URL( window.location.href );
-		[ 'open', 'varconv_done', 'varconv_product', 'varconv_made', 'varconv_skip', 'varconv_failed_count', 'varconv_count' ].forEach( function ( name ) {
+		( drop || [] ).concat( [ 'open', 'varconv_done', 'varconv_product', 'varconv_made', 'varconv_skip', 'varconv_failed_count', 'varconv_count' ] ).forEach( function ( name ) {
 			url.searchParams.delete( name );
 		} );
 		Object.keys( params ).forEach( function ( name ) {
@@ -291,23 +291,17 @@
 	}
 
 	/*
-	 * After a create. Part of a group: reload, opening what is left of it, since its warnings and SKU buttons
-	 * have changed. The whole group: mark its row created in place.
+	 * After a create, reload so the notice sits above the list and the counts and suggestions are fresh. Part of a
+	 * group: open what is left of it, since its warnings and SKU buttons have changed. The whole group: it is gone
+	 * from the list, and a page for just these products ("Combine" from search or Products) has nothing left to show.
 	 */
 	function created( card, data ) {
+		var params = { varconv_done: 'created', varconv_product: data.id };
 		if ( data.members.length < rows( card ).length ) {
-			reload( { varconv_done: 'created', varconv_product: data.id }, data.next );
+			reload( params, data.next );
 			return;
 		}
-		var message = card.querySelector( '.varconv-card-message' );
-		message.innerHTML = '';
-		finish( card, strings.created, 'ready' );
-		message.appendChild( notice( 'success', data.html ) );
-		Array.prototype.slice.call( card.children ).forEach( function ( child ) {
-			if ( ! child.classList.contains( 'varconv-card-message' ) ) {
-				child.hidden = true;
-			}
-		} );
+		reload( params, '', [ 'grid', 'combine' ] );
 	}
 
 	function filterRows( card ) {

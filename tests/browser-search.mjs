@@ -30,12 +30,10 @@ export default async function ({ page, go, shot, problems }) {
 	if (!groupLabels.includes('Hazelnut')) fail('Hazelnut is not its own group');
 	if (!labels.includes('750ml')) fail('Hazelnut did not take the 750ml label');
 	await shot('search-card', page.locator('.varconv-list-table'));
-	await card.locator('.varconv-create').click();
-	await card.locator('.varconv-card-message .notice-success').waitFor();
-	console.log('created:', (await card.locator('.varconv-card-message .notice-success').innerText()).split('\n')[0]);
-	const back = page.locator('a', { hasText: 'Back to search results' });
-	console.log('back link:', await back.getAttribute('href'));
-	await Promise.all([page.waitForNavigation(), back.click()]);
+	// The page goes back to the search results, with the notice above them.
+	await Promise.all([page.waitForNavigation(), card.locator('.varconv-create').click()]);
+	console.log('created:', (await page.locator('.varconv-created').innerText()).split('\n')[0]);
+	if (await page.locator('form.varconv-card[data-grid]').count()) fail('the combined card is still showing');
 	console.log('search kept:', await page.locator('#varconv-search').inputValue(), '| groups left:', await page.locator('tr.varconv-group-row').count());
 	if (problems.length) fail(problems.join('\n'));
 }
