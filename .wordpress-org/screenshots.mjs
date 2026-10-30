@@ -1,17 +1,23 @@
-// wordpress.org listing screenshots 1-4, matching the readme captions.
+// wordpress.org listing screenshots 1-4, matching the readme captions. Needs the syrup groups:
+//   harness/wp-harness reset && harness/wp-harness eval tests/seed-grid.php
+//   harness/wp-harness browse .wordpress-org/screenshots.mjs --out .wordpress-org
 export default async function ({ page, go, shot }) {
 	const tidy = () => page.addStyleTag({ content: '#wpbody-content > .notice:not([class*=varconv]), .woocommerce-layout__header, #woocommerce-embedded-root, .woocommerce-store-alerts, #screen-meta-links, #wp-admin-bar-sqlite-db-integration, #wp-admin-bar-woocommerce-site-visibility-badge, #wp-admin-bar-top-secondary > li:not(#wp-admin-bar-my-account) { display: none !important; } #wpbody-content { padding-top: 0 !important; }' });
 	await go('edit.php?post_type=product&page=varconv');
 	await tidy();
+	await page.locator('#varconv-search').fill('Barista Syrup');
+	await Promise.all([page.waitForNavigation(), page.locator('.varconv-find .button-primary').click()]);
+	await tidy();
+	await page.locator('tr.varconv-group-row .varconv-pick').nth(0).check();
+	await page.locator('tr.varconv-group-row .varconv-pick').nth(1).check();
+	await page.locator('.varconv-loose-table tr', { hasText: 'Hazelnut' }).locator('.varconv-pick-loose').check();
 	await shot('screenshot-1');
-	const row = page.locator('tr.varconv-group-row', { hasText: 'Classic Crew Tee' }).first();
-	await row.locator('.row-title').click();
-	const card = page.locator('#varconv-' + await row.getAttribute('data-key'));
-	await card.scrollIntoViewIfNeeded();
-	await row.evaluate(el => window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - 60));
-	await shot('screenshot-2');
+	await Promise.all([page.waitForNavigation(), page.locator('.varconv-do[value="combine"]').first().click()]);
+	await tidy();
+	const card = page.locator('form.varconv-card[data-grid]');
+	await shot('screenshot-2', page.locator('.varconv-list-table'));
 	await card.locator('.varconv-create').click();
-	await page.waitForTimeout(4000);
+	await card.locator('.varconv-card-message .notice-success').waitFor();
 	await go('edit.php?post_type=product&page=varconv&tab=split');
 	await tidy();
 	const srow = page.locator('tr', { hasText: 'Canvas Apron' }).first();
