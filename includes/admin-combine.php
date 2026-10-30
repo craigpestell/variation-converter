@@ -628,7 +628,8 @@ function varconv_render_group( array $c, array $excluded, array $f, int $paged, 
 function varconv_render_card( array $c, array $checked, ?array $posted, array $f, int $paged, bool $skipped = false ): void {
 	$members = $c['members'];
 	$manual = ! empty( $c['manual'] );
-	$grid = ! empty( $c['grid'] );
+	// A card whose admin removed one of the two attributes comes back with the other alone.
+	$grid = ! empty( $c['grid'] ) && ! ( $posted && null === ( $posted['group_attribute'] ?? null ) );
 	if ( $posted ) {
 		// The order the admin had set.
 		$order = array_flip( array_map( 'intval', array_keys( (array) $posted['order'] ) ) );
@@ -657,8 +658,8 @@ function varconv_render_card( array $c, array $checked, ?array $posted, array $f
 		<input type="hidden" name="key" value="<?php echo esc_attr( $c['key'] ); ?>">
 		<input type="hidden" name="filters" value="<?php echo esc_attr( http_build_query( varconv_filter_args( $f ) ) ); ?>">
 		<input type="hidden" name="paged" value="<?php echo (int) $paged; ?>">
-		<?php if ( $grid ) : ?>
-			<input type="hidden" name="grid" value="<?php echo esc_attr( implode( ',', array_map( 'sanitize_key', $c['grid'] ) ) ); ?>">
+		<?php if ( ! empty( $c['grid'] ) ) : ?>
+			<input type="hidden" name="grid" value=""<?php echo esc_attr( implode( ',', array_map( 'sanitize_key', $c['grid'] ) ) ); ?>">
 		<?php elseif ( $manual ) : ?>
 			<input type="hidden" name="combine" value="<?php echo esc_attr( implode( ',', array_map( static fn( $m ) => (int) $m['id'], $c['members'] ) ) ); ?>">
 		<?php endif; ?>
@@ -671,11 +672,13 @@ function varconv_render_card( array $c, array $checked, ?array $posted, array $f
 		<div class="varconv-fields">
 			<label class="name"><span><?php esc_html_e( 'Product name', 'variation-converter-for-woocommerce' ); ?></span> <input type="text" name="name" value="<?php echo esc_attr( $name ); ?>" required></label>
 			<?php if ( $grid ) : ?>
-				<?php // The first comes first on the product page; the swap button swaps the two, with every product's labels. ?>
+				<?php // The first comes first on the product page; the swap button swaps the two, with every product's labels, and each remove button drops one, leaving a product with the other alone. ?>
 				<div class="varconv-attr-pair">
 					<label><span><?php esc_html_e( 'First attribute', 'variation-converter-for-woocommerce' ); ?></span> <input type="text" name="group_attribute" class="varconv-group-attribute" value="<?php echo esc_attr( $group_attribute ); ?>" list="varconv-attributes" required></label>
+					<button type="button" class="button-link varconv-remove-attribute" data-which="first" title="<?php esc_attr_e( 'Remove this attribute and its labels', 'variation-converter-for-woocommerce' ); ?>"><span class="dashicons dashicons-no-alt" aria-hidden="true"></span><span class="screen-reader-text"><?php esc_html_e( 'Remove the first attribute and its labels', 'variation-converter-for-woocommerce' ); ?></span></button>
 					<button type="button" class="button varconv-swap" title="<?php esc_attr_e( 'Swap the two attributes and their labels', 'variation-converter-for-woocommerce' ); ?>"><span class="dashicons dashicons-leftright" aria-hidden="true"></span><span class="screen-reader-text"><?php esc_html_e( 'Swap the two attributes and their labels', 'variation-converter-for-woocommerce' ); ?></span></button>
 					<label><span><?php esc_html_e( 'Second attribute', 'variation-converter-for-woocommerce' ); ?></span> <input type="text" name="attribute" class="varconv-attribute" value="<?php echo esc_attr( $attribute ); ?>" list="varconv-attributes" required></label>
+					<button type="button" class="button-link varconv-remove-attribute" data-which="second" title="<?php esc_attr_e( 'Remove this attribute and its labels', 'variation-converter-for-woocommerce' ); ?>"><span class="dashicons dashicons-no-alt" aria-hidden="true"></span><span class="screen-reader-text"><?php esc_html_e( 'Remove the second attribute and its labels', 'variation-converter-for-woocommerce' ); ?></span></button>
 				</div>
 			<?php else : ?>
 				<label><span><?php esc_html_e( 'Attribute', 'variation-converter-for-woocommerce' ); ?></span> <input type="text" name="attribute" class="varconv-attribute" value="<?php echo esc_attr( $attribute ); ?>" list="varconv-attributes" required></label>

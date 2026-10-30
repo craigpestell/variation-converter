@@ -87,6 +87,9 @@ function varconv_assets(): void {
 			/* translators: 1: number of variations, 2: number of possible pairs. */
 			'gridCount' => __( '%1$d variations of %2$d possible pairs.', 'variation-converter-for-woocommerce' ),
 			'twice'     => __( 'Two products have this pair; change a label.', 'variation-converter-for-woocommerce' ),
+			'attribute' => __( 'Attribute', 'variation-converter-for-woocommerce' ),
+			/* translators: %s: variant labels, such as "4oz", "8oz". */
+			'labelsTwice' => __( 'With one attribute, each product needs its own label. Used more than once: %s. Change the labels or uncheck products.', 'variation-converter-for-woocommerce' ),
 		),
 	) );
 }
