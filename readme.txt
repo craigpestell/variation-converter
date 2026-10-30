@@ -91,7 +91,7 @@ Scan results are cached for 30 minutes. Click **Scan again** to refresh them.
 
 = Can a product have more than one attribute, like color and size? =
 
-Not in this version. Each variable product gets one attribute. You can change its name before creating, for example from "Color" to "Finish".
+Yes, from two or more groups. Each group the scan finds gets one attribute, say Size. When each group is one flavor or color of the same product (Syrup Vanilla in 250ml and 750ml, Syrup Caramel in 250ml, 750ml and 1L), tick the groups and choose **Combine groups into one product** from the bulk actions. You get one variable product with two attributes, Flavor and Size, and a variation for each product. A grid shows which pairs exist; pairs no product has, such as Vanilla 1L, are not sold.
 
 = It guessed the wrong attribute. Can I change it? =
 
@@ -125,6 +125,9 @@ Questions about using the plugin go in the support forum here on wordpress.org. 
 4. The History tab with one-click Undo.
 
 == Changelog ==
+
+= Unreleased =
+* New bulk action, Combine groups into one product: several groups become one variable product with two attributes (for example Flavor and Size), with a grid of the pairs that exist.
 
 = 0.5.1 =
 * Fix: Stop on a bulk create now stops it, after the group being created.

@@ -130,3 +130,14 @@ p.varconv-notes { color: #996800; margin: 4px 0 0; }
 	.varconv-split-list .column-sku, .varconv-split-list .column-variations, .varconv-split-list .column-note, .varconv-history .column-change { display: none; }
 	.varconv-review-inner { margin: 0 0 12px; padding: 12px; }
 }
+
+/* Groups combined into one product: which pairs exist. */
+.varconv-grid { margin: 12px 0 0; overflow-x: auto; }
+.varconv-grid-table { width: auto; border: 1px solid #dcdcde; box-shadow: none; }
+.varconv-grid-table th, .varconv-grid-table td { padding: 6px 10px; white-space: nowrap; }
+.varconv-grid-table thead th { border-bottom: 1px solid #dcdcde; }
+.varconv-grid-table tbody th { font-weight: 600; }
+.varconv-grid-table td { font-family: Consolas, Monaco, monospace; }
+.varconv-grid-table td.is-missing { color: #8c8f94; font-family: inherit; font-style: italic; }
+.varconv-grid-table td.is-twice { color: #b32d2e; font-weight: 600; }
+.varconv-grid p { margin: 6px 0 0; }

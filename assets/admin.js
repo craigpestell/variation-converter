@@ -95,6 +95,77 @@
 		checkAll.indeterminate = picked.length > 0 && picked.length < all.length;
 	}
 
+	/*
+	 * Groups combined into one product: a table of the first attribute's labels against the second's, each cell the
+	 * SKU of the product that becomes that variation, or "Not sold".
+	 */
+	function drawGrid( card ) {
+		var box = card && card.dataset.grid ? card.querySelector( '.varconv-grid' ) : null;
+		if ( ! box ) {
+			return;
+		}
+		var groups = [];
+		var labels = [];
+		var cells = {};
+		var made = 0;
+		rows( card ).filter( used ).forEach( function ( row ) {
+			var group = row.querySelector( '.varconv-group-label' ).value.trim();
+			var label = row.querySelector( 'input[name$="[label]"]' ).value.trim();
+			if ( -1 === groups.indexOf( group ) ) {
+				groups.push( group );
+			}
+			if ( -1 === labels.indexOf( label ) ) {
+				labels.push( label );
+			}
+			var cell = group + '|' + label;
+			cells[ cell ] = ( cells[ cell ] || [] ).concat( row.dataset.sku );
+			made++;
+		} );
+		box.hidden = ! made;
+		box.innerHTML = '';
+		if ( ! made ) {
+			return;
+		}
+		var table = document.createElement( 'table' );
+		table.className = 'widefat varconv-grid-table';
+		var head = table.createTHead().insertRow();
+		var corner = document.createElement( 'td' );
+		head.appendChild( corner );
+		labels.forEach( function ( label ) {
+			var th = document.createElement( 'th' );
+			th.scope = 'col';
+			th.textContent = label;
+			head.appendChild( th );
+		} );
+		var body = table.createTBody();
+		groups.forEach( function ( group ) {
+			var tr = body.insertRow();
+			var th = document.createElement( 'th' );
+			th.scope = 'row';
+			th.textContent = group;
+			tr.appendChild( th );
+			labels.forEach( function ( label ) {
+				var td = tr.insertCell();
+				var skus = cells[ group + '|' + label ];
+				if ( ! skus ) {
+					td.className = 'is-missing';
+					td.textContent = strings.notSold;
+				} else {
+					td.textContent = skus.join( ', ' );
+					if ( skus.length > 1 ) {
+						td.className = 'is-twice';
+						td.title = strings.twice;
+					}
+				}
+			} );
+		} );
+		var caption = document.createElement( 'p' );
+		caption.className = 'varconv-muted';
+		caption.textContent = format( strings.gridCount, made, groups.length * labels.length );
+		box.appendChild( table );
+		box.appendChild( caption );
+	}
+
 	/* Remembers which products are unchecked, so the card and bulk runs leave them out next time. */
 	function remember( card, changed ) {
 		// Products picked by hand are not a scan group, so there is nothing to remember them by.
@@ -130,6 +201,7 @@
 		} );
 		remember( card, changed );
 		refresh( card );
+		drawGrid( card );
 	}
 
 	/* Opens or closes a group's card under its row. */
@@ -166,6 +238,9 @@
 			handle: '.varconv-handle',
 			axis: 'y',
 			items: '> tr',
+			update: function () {
+				drawGrid( body.closest( 'form.varconv-card' ) );
+			},
 			helper: function ( event, tr ) {
 				// Keep the cells' widths while dragging.
 				var cells = tr.children();
@@ -479,6 +554,7 @@
 		if ( input.matches( '.varconv-use' ) ) {
 			remember( card, [ input.closest( 'tr' ) ] );
 			refresh( card );
+			drawGrid( card );
 		} else if ( input.matches( '.varconv-check-all' ) ) {
 			setUsed( card, rows( card ).filter( shown ), input.checked );
 		} else if ( input.matches( '.varconv-pick-page' ) ) {
@@ -515,6 +591,10 @@
 			filterRows( card );
 		} else if ( input.matches( '.varconv-attribute' ) ) {
 			card.querySelector( '.varconv-attribute-name' ).textContent = input.value;
+		} else if ( input.matches( '.varconv-group-attribute' ) ) {
+			card.querySelector( '.varconv-group-attribute-name' ).textContent = input.value;
+		} else if ( input.matches( '.varconv-group-label, input[name$="[label]"]' ) ) {
+			drawGrid( card );
 		} else if ( input.matches( '.varconv-parent-sku' ) ) {
 			window.clearTimeout( skuTimer );
 			skuTimer = window.setTimeout( function () {
@@ -567,9 +647,11 @@
 		if ( button.matches( '.varconv-up' ) && row.previousElementSibling ) {
 			row.parentNode.insertBefore( row, row.previousElementSibling );
 			button.focus();
+			drawGrid( card );
 		} else if ( button.matches( '.varconv-down' ) && row.nextElementSibling ) {
 			row.parentNode.insertBefore( row.nextElementSibling, row );
 			button.focus();
+			drawGrid( card );
 		} else if ( button.matches( '.varconv-check-shown' ) ) {
 			var list = rows( card );
 			setUsed( card, list.filter( shown ), true );
@@ -594,6 +676,7 @@
 
 	// Cards open on load (a failed create, a link to one group) can be dragged right away.
 	document.querySelectorAll( '.varconv-review:not([hidden]) .varconv-members tbody' ).forEach( sortable );
+	document.querySelectorAll( 'form.varconv-card[data-grid]' ).forEach( drawGrid );
 	updateBulk();
 	if ( document.querySelector( '.varconv-job.is-running' ) ) {
 		bulkButtons( true );

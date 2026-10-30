@@ -209,12 +209,39 @@ function varconv_created(): array {
  * @throws RuntimeException When the collection cannot be made; nothing is left half made.
  */
 function varconv_create( string $name, string $attribute_name, string $sku, array $members, array $categories = array() ): int {
-	$name = trim( $name );
-	$attribute_name = trim( $attribute_name );
-	$sku = trim( $sku );
 	$errors = varconv_validate( $name, $attribute_name, $members );
+	return varconv_make( $name, array( $attribute_name ), $sku, array_map( static fn( $label ) => array( (string) $label ), $members ), $categories, $errors );
+}
+
+/**
+ * As varconv_create(), with two attributes: each member is one pair of labels (Strawberry, 4oz), and only the pairs
+ * given become variations.
+ *
+ * @param array<int,array{0:string,1:string}> $members Simple product ID => array( group label, label ).
+ * @param int[] $categories As for varconv_create().
+ * @return int The new product's ID.
+ * @throws RuntimeException When the product cannot be made; nothing is left half made.
+ */
+function varconv_create_grid( string $name, string $group_attribute, string $attribute_name, string $sku, array $members, array $categories = array() ): int {
+	$members = array_map( static fn( $pair ) => array( (string) ( $pair[0] ?? '' ), (string) ( $pair[1] ?? '' ) ), $members );
+	$errors = varconv_validate_grid( $name, $group_attribute, $attribute_name, $members );
+	return varconv_make( $name, array( $group_attribute, $attribute_name ), $sku, $members, $categories, $errors );
+}
+
+/**
+ * Makes the variable product for varconv_create() and varconv_create_grid().
+ *
+ * @param string[] $attribute_names The variation attributes, in order.
+ * @param array<int,string[]> $members Simple product ID => its label for each attribute, in the same order.
+ * @param string[] $errors Problems already found with what was submitted.
+ * @throws RuntimeException When the product cannot be made; nothing is left half made.
+ */
+function varconv_make( string $name, array $attribute_names, string $sku, array $members, array $categories, array $errors ): int {
+	$name = trim( $name );
+	$attribute_names = array_map( 'trim', $attribute_names );
+	$sku = trim( $sku );
 	$sources = array();
-	foreach ( $members as $id => $label ) {
+	foreach ( $members as $id => $labels ) {
 		$simple = wc_get_product( (int) $id );
 		if ( ! $simple || ! $simple->is_type( 'simple' ) || 'publish' !== $simple->get_status() ) {
 			/* translators: %d: product ID. */
@@ -223,7 +250,7 @@ function varconv_create( string $name, string $attribute_name, string $sku, arra
 			/* translators: %d: product ID. */
 			$errors[] = sprintf( __( 'Product %d is already in a variable product.', 'variation-converter-for-woocommerce' ), $id );
 		} else {
-			$sources[] = array( $simple, trim( (string) $label ) );
+			$sources[] = array( $simple, array_map( static fn( $label ) => trim( (string) $label ), array_values( $labels ) ) );
 		}
 	}
 	$categories = array_values( array_unique( array_filter( array_map( 'intval', $categories ) ) ) );
@@ -245,11 +272,17 @@ function varconv_create( string $name, string $attribute_name, string $sku, arra
 	// The variations reuse the members' SKUs, which WooCommerce otherwise refuses as duplicates.
 	add_filter( 'wc_product_has_unique_sku', '__return_false', 99 );
 	try {
-		$attribute = new WC_Product_Attribute();
-		$attribute->set_name( $attribute_name );
-		$attribute->set_options( array_map( static fn( $s ) => $s[1], $sources ) );
-		$attribute->set_visible( true );
-		$attribute->set_variation( true );
+		$attributes = array();
+		foreach ( $attribute_names as $i => $attribute_name ) {
+			$attribute = new WC_Product_Attribute();
+			$attribute->set_name( $attribute_name );
+			// Each label once, in the order of the first member with it.
+			$attribute->set_options( array_values( array_unique( array_map( static fn( $s ) => $s[1][ $i ], $sources ) ) ) );
+			$attribute->set_position( $i );
+			$attribute->set_visible( true );
+			$attribute->set_variation( true );
+			$attributes[] = $attribute;
+		}
 
 		$newest = max( array_map( static fn( $s ) => $s[0]->get_date_created() ? $s[0]->get_date_created()->getTimestamp() : 0, $sources ) );
 		$parent = new WC_Product_Variable();
@@ -266,7 +299,7 @@ function varconv_create( string $name, string $attribute_name, string $sku, arra
 		$parent->set_tax_class( $first->get_tax_class( 'edit' ) );
 		$parent->set_tax_status( $first->get_tax_status( 'edit' ) );
 		$parent->set_shipping_class_id( $first->get_shipping_class_id( 'edit' ) );
-		$parent->set_attributes( array( $attribute ) );
+		$parent->set_attributes( $attributes );
 		// Set on the product, not only as terms after saving, so WooCommerce doesn't add the default category.
 		$parent->set_category_ids( $categories ?: $first->get_category_ids( 'edit' ) );
 		$parent->set_tag_ids( $first->get_tag_ids( 'edit' ) );
@@ -288,11 +321,11 @@ function varconv_create( string $name, string $attribute_name, string $sku, arra
 			}
 		}
 
-		$key = sanitize_title( $attribute->get_name() );
-		foreach ( $sources as $i => [ $simple, $label ] ) {
+		$keys = array_map( static fn( $a ) => sanitize_title( $a->get_name() ), $attributes );
+		foreach ( $sources as $i => [ $simple, $labels ] ) {
 			$variation = new WC_Product_Variation();
 			$variation->set_parent_id( $parent_id );
-			$variation->set_attributes( array( $key => $label ) );
+			$variation->set_attributes( array_combine( $keys, $labels ) );
 			$variation->set_status( 'publish' );
 			$variation->set_menu_order( $i );
 			$variation->set_sku( $simple->get_sku( 'edit' ) );
