@@ -673,6 +673,16 @@
 		}
 	} );
 
+	/* Swaps the two attribute columns of a card's product list, so they read in the same order as the fields. */
+	function swapColumns( card ) {
+		card.querySelectorAll( '.varconv-members tr' ).forEach( function ( tr ) {
+			var cells = tr.querySelectorAll( ':scope > .col-label' );
+			if ( 2 === cells.length ) {
+				tr.insertBefore( cells[ 1 ], cells[ 0 ] );
+			}
+		} );
+	}
+
 	/* Groups combined into one product: the swap button flips which attribute the product page shows first. */
 	document.addEventListener( 'click', function ( event ) {
 		var swap = event.target.closest( '.varconv-swap' );
@@ -683,9 +693,16 @@
 		var fields = pair.querySelectorAll( ':scope > label' );
 		pair.insertBefore( fields[ 1 ], fields[ 0 ] );
 		pair.appendChild( fields[ 0 ] );
+		swapColumns( swap.closest( 'form.varconv-card' ) );
 		var value = pair.querySelector( '.varconv-swap-value' );
 		value.value = '1' === value.value ? '0' : '1';
 		swap.setAttribute( 'aria-pressed', '1' === value.value ? 'true' : 'false' );
+	} );
+	// A card refilled after a failed Create comes back swapped: its columns follow.
+	document.querySelectorAll( '.varconv-swap-value' ).forEach( function ( value ) {
+		if ( '1' === value.value ) {
+			swapColumns( value.closest( 'form.varconv-card' ) );
+		}
 	} );
 
 	document.addEventListener( 'click', function ( event ) {
