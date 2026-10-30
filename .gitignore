@@ -4,3 +4,4 @@ HANDOFF.md
 /node_modules/
 *.zip
 svn-pass.txt
+.vercel
