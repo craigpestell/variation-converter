@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 0.10.0
+Stable tag: 0.11.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -139,6 +139,9 @@ Questions about using the plugin go in the support forum here on wordpress.org. 
 4. The History tab with one-click Undo.
 
 == Changelog ==
+
+= 0.11.0 =
+* Combining groups into one product with two attributes: a swap button between the two attribute fields picks which one the product page shows first.
 
 = 0.10.0 =
 * Variable products made by the plugin no longer get a SKU of their own; each variation keeps its original's SKU. The Parent SKU field is gone from the combine card, and the list's SKU column is now called SKU family.
