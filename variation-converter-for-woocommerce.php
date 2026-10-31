@@ -22,7 +22,6 @@ define( 'VARCONV_VERSION', '0.14.0' );
 
 require_once __DIR__ . '/includes/scan.php';
 require_once __DIR__ . '/includes/create.php';
-require_once __DIR__ . '/includes/attributes.php';
 require_once __DIR__ . '/includes/split.php';
 require_once __DIR__ . '/includes/job.php';
 require_once __DIR__ . '/includes/redirect.php';
