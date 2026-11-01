@@ -129,8 +129,10 @@ p.varconv-notes { color: #996800; margin: 4px 0 0; }
 .varconv-split-list .column-note { width: 220px; }
 .varconv-history .column-change { width: 110px; }
 .varconv-history .column-date { width: 190px; }
-.varconv-history .column-undo { width: 80px; }
-.varconv-history .varconv-undo { margin: 0; }
+/* Undo as a row action: a form with a button drawn as a link, red like WordPress's Trash. */
+.row-actions .varconv-undo { display: inline; margin: 0; }
+.row-actions .varconv-undo-link { color: #b32d2e; font-size: 13px; line-height: inherit; vertical-align: baseline; }
+.row-actions .varconv-undo-link:hover, .row-actions .varconv-undo-link:focus { color: #b32d2e; text-decoration: underline; }
 .varconv-review-inner .varconv-members .check-column { padding: 6px 0 6px 10px; width: 28px; }
 .varconv-review-inner .varconv-members .check-column input { margin: 0; }
 .varconv-members .col-sku { width: 110px; }
@@ -160,4 +162,3 @@ p.varconv-notes { color: #996800; margin: 4px 0 0; }
 .varconv-grid-table td.is-missing { color: #8c8f94; font-family: inherit; font-style: italic; }
 .varconv-grid-table td.is-twice { color: #b32d2e; font-weight: 600; }
 .varconv-grid p { margin: 6px 0 0; }
-.varconv-undo-checked { margin: 0 0 8px; }

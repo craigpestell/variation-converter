@@ -567,6 +567,16 @@
 			event.preventDefault();
 			return;
 		}
+		// History's Bulk actions: ask before undoing what is checked. With no action or nothing checked, the page
+		// that comes back says what is missing.
+		if ( form.matches( 'form.varconv-undo-checked' ) ) {
+			var menu = document.querySelector( '[name="' + ( event.submitter && 'bottom' === event.submitter.value ? 'bulk_action2' : 'bulk_action' ) + '"]' );
+			var checked = document.querySelector( 'input[name="products[]"]:checked' );
+			if ( menu && 'undo' === menu.value && checked && ! window.confirm( form.dataset.confirm ) ) {
+				event.preventDefault();
+			}
+			return;
+		}
 		if ( form.matches( 'form.varconv-undo' ) ) {
 			if ( ! window.confirm( form.dataset.confirm ) ) {
 				event.preventDefault();

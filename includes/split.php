@@ -49,7 +49,7 @@ function varconv_split_validate( array $names ): array {
  *
  * @return array{ids:int[],total:int}
  */
-function varconv_variables( string $search, int $paged, int $per_page, string $orderby = '', string $order = '' ): array {
+function varconv_variables( string $search, int $paged, int $per_page, string $orderby = '', string $order = '', string $view = '' ): array {
 	$args = array(
 		'post_type'      => 'product',
 		'post_status'    => 'publish',
@@ -63,6 +63,10 @@ function varconv_variables( string $search, int $paged, int $per_page, string $o
 		// phpcs:ignore WordPress.DB.SlowDBQuery.slow_db_query_meta_query
 		'meta_query'     => array( array( 'key' => VARCONV_SPLIT_META, 'compare' => 'NOT EXISTS' ) ),
 	);
+	// The Split tab's views: those that can be split, or those combined here (Undo in History instead).
+	if ( 'ready' === $view || 'combined' === $view ) {
+		$args['meta_query'][] = array( 'key' => VARCONV_META, 'compare' => 'combined' === $view ? 'EXISTS' : 'NOT EXISTS' );
+	}
 	if ( '' !== $search ) {
 		// The product data store matches SKUs as well as titles.
 		$args['post__in'] = array_merge( array( 0 ), array_map( 'intval', WC_Data_Store::load( 'product' )->search_products( $search, 'variable', false, false ) ) );

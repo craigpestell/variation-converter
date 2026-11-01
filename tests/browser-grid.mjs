@@ -39,8 +39,9 @@ export default async function ({ page, go, shot, problems }) {
 	await shot('grid-product', page.locator('form.variations_form'));
 	// Undo from History.
 	await go('edit.php?post_type=product&page=varconv&tab=history');
-	const undo = page.locator('form.varconv-undo').first();
-	await Promise.all([page.waitForNavigation(), undo.locator('button').click()]);
+	// Undo is a row action, shown when the row is hovered.
+	await page.locator('.varconv-history tbody tr').first().hover();
+	await Promise.all([page.waitForNavigation(), page.locator('.varconv-history tbody .varconv-undo-link').first().click()]);
 	console.log('after undo:', (await page.locator('.notice').first().innerText()).trim());
 	if (problems.length) throw new Error(problems.join('\n'));
 }
