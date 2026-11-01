@@ -470,7 +470,7 @@ function varconv_render_loose( array $loose, array $f ): void {
 		<p class="description">
 			<?php
 			/* translators: %s: what was searched for. */
-			echo esc_html( sprintf( __( 'Every simple product matching "%s" is in a group above. Only published simple products with a SKU, shown in the catalog, can be combined.', 'variation-converter-for-woocommerce' ), $f['s'] ) );
+			echo esc_html( sprintf( __( 'Every simple product matching "%s" is in a group above. Only simple products with a SKU, shown in the catalog, can be combined.', 'variation-converter-for-woocommerce' ), $f['s'] ) );
 			?>
 		</p>
 		<?php
@@ -494,7 +494,7 @@ function varconv_render_loose( array $loose, array $f ): void {
 						<?php /* translators: %s: product name. */ ?>
 						<input type="checkbox" class="varconv-pick-loose" form="varconv-bulk" name="ids[]" value="<?php echo (int) $p['id']; ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Select %s', 'variation-converter-for-woocommerce' ), $p['title'] ) ); ?>">
 					</th>
-					<td class="column-primary"><a href="<?php echo esc_url( (string) get_edit_post_link( $p['id'] ) ); ?>"><?php echo esc_html( $p['title'] ); ?></a></td>
+					<td class="column-primary"><a href="<?php echo esc_url( (string) get_edit_post_link( $p['id'] ) ); ?>"><?php echo esc_html( $p['title'] ); ?></a><?php echo varconv_status_label( (int) $p['id'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped where it is built. ?></td>
 					<td class="column-sku" data-colname="<?php esc_attr_e( 'SKU', 'variation-converter-for-woocommerce' ); ?>"><span class="varconv-mono"><?php echo esc_html( $p['sku'] ); ?></span></td>
 					<td class="column-price" data-colname="<?php esc_attr_e( 'Price', 'variation-converter-for-woocommerce' ); ?>"><?php echo esc_html( '' !== $p['price'] ? varconv_price_text( (float) $p['price'] ) : '' ); ?></td>
 				</tr>
@@ -529,7 +529,7 @@ function varconv_render_empty( array $scan, array $f, bool $filtered ): void {
 	} elseif ( ! empty( $scan['skipped'] ) ) {
 		esc_html_e( 'Every group the scan found is skipped. The Skipped view lists them.', 'variation-converter-for-woocommerce' );
 	} elseif ( empty( $scan['products'] ) ) {
-		esc_html_e( 'There are no published simple products with a SKU to check. The scan only looks at simple products that have a SKU and are shown in the catalog.', 'variation-converter-for-woocommerce' );
+		esc_html_e( 'There are no simple products with a SKU to check. The scan only looks at simple products that have a SKU and are shown in the catalog.', 'variation-converter-for-woocommerce' );
 	} else {
 		esc_html_e( 'No groups found. The scan looks for simple products whose SKUs share a family (TEE100-BLK, TEE100-BLU) and whose names start the same ("Classic Tee Black", "Classic Tee Blue").', 'variation-converter-for-woocommerce' );
 	}
@@ -765,7 +765,7 @@ function varconv_render_card( array $c, array $checked, ?array $posted, array $f
 						<?php /* translators: 1: attribute name, e.g. Color, 2: product SKU. */ ?>
 						<td class="col-label"><input type="text" name="members[<?php echo (int) $id; ?>][label]" value="<?php echo esc_attr( $label ); ?>" aria-label="<?php echo esc_attr( sprintf( __( '%1$s for SKU %2$s', 'variation-converter-for-woocommerce' ), $attribute, $m['sku'] ) ); ?>"></td>
 						<td class="col-sku"><a class="varconv-mono" href="<?php echo esc_url( (string) get_edit_post_link( $id ) ); ?>"><?php echo esc_html( $m['sku'] ); ?></a></td>
-						<td class="varconv-muted"><?php echo esc_html( $title ); ?></td>
+						<td class="varconv-muted"><?php echo esc_html( $title ); ?><?php echo varconv_status_label( $id ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped where it is built. ?></td>
 						<?php if ( $cats_differ ) : ?>
 							<td><?php echo esc_html( implode( ', ', array_map( 'varconv_cat_name', array_map( 'intval', $m['cats'] ?? array() ) ) ) ); ?></td>
 						<?php endif; ?>

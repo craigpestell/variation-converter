@@ -89,7 +89,7 @@ If it missed a product, search for it. It shows up under **Products not in a gro
 
 = My products don't have SKUs. Will it work? =
 
-Not yet. Grouping relies on SKUs, so products without one are never proposed. Only published, visible simple products are scanned. Name-only matching is being considered for a future version.
+Not yet. Grouping relies on SKUs, so products without one are never proposed. Only simple products shown in the catalog are scanned (published, private, pending or draft; not scheduled or trashed). Name-only matching is being considered for a future version.
 
 = Why are there two products with the same SKU after a conversion? =
 

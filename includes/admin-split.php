@@ -126,7 +126,7 @@ function varconv_render_split(): void {
 				} elseif ( '' !== $view ) {
 					esc_html_e( 'No variable products in this view.', 'variation-converter-for-woocommerce' );
 				} else {
-					esc_html_e( 'There are no published variable products to split.', 'variation-converter-for-woocommerce' );
+					esc_html_e( 'There are no variable products to split.', 'variation-converter-for-woocommerce' );
 				}
 				?>
 			</td></tr>
@@ -146,9 +146,9 @@ function varconv_render_split(): void {
 				<td class="column-primary has-row-actions">
 					<strong>
 						<?php if ( $combined ) : ?>
-							<a class="row-title" href="<?php echo esc_url( (string) get_edit_post_link( $pid ) ); ?>"><?php echo esc_html( $title ); ?></a>
+							<a class="row-title" href="<?php echo esc_url( (string) get_edit_post_link( $pid ) ); ?>"><?php echo esc_html( $title ); ?></a><?php echo varconv_status_label( $pid ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped where it is built. ?>
 						<?php else : ?>
-							<a class="row-title" href="<?php echo esc_url( $card_url ); ?>" aria-expanded="<?php echo $is_open ? 'true' : 'false'; ?>"><span class="varconv-toggle" aria-hidden="true"><?php echo $is_open ? '&#9662;' : '&#9656;'; ?></span> <?php echo esc_html( $title ); ?></a>
+							<a class="row-title" href="<?php echo esc_url( $card_url ); ?>" aria-expanded="<?php echo $is_open ? 'true' : 'false'; ?>"><span class="varconv-toggle" aria-hidden="true"><?php echo $is_open ? '&#9662;' : '&#9656;'; ?></span> <?php echo esc_html( $title ); ?></a><?php echo varconv_status_label( $pid ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped where it is built. ?>
 						<?php endif; ?>
 					</strong>
 					<div class="row-actions">
@@ -197,8 +197,8 @@ function varconv_render_split_card( WC_Product_Variable $product, array $args ):
 		varconv_undo_form( 'varconv_split_undo', $id );
 		return;
 	}
-	if ( 'publish' !== $product->get_status() ) {
-		echo '<p>' . esc_html__( 'Only published products can be split.', 'variation-converter-for-woocommerce' ) . '</p>';
+	if ( ! varconv_status_ok( $product->get_status() ) ) {
+		echo '<p>' . esc_html__( 'Only published, private, pending or draft products can be split.', 'variation-converter-for-woocommerce' ) . '</p>';
 		return;
 	}
 	$rows = varconv_split_rows( $product );
@@ -341,7 +341,7 @@ function varconv_render_history(): void {
 			<tr>
 				<th scope="row" class="check-column"><input type="checkbox" name="products[]" value="<?php echo (int) $id; ?>" form="varconv-undo-checked" aria-label="<?php echo esc_attr( sprintf( /* translators: %s: product name. */ __( 'Select %s', 'variation-converter-for-woocommerce' ), get_post_field( 'post_title', $id, 'raw' ) ) ); ?>"></th>
 				<td class="column-primary has-row-actions">
-					<strong><a class="row-title" href="<?php echo esc_url( (string) get_edit_post_link( $id ) ); ?>"><?php echo esc_html( get_post_field( 'post_title', $id, 'raw' ) ); ?></a></strong>
+					<strong><a class="row-title" href="<?php echo esc_url( (string) get_edit_post_link( $id ) ); ?>"><?php echo esc_html( get_post_field( 'post_title', $id, 'raw' ) ); ?></a><?php echo varconv_status_label( $id ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped where it is built. ?></strong>
 					<div class="row-actions">
 						<span class="edit"><a href="<?php echo esc_url( (string) get_edit_post_link( $id ) ); ?>"><?php esc_html_e( 'Edit', 'variation-converter-for-woocommerce' ); ?></a> | </span>
 						<span class="view"><a href="<?php echo esc_url( (string) get_permalink( $id ) ); ?>"><?php esc_html_e( 'View', 'variation-converter-for-woocommerce' ); ?></a> | </span>
