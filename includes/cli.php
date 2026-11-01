@@ -107,8 +107,8 @@ class Varconv_CLI_Command {
 	}
 
 	/**
-	 * Undoes conversions, as the admin page's Undo does. For a combined product, deletes it and shows its simple
-	 * products again; for a split product, deletes the simple products made from it and shows it again.
+	 * Undoes conversions, as the admin page's Undo does. For a variable product made by combining, deletes it and shows
+	 * its simple products again; for a split variable product, deletes the simple products made from it and shows it again.
 	 *
 	 * ## OPTIONS
 	 *

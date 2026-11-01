@@ -821,7 +821,7 @@ function varconv_notes( array $members, array $duplicates = array(), array $name
 		return implode( ',', $c );
 	}, $members ) );
 	if ( count( $cats ) > 1 ) {
-		$notes['cats'] = __( 'Categories differ. Choose the new product\'s categories in its card; Create from the list gives it the first product\'s.', 'variation-converter-for-woocommerce' );
+		$notes['cats'] = __( 'Categories differ. Choose the variable product\'s categories in its card; Create from the list gives it the first product\'s.', 'variation-converter-for-woocommerce' );
 	}
 	return $notes;
 }
