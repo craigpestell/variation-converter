@@ -317,7 +317,7 @@ function varconv_render_history(): void {
 		</p>
 	</form>
 	<?php // The rows' checkboxes and the Bulk actions menus belong to this form by its id, as each row also holds its own Undo form. ?>
-	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" id="varconv-undo-checked" class="varconv-undo-checked" data-confirm="<?php esc_attr_e( 'Undo every checked conversion? Combined products are deleted and their simple products shown again; simple products made by a split are deleted and the variable product shown again.', 'variation-converter-for-woocommerce' ); ?>">
+	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" id="varconv-undo-checked" class="varconv-undo-checked" data-confirm="<?php esc_attr_e( 'Undo every checked conversion? Variable products made by combining are deleted and their simple products shown again; simple products made by a split are deleted and the variable product shown again.', 'variation-converter-for-woocommerce' ); ?>">
 		<input type="hidden" name="action" value="varconv_undo_checked">
 		<input type="hidden" name="tab" value="history">
 		<?php if ( '' !== $search ) : ?>

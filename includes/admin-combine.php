@@ -677,7 +677,7 @@ function varconv_render_card( array $c, array $checked, ?array $posted, array $f
 		</div>
 		<?php if ( $cats_differ && $cat_ids ) : ?>
 			<fieldset class="varconv-cats">
-				<legend><?php esc_html_e( 'Categories for the new product', 'variation-converter-for-woocommerce' ); ?></legend>
+				<legend><?php esc_html_e( 'Categories for the variable product', 'variation-converter-for-woocommerce' ); ?></legend>
 				<?php foreach ( $cat_ids as $cat ) : ?>
 					<label><input type="checkbox" name="categories[]" value="<?php echo (int) $cat; ?>" <?php checked( in_array( $cat, $chosen, true ) ); ?>> <?php echo esc_html( varconv_cat_name( $cat ) ); ?></label>
 				<?php endforeach; ?>
@@ -781,7 +781,7 @@ function varconv_render_card( array $c, array $checked, ?array $posted, array $f
 			<div class="varconv-grid" aria-live="polite" hidden></div>
 		<?php endif; ?>
 		<div class="varconv-review-foot">
-			<span class="varconv-muted"><?php esc_html_e( 'Drag to reorder. The first product gives the new product its image and description.', 'variation-converter-for-woocommerce' ); ?></span>
+			<span class="varconv-muted"><?php esc_html_e( 'Drag to reorder. The first product gives the variable product its image and description.', 'variation-converter-for-woocommerce' ); ?></span>
 			<?php if ( ! $manual && ! $skipped ) : ?>
 				<button class="button-link varconv-dismiss" name="dismiss" value="1" formnovalidate><?php esc_html_e( 'Skip, not variants', 'variation-converter-for-woocommerce' ); ?></button>
 			<?php endif; ?>

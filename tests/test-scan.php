@@ -84,7 +84,7 @@ expect( varconv_scan( array( $p( 1, 'X1000-01', 'Alpha One' ), $p( 2, 'X1000-02'
 expect( varconv_scan( array( $p( 1, 'X1000-01', 'Alpha One' ), $p( 2, '', 'Alpha Two' ) ) ), array(), 'no SKU' );
 $two = array( $p( 1, 'X1000-01', 'Alpha Red' ), $p( 2, 'X1000-02', 'Alpha Blue', '9.99', array( 6 ) ) );
 $scan = varconv_scan( $two );
-expect( $scan[0]['notes'], array( 'cats' => 'Categories differ. Choose the new product\'s categories in its card; Create from the list gives it the first product\'s.' ), 'category note' );
+expect( $scan[0]['notes'], array( 'cats' => 'Categories differ. Choose the variable product\'s categories in its card; Create from the list gives it the first product\'s.' ), 'category note' );
 expect( varconv_scan( $two, array( $scan[0]['key'] ) ), array(), 'dismissed' );
 // A name that is all base is labeled with its SKU, with a note.
 $scan = varconv_scan( array( $p( 1, 'X1000-01', 'Alpha' ), $p( 2, 'X1000-02', 'Alpha Blue' ) ) );

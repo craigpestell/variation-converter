@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 0.17.0
+Stable tag: 0.17.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -17,7 +17,7 @@ Lots of WooCommerce stores start out with one simple product per color or size: 
 
 Fixing that by hand means building a variable product, re-entering every SKU, price, stock level and image, and then hiding the old products. Variation Converter does it for you.
 
-Search for the product, for example "Classic Tee". Variation Converter shows the groups it has already found for that name, and any matching products it didn't group. Tick the ones that are one product and click **Combine into one product**. You check the new product before anything is created, then get one variable product with a variation for each original. The originals are hidden, not deleted, and Undo puts everything back the way it was.
+Search for the product, for example "Classic Tee". Variation Converter shows the groups it has already found for that name, and any matching products it didn't group. Tick the ones that are one product and click **Combine into one product**. You check the variable product before anything is created, then get one variable product with a variation for each original. The originals are hidden, not deleted, and Undo puts everything back the way it was.
 
 Groups that are colors or flavors of the same product combine too. Tick "Syrup Vanilla" (250ml, 750ml) and "Syrup Caramel" (250ml, 750ml, 1L) and you get one Syrup with two attributes, Flavor and Size.
 
@@ -29,7 +29,7 @@ It works the other way too. If a variable product would sell better as separate 
 
 1. Go to **Products > Variation Converter**. On the **Combine** tab, type a product name or SKU in **Find the products to combine** and click **Search**.
 2. The results show the suggested groups that match and, below them, **Products not in a group**: matching products the scan didn't group.
-3. Tick the groups and products that are one product, and click **Combine into one product**. Products, or one group with extra products, become a product with one attribute, such as Color. Two or more groups become a product with two attributes, such as Flavor and Size.
+3. Tick the groups and products that are one product, and click **Combine into one product**. Products, or one group with extra products, become a variable product with one attribute, such as Color. Two or more groups become a variable product with two attributes, such as Flavor and Size.
 4. Check the product name, the attribute and the label of each variant ("Black", "Blue", "Red"). Untick anything that doesn't belong, then click **Create variable product**.
 5. Changed your mind? The **History** tab has an **Undo** button for every product the plugin made.
 
@@ -46,7 +46,7 @@ Without a search, the Combine tab lists every suggested group, with **Ready** an
 * **Keeps your data.** Each variation takes its original's SKU, regular and sale price, sale dates, stock settings, weight, dimensions and image. The variable product takes the first member's description, images, categories, tags, tax and shipping class, plus every member's image in its gallery. It has no SKU of its own; the variations keep theirs.
 * **Non-destructive.** The products you convert from are hidden from your shop and search, never deleted. Their orders, reviews and links stay as they were.
 * **One-click Undo.** Undo removes what the plugin made and brings the originals back with the visibility they had before.
-* **All or nothing.** If WooCommerce fails to save any part of a new product, the partial product is removed and your catalog is untouched.
+* **All or nothing.** If WooCommerce fails to save any part of a variable product, the partial product is removed and your catalog is untouched.
 * **Lightweight.** No settings page, no front-end code, no external services, and nothing stored beyond a few product meta fields.
 
 = Splitting a variable product =
@@ -93,7 +93,7 @@ Not yet. Grouping relies on SKUs, so products without one are never proposed. On
 
 = Why are there two products with the same SKU after a conversion? =
 
-The originals are kept, hidden, so Undo can restore everything exactly. Each SKU exists on the hidden original and on the new product. Once you're sure you'll keep the new product, you can delete the hidden one yourself.
+The originals are kept, hidden, so Undo can restore everything exactly. Each SKU exists on the hidden original and on its variation in the variable product. Once you're sure you'll keep the variable product, you can delete the hidden one yourself.
 
 = I just changed some products and the list didn't update. =
 
@@ -109,7 +109,7 @@ Yes. The attribute is only a suggestion. Edit it in the group before you click C
 
 = What if I undo after customers have ordered the new variable product? =
 
-Undo deletes the variable product and its variations. Orders keep their line items and totals, but those lines will no longer link to a product. If the new product has already sold, it's usually better to keep it.
+Undo deletes the variable product and its variations. Orders keep their line items and totals, but those lines will no longer link to a product. If the variable product has already sold, it's usually better to keep it.
 
 = Does it work with my search plugin? =
 
@@ -135,6 +135,9 @@ Questions about using the plugin go in the support forum here on wordpress.org. 
 4. The History tab with one-click Undo.
 
 == Changelog ==
+
+= 0.17.1 =
+* Wording: the product made by combining is called a variable product throughout, as WooCommerce calls it.
 
 = 0.17.0 =
 * Private, pending and draft products show on Combine, Split and History, with their status. A combined product is as visible as its most visible member, and members less visible than that become disabled variations. Split products keep the variable product's status, so nothing private or unfinished goes on sale.
