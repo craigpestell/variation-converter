@@ -12,7 +12,7 @@ delete_option( 'varconv_dismissed' );
 delete_option( 'varconv_excluded' );
 delete_option( 'varconv_lock' );
 delete_option( 'varconv_job' );
-delete_option( 'varconv_spelling' ); // From the attribute spelling setting, removed in 0.14.0.
+delete_option( 'varconv_spelling' ); // From the attribute spelling setting, removed in 0.15.0.
 if ( function_exists( 'as_unschedule_all_actions' ) ) {
 	as_unschedule_all_actions( 'varconv_bulk_batch' );
 }
