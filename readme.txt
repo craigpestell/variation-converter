@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 0.16.0
+Stable tag: 0.17.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -135,6 +135,9 @@ Questions about using the plugin go in the support forum here on wordpress.org. 
 4. The History tab with one-click Undo.
 
 == Changelog ==
+
+= 0.17.0 =
+* Private, pending and draft products show on Combine, Split and History, with their status. A combined product is as visible as its most visible member, and members less visible than that become disabled variations. Split products keep the variable product's status, so nothing private or unfinished goes on sale.
 
 = 0.16.0 =
 * Combine, Split and History share one list-table toolbar. History has Bulk actions > Undo and an Undo row action, Split has Can be split and Combined here views and row actions, and Combine's bottom bar repeats the Combine and Create buttons.
