@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 0.17.0
+Stable tag: 0.17.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -135,6 +135,9 @@ Questions about using the plugin go in the support forum here on wordpress.org. 
 4. The History tab with one-click Undo.
 
 == Changelog ==
+
+= 0.17.1 =
+* Wording: the product made by combining is called a variable product throughout, as WooCommerce calls it.
 
 = 0.17.0 =
 * Private, pending and draft products show on Combine, Split and History, with their status. A combined product is as visible as its most visible member, and members less visible than that become disabled variations. Split products keep the variable product's status, so nothing private or unfinished goes on sale.
