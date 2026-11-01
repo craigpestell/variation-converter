@@ -137,7 +137,7 @@ Questions about using the plugin go in the support forum here on wordpress.org. 
 == Changelog ==
 
 = 0.16.0 =
-* Combine, Split and History share one list-table toolbar. History has Bulk actions > Undo and an Undo row action, Split has Ready and Combined here views and row actions, and Combine's bottom bar repeats the Combine and Create buttons.
+* Combine, Split and History share one list-table toolbar. History has Bulk actions > Undo and an Undo row action, Split has Can be split and Combined here views and row actions, and Combine's bottom bar repeats the Combine and Create buttons.
 
 = 0.15.0 =
 * The Attribute spelling setting, its Rename button and `wp varconv spelling` are gone. Attributes keep the names you type.
