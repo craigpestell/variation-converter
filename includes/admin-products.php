@@ -44,7 +44,7 @@ function varconv_render_manual( array $ids ): void {
 			'<div class="notice notice-warning inline"><p>%s %s</p></div>',
 			esc_html( sprintf(
 				/* translators: %d: number of selected products left out. */
-				_n( '%d selected product is left out: only published simple products with a SKU, shown in the catalog and not already combined, can be combined.', '%d selected products are left out: only published simple products with a SKU, shown in the catalog and not already combined, can be combined.', count( $found['refused'] ), 'variation-converter-for-woocommerce' ),
+				_n( '%d selected product is left out: only simple products with a SKU, shown in the catalog and not already combined, can be combined.', '%d selected products are left out: only simple products with a SKU, shown in the catalog and not already combined, can be combined.', count( $found['refused'] ), 'variation-converter-for-woocommerce' ),
 				count( $found['refused'] )
 			) ),
 			wp_kses_post( varconv_product_links( $found['refused'] ) )

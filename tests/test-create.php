@@ -16,4 +16,13 @@ expect( varconv_gallery( array( array( 0, 2 ), array( 0 ), array( '7', 8 ) ) ), 
 expect( varconv_gallery( array( array( 1 ) ) ), array(), 'one image only' );
 expect( varconv_gallery( array() ), array(), 'no sources' );
 
+// Status of a product made from others: the most visible of theirs.
+expect( varconv_status_for( array( 'private', 'private' ) ), 'private', 'all private stays private' );
+expect( varconv_status_for( array( 'draft', 'publish', 'private' ) ), 'publish', 'one published member publishes it' );
+expect( varconv_status_for( array( 'draft', 'pending' ) ), 'pending', 'pending before draft' );
+expect( varconv_status_for( array( 'draft' ) ), 'draft', 'draft stays draft' );
+expect( varconv_status_for( array( 'trash', 'future' ) ), 'draft', 'unknown statuses make a draft' );
+expect( varconv_status_ok( 'private' ), true, 'private products are worked with' );
+expect( varconv_status_ok( 'trash' ), false, 'trashed products are not' );
+
 echo "Create tests passed.\n";

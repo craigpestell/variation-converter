@@ -408,10 +408,23 @@ function varconv_handle_split_undo(): void {
 	varconv_back( array( 'varconv_done' => 'split_undone', 'varconv_product' => $id, 'varconv_count' => $deleted ) );
 }
 
+/**
+ * " — Private", " — Draft" or " — Pending" after a product's name, as Products > All Products shows it; nothing for a
+ * published product.
+ */
+function varconv_status_label( int $id ): string {
+	$status = (string) get_post_status( $id );
+	$object = 'publish' === $status ? null : get_post_status_object( $status );
+	if ( ! $object ) {
+		return '';
+	}
+	return ' &mdash; <span class="post-state">' . esc_html( $object->label ) . '</span>';
+}
+
 /** "Split into simple products" under each variable product in Products > All Products. */
 add_filter( 'post_row_actions', 'varconv_row_action', 10, 2 );
 function varconv_row_action( array $actions, WP_Post $post ): array {
-	if ( 'product' !== $post->post_type || 'publish' !== $post->post_status || ! current_user_can( VARCONV_CAP ) ) {
+	if ( 'product' !== $post->post_type || ! varconv_status_ok( $post->post_status ) || ! current_user_can( VARCONV_CAP ) ) {
 		return $actions;
 	}
 	$product = wc_get_product( $post->ID );

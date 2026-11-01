@@ -21,6 +21,31 @@ const VARCONV_HIDDEN_META = '_varconv_collection_hidden';
 const VARCONV_TWIN_META = '_varconv_twin';
 // When a product was combined or split here, for History.
 const VARCONV_TIME_META = '_varconv_time';
+/**
+ * The product statuses the plugin works with, most visible first: the ones an admin sees in Products > All Products,
+ * apart from scheduled products.
+ */
+const VARCONV_STATUSES = array( 'publish', 'private', 'pending', 'draft' );
+
+/** Whether a product's status is one the plugin works with. */
+function varconv_status_ok( string $status ): bool {
+	return in_array( $status, VARCONV_STATUSES, true );
+}
+
+/**
+ * The status for a product made from products with these statuses: the most visible of them, so combining private
+ * products makes a private product, and one published member makes it published.
+ *
+ * @param string[] $statuses
+ */
+function varconv_status_for( array $statuses ): string {
+	foreach ( VARCONV_STATUSES as $status ) {
+		if ( in_array( $status, $statuses, true ) ) {
+			return $status;
+		}
+	}
+	return 'draft';
+}
 const VARCONV_DISMISSED_OPTION = 'varconv_dismissed';
 const VARCONV_SCAN_TRANSIENT = 'varconv_scan';
 // Members the admin unchecked, by collection key; bulk runs leave them out too.
@@ -29,7 +54,7 @@ const VARCONV_EXCLUDED_OPTION = 'varconv_excluded';
 const VARCONV_LOCK_OPTION = 'varconv_lock';
 
 /**
- * Published simple products with a SKU, shown in the catalog, not already in a collection or made by a split.
+ * Simple products with a SKU (published, private, pending or draft), shown in the catalog, not already in a collection or made by a split.
  *
  * @return array<int,array{id:int,sku:string,name:string,title:string,price:string,stock:string,cats:int[],brands:string[]}>
  */
@@ -39,7 +64,7 @@ function varconv_products(): array {
 	// varconv_candidates().
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 	$rows = $wpdb->get_results( $wpdb->prepare(
-		"SELECT p.ID, p.post_title, sku.meta_value AS sku, price.meta_value AS price, stock.meta_value AS stock
+		"SELECT p.ID, p.post_title, p.post_status, sku.meta_value AS sku, price.meta_value AS price, stock.meta_value AS stock
 		FROM {$wpdb->posts} p
 		JOIN {$wpdb->term_relationships} tr ON tr.object_id = p.ID
 		JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = tr.term_taxonomy_id AND tt.taxonomy = 'product_type'
@@ -47,7 +72,7 @@ function varconv_products(): array {
 		JOIN {$wpdb->postmeta} sku ON sku.post_id = p.ID AND sku.meta_key = '_sku' AND sku.meta_value <> ''
 		LEFT JOIN {$wpdb->postmeta} price ON price.post_id = p.ID AND price.meta_key = '_regular_price'
 		LEFT JOIN {$wpdb->postmeta} stock ON stock.post_id = p.ID AND stock.meta_key = '_stock_status'
-		WHERE p.post_type = 'product' AND p.post_status = 'publish'
+		WHERE p.post_type = 'product' AND p.post_status IN ( 'publish', 'private', 'pending', 'draft' )
 		AND p.ID NOT IN ( SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key IN ( %s, %s ) )
 		AND p.ID NOT IN ( SELECT vr.object_id FROM {$wpdb->term_relationships} vr
 			JOIN {$wpdb->term_taxonomy} vt ON vt.term_taxonomy_id = vr.term_taxonomy_id AND vt.taxonomy = 'product_visibility'
@@ -85,6 +110,7 @@ function varconv_products(): array {
 			'title' => (string) $row->post_title,
 			'price' => (string) $row->price,
 			'stock' => (string) $row->stock,
+			'status' => (string) $row->post_status,
 			'cats'   => $cats[ $id ] ?? array(),
 			'brands' => $brands[ $id ] ?? array(),
 		);
@@ -176,7 +202,7 @@ function varconv_created(): array {
 }
 
 /**
- * Makes a published variable product from simple products: one variation per member, in the order given, with the
+ * Makes a variable product from simple products: one variation per member, in the order given, with the
  * member's SKU, prices, stock, weight and image, and the rest varconv_copy_to_variation() copies. The product takes the first member's descriptions, categories,
  * tags and other taxonomies, but no SKU of its own, and is dated just after its newest member so the shop order
  * barely moves. The members are then hidden from the catalog and search.
@@ -275,9 +301,9 @@ function varconv_make( string $name, array $attribute_names, array $members, arr
 	$sources = array();
 	foreach ( $members as $id => $labels ) {
 		$simple = wc_get_product( (int) $id );
-		if ( ! $simple || ! $simple->is_type( 'simple' ) || 'publish' !== $simple->get_status() ) {
+		if ( ! $simple || ! $simple->is_type( 'simple' ) || ! varconv_status_ok( $simple->get_status() ) ) {
 			/* translators: %d: product ID. */
-			$errors[] = sprintf( __( 'Product %d is not a published simple product.', 'variation-converter-for-woocommerce' ), $id );
+			$errors[] = sprintf( __( 'Product %d is not a simple product that can be combined.', 'variation-converter-for-woocommerce' ), $id );
 		} elseif ( $simple->get_meta( VARCONV_PARENT_META ) ) {
 			/* translators: %d: product ID. */
 			$errors[] = sprintf( __( 'Product %d is already in a variable product.', 'variation-converter-for-woocommerce' ), $id );
@@ -315,7 +341,10 @@ function varconv_make( string $name, array $attribute_names, array $members, arr
 		$newest = max( array_map( static fn( $s ) => $s[0]->get_date_created() ? $s[0]->get_date_created()->getTimestamp() : 0, $sources ) );
 		$parent = new WC_Product_Variable();
 		$parent->set_name( $name );
-		$parent->set_status( 'publish' );
+		// As visible as its most visible member; a member less visible than that becomes a disabled variation, so
+		// combining never puts a private or draft product on sale.
+		$status = varconv_status_for( array_map( static fn( $s ) => $s[0]->get_status(), $sources ) );
+		$parent->set_status( $status );
 		$parent->set_description( $first->get_description( 'edit' ) );
 		$parent->set_short_description( $first->get_short_description( 'edit' ) );
 		$parent->set_image_id( $first->get_image_id( 'edit' ) );
@@ -353,7 +382,7 @@ function varconv_make( string $name, array $attribute_names, array $members, arr
 			$variation = new WC_Product_Variation();
 			$variation->set_parent_id( $parent_id );
 			$variation->set_attributes( array_combine( $keys, $labels ) );
-			$variation->set_status( 'publish' );
+			$variation->set_status( $simple->get_status() === $status ? 'publish' : 'private' );
 			$variation->set_menu_order( $i );
 			$variation->set_sku( $simple->get_sku( 'edit' ) );
 			$variation->set_regular_price( $simple->get_regular_price( 'edit' ) );

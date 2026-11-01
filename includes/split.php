@@ -44,7 +44,7 @@ function varconv_split_validate( array $names ): array {
 }
 
 /**
- * Published variable products not already split, optionally matching a name or SKU: newest first, or by number of
+ * Variable products (published, private, pending or draft) not already split, optionally matching a name or SKU: newest first, or by number of
  * variations when $orderby is "variations" ($order "asc" or "desc", the default).
  *
  * @return array{ids:int[],total:int}
@@ -52,7 +52,7 @@ function varconv_split_validate( array $names ): array {
 function varconv_variables( string $search, int $paged, int $per_page, string $orderby = '', string $order = '', string $view = '' ): array {
 	$args = array(
 		'post_type'      => 'product',
-		'post_status'    => 'publish',
+		'post_status'    => VARCONV_STATUSES,
 		'posts_per_page' => $per_page,
 		'paged'          => $paged,
 		'fields'         => 'ids',
@@ -69,7 +69,7 @@ function varconv_variables( string $search, int $paged, int $per_page, string $o
 	}
 	if ( '' !== $search ) {
 		// The product data store matches SKUs as well as titles.
-		$args['post__in'] = array_merge( array( 0 ), array_map( 'intval', WC_Data_Store::load( 'product' )->search_products( $search, 'variable', false, false ) ) );
+		$args['post__in'] = array_merge( array( 0 ), array_map( 'intval', WC_Data_Store::load( 'product' )->search_products( $search, 'variable', false, true ) ) );
 	}
 	$by_count = static function ( array $clauses ) use ( $order ): array {
 		global $wpdb;
@@ -207,7 +207,7 @@ function varconv_split_rows( WC_Product_Variable $parent ): array {
 }
 
 /**
- * Makes a published simple product from each chosen variation of a variable product, with the variation's SKU,
+ * Makes a simple product, with the variable product's status, from each chosen variation of a variable product, with the variation's SKU,
  * prices, stock, weight, size and image. Each takes the variable product's descriptions, categories, tags and other
  * attributes; fields a variation leaves to its parent (weight, tax class, shipping class, image) come from the
  * variable product. The variable product is then hidden from the catalog and search.
@@ -218,9 +218,9 @@ function varconv_split_rows( WC_Product_Variable $parent ): array {
  */
 function varconv_split_product( int $parent_id, array $names ): array {
 	$parent = wc_get_product( $parent_id );
-	if ( ! $parent instanceof WC_Product_Variable || 'publish' !== $parent->get_status() ) {
+	if ( ! $parent instanceof WC_Product_Variable || ! varconv_status_ok( $parent->get_status() ) ) {
 		/* translators: %d: product ID. */
-		throw new RuntimeException( esc_html( sprintf( __( 'Product %d is not a published variable product.', 'variation-converter-for-woocommerce' ), $parent_id ) ) );
+		throw new RuntimeException( esc_html( sprintf( __( 'Product %d is not a variable product that can be split.', 'variation-converter-for-woocommerce' ), $parent_id ) ) );
 	}
 	if ( '' !== (string) $parent->get_meta( VARCONV_META ) ) {
 		/* translators: %d: product ID. */
@@ -268,7 +268,8 @@ function varconv_split_product( int $parent_id, array $names ): array {
 			$inherit = static fn( string $field ) => '' !== (string) $variation->{"get_$field"}( 'edit' ) ? $variation->{"get_$field"}( 'edit' ) : $parent->{"get_$field"}( 'edit' );
 			$simple = new WC_Product_Simple();
 			$simple->set_name( $name );
-			$simple->set_status( 'publish' );
+			// The variable product's status, so splitting a private or draft product publishes nothing.
+			$simple->set_status( $parent->get_status() );
 			$simple->set_menu_order( $parent->get_menu_order( 'edit' ) + $i );
 			$simple->set_sku( $variation->get_sku( 'edit' ) );
 			if ( method_exists( $variation, 'get_global_unique_id' ) ) {

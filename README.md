@@ -49,7 +49,7 @@ Take a database backup before converting many products at once. Undo is there, b
 
 **Combining products the plugin didn't group.** Search for them on the Combine tab, where they show under **Products not in a group**. Or, in **Products > All Products**, tick the products, choose **Combine into variable product** from the bulk actions, and click **Apply**. Their SKUs don't need to match.
 
-**How groups are found.** Only published simple products that have a SKU and are shown in the catalog are scanned. Products without a SKU are never suggested. Products are grouped when:
+**How groups are found.** Only simple products that have a SKU and are shown in the catalog are scanned: published, private, pending and draft ones, as Products > All Products shows them. A product made by Combine or Split takes the status of what it was made from, so splitting a private product makes private products. Products without a SKU are never suggested. Products are grouped when:
 
 - their SKUs belong to one family, such as `SE1421-01` and `SE1421-03`, and
 - their names start with the same words. A brand name at the start doesn't count.
