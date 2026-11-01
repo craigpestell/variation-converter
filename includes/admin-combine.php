@@ -245,24 +245,12 @@ function varconv_combine_buttons(): void {
 	<?php
 }
 
-/** The bulk actions menu for the view; the bottom one names its select apart, as WordPress does. */
+/** The Bulk actions menu for the view: skip groups that are not variants, or restore skipped ones. */
 function varconv_bulk_menu( array $f, string $which ): void {
-	$name = 'top' === $which ? 'bulk_action' : 'bulk_action2';
 	$actions = 'skipped' === $f['view']
 		? array( 'restore' => __( 'Restore to the list', 'variation-converter-for-woocommerce' ) )
 		: array( 'skip' => __( 'Skip, not variants', 'variation-converter-for-woocommerce' ) );
-	?>
-	<div class="alignleft actions bulkactions">
-		<label for="varconv-<?php echo esc_attr( $name ); ?>" class="screen-reader-text"><?php esc_html_e( 'Select bulk action', 'variation-converter-for-woocommerce' ); ?></label>
-		<select name="<?php echo esc_attr( $name ); ?>" id="varconv-<?php echo esc_attr( $name ); ?>" form="varconv-bulk">
-			<option value=""><?php esc_html_e( 'Bulk actions', 'variation-converter-for-woocommerce' ); ?></option>
-			<?php foreach ( $actions as $value => $label ) : ?>
-				<option value="<?php echo esc_attr( $value ); ?>"><?php echo esc_html( $label ); ?></option>
-			<?php endforeach; ?>
-		</select>
-		<button class="button action varconv-bulk-apply" form="varconv-bulk" name="which" value="<?php echo esc_attr( $which ); ?>"><?php esc_html_e( 'Apply', 'variation-converter-for-woocommerce' ); ?></button>
-	</div>
-	<?php
+	varconv_bulk_actions( $actions, $which, 'varconv-bulk' );
 }
 
 /** Pagination in a tablenav, with the number of groups and products shown. */
@@ -346,12 +334,7 @@ function varconv_render_combine(): void {
 		}
 		?>
 	</h2>
-	<ul class="subsubsub">
-		<?php $tips = varconv_view_tips(); ?>
-		<?php foreach ( varconv_views() as $key => $label ) : ?>
-			<li><a href="<?php echo esc_url( varconv_url( array_filter( array( 'view' => $key, 's' => $f['s'] ) ) ) ); ?>"<?php echo $key === $f['view'] ? ' class="current" aria-current="page"' : ''; ?><?php echo isset( $tips[ $key ] ) ? ' title="' . esc_attr( $tips[ $key ] ) . '"' : ''; ?>><?php echo esc_html( $label ); ?> <span class="count">(<?php echo (int) $counts[ $key ]; ?>)</span></a><?php echo 'skipped' === $key ? '' : ' |'; ?></li>
-		<?php endforeach; ?>
-	</ul>
+	<?php varconv_views_list( varconv_views(), $counts, $f['view'], array_filter( array( 's' => $f['s'] ) ), varconv_view_tips() ); ?>
 	<br class="clear">
 
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" id="varconv-bulk" data-keys="<?php echo esc_attr( (string) wp_json_encode( array_column( $groups, 'key' ) ) ); ?>">
@@ -447,14 +430,22 @@ function varconv_render_combine(): void {
 		</tbody>
 		<tfoot><?php varconv_list_headers( $f, true ); ?></tfoot>
 	</table>
+	<?php
+	// Below the table the bar mirrors the one above. With a search, the products in no group follow, and the Combine
+	// buttons go below them instead, at the end of the page.
+	$loose = $skipped ? array() : varconv_loose_matching( (array) ( $scan['loose'] ?? array() ), $f['s'] );
+	?>
 	<div class="tablenav bottom">
+		<?php if ( ! $skipped && ! $loose ) : ?>
+			<?php varconv_combine_buttons(); ?>
+		<?php endif; ?>
 		<?php varconv_bulk_menu( $f, 'bottom' ); ?>
 		<?php varconv_list_pages( $total, $products, $paged, $pages, $f ); ?>
 		<br class="clear">
 	</div>
 	<?php
 	if ( ! $skipped ) {
-		varconv_render_loose( varconv_loose_matching( (array) ( $scan['loose'] ?? array() ), $f['s'] ), $f );
+		varconv_render_loose( $loose, $f );
 	}
 	// The refill after a failed Create is shown once.
 	delete_transient( 'varconv_posted_' . get_current_user_id() );

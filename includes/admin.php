@@ -230,8 +230,7 @@ function varconv_handle_bulk(): void {
 	}
 	check_admin_referer( 'varconv_bulk' );
 	// The Combine and Create buttons name their action; Bulk actions uses its menu.
-	$which = isset( $_POST['which'] ) && 'bottom' === $_POST['which'] ? 'bulk_action2' : 'bulk_action';
-	$action = isset( $_POST['do'] ) ? sanitize_key( wp_unslash( $_POST['do'] ) ) : ( isset( $_POST[ $which ] ) ? sanitize_key( wp_unslash( $_POST[ $which ] ) ) : 'create' );
+	$action = isset( $_POST['do'] ) ? sanitize_key( wp_unslash( $_POST['do'] ) ) : varconv_posted_bulk_action();
 	if ( ! empty( $_POST['all'] ) ) {
 		wp_parse_str( isset( $_POST['filters'] ) ? sanitize_text_field( wp_unslash( $_POST['filters'] ) ) : '', $filters );
 		$keys = array_column( varconv_filtered( varconv_candidates(), varconv_filters( $filters ) ), 'key' );
@@ -329,6 +328,9 @@ function varconv_handle_undo_checked(): void {
 		wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'variation-converter-for-woocommerce' ), 403 );
 	}
 	check_admin_referer( 'varconv_undo_checked' );
+	if ( 'undo' !== varconv_posted_bulk_action() ) {
+		varconv_fail( __( 'Choose a bulk action first.', 'variation-converter-for-woocommerce' ), array( 'tab' => 'history' ) );
+	}
 	$ids = isset( $_POST['products'] ) ? array_map( 'absint', (array) wp_unslash( $_POST['products'] ) ) : array();
 	if ( ! $ids ) {
 		varconv_fail( __( 'Check at least one conversion to undo.', 'variation-converter-for-woocommerce' ), array() );
@@ -546,8 +548,95 @@ function varconv_bulk_summary( int $made, int $skip, int $failed ): string {
 	);
 }
 
-/** An Undo button for a conversion, posting to the given admin-post action; assets/admin.js asks first. */
-function varconv_undo_form( string $action, int $id, string $label = '' ): void {
+/**
+ * A list table's views, as WordPress draws them above the table: "All (12) | Ready (8) | ...".
+ *
+ * @param array<string,string> $labels View => label; "" is All.
+ * @param array<string,int>    $counts View => number of items.
+ * @param array                $base   Query args every view's link keeps, such as the tab and search.
+ * @param array<string,string> $tips   View => tooltip.
+ */
+function varconv_views_list( array $labels, array $counts, string $current, array $base, array $tips = array() ): void {
+	$last = array_key_last( $labels );
+	?>
+	<ul class="subsubsub">
+		<?php foreach ( $labels as $key => $label ) : ?>
+			<li><a href="<?php echo esc_url( varconv_url( array_filter( array_merge( $base, array( 'view' => $key ) ) ) ) ); ?>"<?php echo $key === $current ? ' class="current" aria-current="page"' : ''; ?><?php echo isset( $tips[ $key ] ) ? ' title="' . esc_attr( $tips[ $key ] ) . '"' : ''; ?>><?php echo esc_html( $label ); ?> <span class="count">(<?php echo (int) ( $counts[ $key ] ?? 0 ); ?>)</span></a><?php echo $key === $last ? '' : ' |'; ?></li>
+		<?php endforeach; ?>
+	</ul>
+	<?php
+}
+
+/**
+ * A Bulk actions menu and its Apply button, as WordPress list tables draw them, for the form with the given id. Every tab
+ * with checkboxes has one above and below its table; the bottom one names its select apart, as WordPress does.
+ *
+ * @param array<string,string> $actions Value => label.
+ */
+function varconv_bulk_actions( array $actions, string $which, string $form ): void {
+	$name = 'top' === $which ? 'bulk_action' : 'bulk_action2';
+	$id = $form . '-' . $name;
+	?>
+	<div class="alignleft actions bulkactions">
+		<label for="<?php echo esc_attr( $id ); ?>" class="screen-reader-text"><?php esc_html_e( 'Select bulk action', 'variation-converter-for-woocommerce' ); ?></label>
+		<select name="<?php echo esc_attr( $name ); ?>" id="<?php echo esc_attr( $id ); ?>" form="<?php echo esc_attr( $form ); ?>">
+			<option value=""><?php esc_html_e( 'Bulk actions', 'variation-converter-for-woocommerce' ); ?></option>
+			<?php foreach ( $actions as $value => $label ) : ?>
+				<option value="<?php echo esc_attr( $value ); ?>"><?php echo esc_html( $label ); ?></option>
+			<?php endforeach; ?>
+		</select>
+		<button class="button action varconv-bulk-apply" form="<?php echo esc_attr( $form ); ?>" name="which" value="<?php echo esc_attr( $which ); ?>"><?php esc_html_e( 'Apply', 'variation-converter-for-woocommerce' ); ?></button>
+	</div>
+	<?php
+}
+
+/** The bulk action a form posted, from the menu above or below the table, whichever's Apply was clicked. */
+function varconv_posted_bulk_action(): string {
+	// phpcs:disable WordPress.Security.NonceVerification.Missing -- every caller has checked its form's nonce.
+	$which = isset( $_POST['which'] ) && 'bottom' === $_POST['which'] ? 'bulk_action2' : 'bulk_action';
+	return isset( $_POST[ $which ] ) ? sanitize_key( wp_unslash( $_POST[ $which ] ) ) : '';
+	// phpcs:enable WordPress.Security.NonceVerification.Missing
+}
+
+/**
+ * The bar above or below a list table: the controls on the left (Bulk actions, filters), then the number of items and
+ * the page links on the right. Split and History draw theirs with this; Combine's has its own count of groups and
+ * products.
+ *
+ * @param callable|null $left Prints the controls on the left.
+ */
+function varconv_tablenav( string $which, int $total, int $paged, int $per_page, array $args, string $label, ?callable $left = null ): void {
+	$pages = max( 1, (int) ceil( $total / $per_page ) );
+	?>
+	<div class="tablenav <?php echo esc_attr( $which ); ?>">
+		<?php
+		if ( $left ) {
+			$left( $which );
+		}
+		?>
+		<div class="tablenav-pages<?php echo $pages > 1 ? '' : ' one-page'; ?>">
+			<span class="displaying-num"><?php echo esc_html( $label ); ?></span>
+			<?php
+			if ( $pages > 1 ) {
+				echo wp_kses_post( paginate_links( array(
+					'base'    => add_query_arg( 'paged', '%#%', varconv_url( $args ) ),
+					'format'  => '',
+					'current' => min( $paged, $pages ),
+					'total'   => $pages,
+				) ) );
+			}
+			?>
+		</div>
+		<br class="clear">
+	</div>
+	<?php
+}
+
+/**
+ * An Undo button for a conversion, posting to the given admin-post action; assets/admin.js asks first. In a list
+ * table's row actions it is drawn as a link.
+ */
+function varconv_undo_form( string $action, int $id, string $label = '', bool $link = false ): void {
 	$confirm = 'varconv_undo' === $action
 		? __( 'Delete this variable product and show its simple products again?', 'variation-converter-for-woocommerce' )
 		: __( 'Delete the simple products made from this product and show it again?', 'variation-converter-for-woocommerce' );
@@ -557,7 +646,7 @@ function varconv_undo_form( string $action, int $id, string $label = '' ): void 
 		<input type="hidden" name="tab" value="history">
 		<input type="hidden" name="product" value="<?php echo (int) $id; ?>">
 		<?php wp_nonce_field( $action . '_' . $id ); ?>
-		<button class="button"><?php echo esc_html( '' !== $label ? $label : __( 'Undo', 'variation-converter-for-woocommerce' ) ); ?></button>
+		<button class="<?php echo $link ? 'button-link varconv-undo-link' : 'button'; ?>"><?php echo esc_html( '' !== $label ? $label : __( 'Undo', 'variation-converter-for-woocommerce' ) ); ?></button>
 	</form>
 	<?php
 }
