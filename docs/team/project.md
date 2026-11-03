@@ -7,7 +7,7 @@ Every role reads this file first. It holds everything specific to the variation 
 - **Name:** Variation Converter for WooCommerce (slug `variation-converter-for-woocommerce`).
 - **What it is:** a WordPress plugin that finds groups of simple WooCommerce products that are really one product in several variants and combines each approved group into one variable product, or splits a variable product into simple ones. Originals are hidden, not deleted, and Undo restores them.
 - **Owner:** the founder's own product. Free on wordpress.org.
-- **Stage:** live in the [wordpress.org plugin directory](https://wordpress.org/plugins/variation-converter-for-woocommerce/), version in the plugin header (0.4.0 as of 2026-10-29).
+- **Stage:** live in the [wordpress.org plugin directory](https://wordpress.org/plugins/variation-converter-for-woocommerce/), version in the plugin header (0.17.1 on `main` as of 2026-11-03; 0.14.0 is the latest published release).
 
 ## Stack
 
@@ -40,11 +40,30 @@ Every role reads this file first. It holds everything specific to the variation 
 - No remote calls, tracking or analytics from the plugin.
 - Keep PHP 7.4 and WordPress 6.5 compatibility unless a release raises the minimums on purpose.
 - Only plugin files ship; tests, harness, site and listing assets are `export-ignore`.
+- Parent variable products the plugin creates have no SKU.
+- American English in the plugin UI, docs and listing (store attribute labels a merchant enters are left as entered).
+- Never touch the live Ultralove store. Test on the harness or on dev.ultralove.ca only.
+
+## Working threads and merging
+
+The founder runs the project in a Claude project with one standing thread per area. Each maps onto the roster:
+
+| Thread | Roles |
+| --- | --- |
+| Plugin code development | `engineering-lead`, `design-lead` |
+| Code review and publishing | `qa-engineer`, `security-compliance`; owns versioning and release prep |
+| Plugin docs and listing copy | `growth-lead` (all writing: readme.txt, docs, listing) |
+| Plugin website | `growth-lead` for copy, `engineering-lead` for `site/` |
+
+PRs may merge to `main` without asking the founder once the Code review and publishing thread has reviewed them and the checks below pass. Open PRs early.
 
 ## Deploy gate
 
-- `harness/wp-harness lint`, `harness/wp-harness test` and `harness/wp-harness check` pass on the exact commit, with results posted on the PR. (There is no CI test workflow yet; adding one with the `ci-github-actions` skill is planned.)
-- `qa-engineer` has verified the change, including the browser checks for admin UI changes.
+Keep checks proportionate; the founder dislikes long test runs.
+
+- **Every PR:** `php -l` on changed PHP files and the offline tests (`php tests/test-*.php`) pass on the exact commit, with results posted on the PR. (No CI test workflow yet; adding one with the `ci-github-actions` skill is planned.)
+- **Larger UI or behavior changes, and every release:** also `harness/wp-harness test` and `harness/wp-harness check`, plus screenshots or browser checks for admin UI changes.
+- `qa-engineer` (the review thread) has verified the change.
 - `security-compliance` has reviewed changes to capabilities, nonces, AJAX or REST handlers, redirects, uninstall, or anything that writes products.
 - No role approves its own work.
 

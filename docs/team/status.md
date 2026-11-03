@@ -15,6 +15,13 @@ Entry format:
 
 ---
 
+## 2026-11-03 · talent-lead · Refresh the project profile
+- Did: brought `project.md` up to date: current version, the founder's standing rules (no parent SKU, American English, never touch the live Ultralove store), the working threads mapped onto the roster, the merge policy, and a proportionate deploy gate (php -l and offline tests for every PR; harness, Plugin Check and screenshots for larger UI changes and releases).
+- Decided: wrote down how the project already runs rather than changing it.
+- Blocked: **Needs founder:** set the monthly budget in `budget.md`. The company-full agents don't load in cloud sessions because company-kit isn't in their repo access.
+- Cost: est. 15k tokens, Standard.
+- Links: this PR.
+
 ## 2026-10-30 · engineering-lead · Combine groups into one product with two attributes
 - Did: new Combine bulk action, "Combine groups into one product". Two or more groups become one variable product with two attributes (one from the groups, the groups' own), one variation per product; a grid on the card shows the pairs and which are not sold. `varconv_grid()`/`varconv_validate_grid()` in scan.php, `varconv_create_grid()` over a shared `varconv_make()` in create.php. Offline tests, `tests/integration-grid.php`, `tests/browser-grid.mjs` (with `tests/seed-grid.php`).
 - Decided: the founder picked the two-attribute grid over one longer single-attribute list. Pairs nobody sells get no variation (WooCommerce shows them as unavailable) rather than placeholder variations. At most 20 groups at once.
