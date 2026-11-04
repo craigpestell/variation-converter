@@ -1,6 +1,6 @@
 === Variation Converter for WooCommerce ===
 Contributors: craigpestell
-Tags: woocommerce, variable products, product variations, merge products, simple to variable
+Tags: simple to variable, variable products, product variations, merge products, combine products
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
@@ -9,15 +9,17 @@ Stable tag: 0.17.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Combine one-per-color simple products into a single variable product, or split a variable product apart. Nothing is deleted and Undo is one click.
+Convert simple products to variable products in bulk: merge one-per-color or one-per-size products into variations, or split them back. Undo anytime.
 
 == Description ==
 
 Many WooCommerce stores end up with one simple product per color or size: "Classic Tee Black", "Classic Tee Blue", "Classic Tee Red". Shoppers scroll past three listings where there should be one, and you keep three products in sync by hand.
 
-Variation Converter turns them into one variable product, "Classic Tee", with a Black, Blue and Red variation. Each variation keeps its original's SKU, price, stock and image. The originals are hidden, not deleted, and Undo puts everything back.
+Variation Converter converts simple products to a variable product. It merges them into one product, "Classic Tee", with a Black, Blue and Red variation, and each variation keeps its original's SKU, price, stock and image. The originals are hidden, not deleted, and Undo puts everything back.
 
-It works the other way too: split a variable product into separate simple products, with the same preview and the same Undo.
+It finds the products that belong together for you, so you can combine products into variations one at a time or bulk convert a whole catalog, such as one imported from a supplier feed or CSV with a separate product for every size and color.
+
+It works the other way too: convert a variable product to simple products, with the same preview and the same Undo.
 
 = How it works =
 
@@ -71,7 +73,7 @@ A variable product the plugin made offers Undo instead of Split, so you get your
 
 = Who it's for =
 
-* Stores imported from a supplier feed or another platform that made one product per variant.
+* Stores imported from a supplier feed, a CSV or another platform such as Shopify that made a separate product for every variant.
 * Shops that grew one product at a time and now want a tidier catalog.
 * Developers cleaning up a client's catalog who want a reversible tool instead of a spreadsheet.
 
@@ -92,6 +94,14 @@ You need a role that can manage WooCommerce, such as Shop Manager or Administrat
 Undo covers every conversion, but take a database backup before converting many products at once. It's good practice.
 
 == Frequently Asked Questions ==
+
+= How do I convert simple products to a variable product in WooCommerce? =
+
+Install this plugin, go to **Products > Variation Converter**, search for the product name, tick the simple products that belong together and click **Combine into one product**. Check the attribute (such as Color or Size) and the label of each variation, then click **Create variable product**. Each simple product becomes a variation of the new variable product.
+
+= Can I bulk convert simple products to variable products? =
+
+Yes. The plugin scans your catalog and suggests every group of products that look like variants of one product. Tick as many groups as you like and click **Create a product for each group**. Large batches run in the background. With WP-CLI, `wp varconv combine --all` does the same.
 
 = Will this delete my products? =
 
@@ -140,6 +150,10 @@ The originals are kept, hidden, so Undo can restore everything exactly. Each SKU
 = I changed some products and the list didn't update. =
 
 Scan results are kept for 30 minutes. Click **Scan again** to refresh them.
+
+= Can I convert a variable product back to simple products? =
+
+Yes. Use the **Split** tab, or the **Split into simple products** link under a variable product in **Products > All Products**. Each variation becomes a simple product with its own SKU, price, stock and image.
 
 = Why can't I split some variations? =
 
