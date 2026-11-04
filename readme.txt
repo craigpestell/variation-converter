@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 0.17.1
+Stable tag: 1.0.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -166,6 +166,10 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 
 == Changelog ==
 
+= 1.0.0 =
+* First stable release. The code is the same as 0.17.1, and this is the first wordpress.org release since 0.14.0, so it includes everything from 0.15.0 to 0.17.1 below.
+* Rewrote the plugin description and FAQ, and moved changelog entries before 0.12.0 to changelog.txt.
+* New listing screenshots.
 
 = 0.17.1 =
 * Wording: the product made by combining is called a variable product throughout, as WooCommerce calls it.
@@ -203,6 +207,9 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 Older versions are listed in changelog.txt, in the plugin's folder.
 
 == Upgrade Notice ==
+
+= 1.0.0 =
+First stable release. Since 0.14.0: one toolbar across Combine, Split and History with bulk Undo; private and draft products can be converted without being published; the Attribute spelling setting is removed, so attributes keep the names you type.
 
 = 0.12.0 =
 Set one name is removed; Combine into one product names the product and its variations. New variable products get no SKU of their own, and a swap button sets which of two attributes comes first.

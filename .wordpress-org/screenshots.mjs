@@ -23,8 +23,8 @@ export default async function ({ page, go, shot }) {
 	await page.evaluate(() => window.scrollTo(0, 0));
 	await page.waitForTimeout(300);
 	await shot('screenshot-2', page.locator('.varconv-list-table'));
-	await card.locator('.varconv-create').click();
-	await card.locator('.varconv-card-message .notice-success').waitFor();
+	// A whole-group create reloads the page with its notice.
+	await Promise.all([page.waitForNavigation(), card.locator('.varconv-create').click()]);
 	await go('edit.php?post_type=product&page=varconv&tab=split');
 	await tidy();
 	const srow = page.locator('tr', { hasText: 'Canvas Apron' }).first();
@@ -36,5 +36,7 @@ export default async function ({ page, go, shot }) {
 	if (await split.count()) { await Promise.all([page.waitForNavigation(), split.click()]); }
 	await go('edit.php?post_type=product&page=varconv&tab=history');
 	await tidy();
+	// Hover the row so its Undo row action shows.
+	await page.locator('.varconv-history tbody tr').first().hover();
 	await shot('screenshot-4');
 }
