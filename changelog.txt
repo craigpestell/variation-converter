@@ -1,0 +1,66 @@
+== Changelog for older versions ==
+
+Variation Converter for WooCommerce. Recent versions are listed in readme.txt.
+
+= 0.11.0 =
+* Combining groups into one product with two attributes: a swap button between the two attribute fields picks which one the product page shows first.
+
+= 0.10.0 =
+* Variable products made by the plugin no longer get a SKU of their own; each variation keeps its original's SKU. The Parent SKU field is gone from the combine card, and the list's SKU column is now called SKU family.
+
+= 0.9.0 =
+* Set one name: tick products on the Combine tab (or choose "Set one name for variants" in Products > All Products) and give them one shared name, each followed by its color, size or other variant, so they are listed together and can be combined into one variable product. The new names are previewed as you type, URLs stay the same, and Undo rename puts the old names back.
+
+= 0.8.0 =
+* Attribute names in one spelling: choose British and Canadian (Colour, Flavour) or American (Color, Flavor) on the History tab, and products made here use it whatever was typed. Rename puts products already spelled the other way into that spelling, with their variations. Also `wp varconv spelling`.
+
+= 0.7.0 =
+* The Combine tab puts search first, and search also finds products that are in no group, so you can combine them by hand.
+* New buttons above the list: Combine into one product, and Create a product for each group. They replace those two Bulk actions entries.
+
+= 0.6.0 =
+* New bulk action, Combine groups into one product: several groups become one variable product with two attributes (for example Flavor and Size), with a grid of the pairs that exist.
+
+= 0.5.1 =
+* Fix: Stop on a bulk create now stops it, after the group being created.
+
+= 0.5.0 =
+* The Combine list's warnings filter lets you pick several warnings, and shows only the groups with exactly those warnings.
+
+= 0.4.0 =
+* Bulk create runs on the server, through WooCommerce's Action Scheduler, so it finishes even if you leave the page. Its progress shows on every tab, with a Stop button.
+* The plugin's version shows beside the page title.
+
+= 0.3.1 =
+* Combine keeps every product's gallery images on the new variable product, not just the first product's.
+
+= 0.3.0 =
+* The WP-CLI command is now `wp varconv` (was `wp variation-converter`). The admin page address is now `page=varconv`; old links redirect.
+* The Combine list explains its Ready, Needs review and Skipped views, with tips on hover.
+* Clearer example product names in the description and empty list.
+
+= 0.2.4 =
+* Undo brings back current prices and stock: sales made while products were combined or split now carry over to the restored products.
+
+= 0.2.3 =
+* The plugin's slug and text domain are now variation-converter-for-woocommerce, to match its wordpress.org address.
+
+= 0.2.2 =
+* Split tab: sort variable products by number of variations.
+
+= 0.2.1 =
+* Hover over or focus a product thumbnail in a Combine or Split card to see a larger image.
+
+= 0.2.0 =
+* Combine list: a sortable, filterable table with Ready, Needs review and Skipped views, an inline card per group, and Select by SKU.
+* Combine from the Products list: select products and choose "Combine into variable product".
+* Create many groups at once, from the list or with WP-CLI (`wp varconv combine` and `undo`).
+* Split and History tabs are list tables too.
+* Better grouping: sizes in size order, "12 oz" and "12oz" treated alike, bracketed labels unwrapped, clearer notes about duplicates, prices and categories.
+* A free parent SKU is suggested when the group's SKU is taken.
+* Old product URLs now 301 to the variable product with the option chosen (filter: `varconv_redirect_url`). Undo stops it.
+* Fixes: cards on phones, the next group after a partial create, works without mbstring.
+
+= 0.1.0 =
+* First public version: detect groups of simple products, review them, merge each into a variable product, split variable products into simple products, and undo either.
+
