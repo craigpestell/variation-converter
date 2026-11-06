@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 1.1.0
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -183,6 +183,10 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 4. The History tab, where every conversion can be undone.
 
 == Changelog ==
+
+= 1.2.0 =
+* Quick Edit on a variable product the plugin made shows a Variant stock box to set each variation's stock. The Stock column shows the variations' total instead of an unused count on the variable product, and saving clears that unused count.
+* Developers: the `varconv_quick_edit_variant_stock` filter turns the box on for other variable products, or off.
 
 = 1.1.0 =
 * Fix: a variation made from a product that has a price but no regular price (common on imported products) now gets that price. Before, it had no price, so it couldn't be bought, and a variable product with only such variations showed "Read more" in the shop. A $0 price is kept as a price.
