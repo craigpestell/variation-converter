@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 1.0.0
+Stable tag: 1.0.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -179,6 +179,9 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 4. The History tab, where every conversion can be undone.
 
 == Changelog ==
+
+= 1.0.1 =
+* A combined product's old page now redirects (301) to its variation's own URL, with every option chosen. If that variation is disabled or has an "Any" option, it redirects to the variable product.
 
 = 1.0.0 =
 * First stable release. The code is the same as 0.17.1, and this is the first wordpress.org release since 0.14.0, so it includes everything from 0.15.0 to 0.17.1 below.

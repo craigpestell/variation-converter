@@ -33,8 +33,27 @@ try {
 	$parent_id = varconv_create( 'VC Redirect Candle', 'Scent', $ids );
 	$base = (string) get_permalink( $parent_id );
 	$keys = array_keys( $ids );
-	check( varconv_combined_url( $keys[0] ), add_query_arg( 'attribute_scent', rawurlencode( 'Sea Salt' ), $base ), 'first member goes to its option' );
-	check( varconv_combined_url( $keys[1] ), add_query_arg( 'attribute_scent', rawurlencode( 'Cedar & Sage' ), $base ), 'second member goes to its option' );
+	$sep = str_contains( $base, '?' ) ? '&' : '?';
+	check( varconv_combined_url( $keys[0] ), $base . $sep . 'attribute_scent=Sea%20Salt', 'first member goes to its variant URL, space as %20' );
+	check( varconv_combined_url( $keys[1] ), $base . $sep . 'attribute_scent=Cedar%20%26%20Sage', 'second member goes to its variant URL' );
+
+	// Found by the twin link, not the SKU, so a changed or missing SKU still finds the variant.
+	update_post_meta( $keys[1], '_sku', '' );
+	check( varconv_combined_url( $keys[1] ), $base . $sep . 'attribute_scent=Cedar%20%26%20Sage', 'variant found without a SKU' );
+
+	// A disabled variation, or one with an "Any" attribute, names no single variant: the variable product instead.
+	$twins = array_flip( varconv_twins( $parent_id, $keys ) );
+	$variation = wc_get_product( $twins[ $keys[0] ] );
+	$variation->set_status( 'private' );
+	$variation->save();
+	check( varconv_combined_url( $keys[0] ), $base, 'disabled variation goes to the variable product' );
+	$variation->set_status( 'publish' );
+	$variation->set_attributes( array( 'scent' => '' ) );
+	$variation->save();
+	check( varconv_combined_url( $keys[0] ), $base, '"Any" variation goes to the variable product' );
+	$variation->set_attributes( array( 'scent' => 'Sea Salt' ) );
+	$variation->save();
+	check( varconv_combined_url( $keys[0] ), $base . $sep . 'attribute_scent=Sea%20Salt', 'variant URL back once enabled' );
 
 	add_filter( 'varconv_redirect_url', '__return_empty_string' );
 	check( varconv_combined_url( $keys[0] ), '', 'filter turns it off' );
