@@ -1,0 +1,9 @@
+/* Products > All Products > Quick Edit: Variant stock box (assets/quick-edit.js). */
+.inline-edit-row .varconv-variant-stock { clear: both; padding-top: 8px; }
+.inline-edit-row .varconv-variant-stock .title { display: block; width: auto; font-weight: 600; }
+.inline-edit-row .varconv-variant-stock .description { margin: 2px 0 6px; }
+.varconv-variant-stock-list { display: grid; grid-template-columns: auto auto 6em; gap: 6px 10px; align-items: center; justify-content: start; }
+.inline-edit-row .varconv-variant-stock-item { display: contents; }
+.varconv-variant-stock-name { font-weight: 500; }
+.varconv-variant-stock-sku { color: #646970; font-size: 12px; }
+.inline-edit-row .varconv-variant-stock-item input[type="number"] { width: 100%; grid-column: 3; }

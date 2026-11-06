@@ -9,3 +9,12 @@ function __( $text ) {
 function _n( $single, $plural, $number ) {
 	return 1 === $number ? $single : $plural;
 }
+
+// Hook registrations in the includes do nothing offline.
+function add_action( ...$args ) {
+	return true;
+}
+
+function add_filter( ...$args ) {
+	return true;
+}

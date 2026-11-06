@@ -17,6 +17,7 @@ const VARCONV_PER_PAGE = 25;
 require_once __DIR__ . '/admin-combine.php';
 require_once __DIR__ . '/ajax.php';
 require_once __DIR__ . '/admin-products.php';
+require_once __DIR__ . '/admin-quick-edit.php';
 require_once __DIR__ . '/admin-split.php';
 
 add_action( 'admin_menu', 'varconv_menu', 60 );
