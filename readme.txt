@@ -80,7 +80,7 @@ A variable product the plugin made offers Undo instead of Split, so you get your
 = For developers =
 
 * WP-CLI: `wp varconv combine` creates the suggested groups (with `--dry-run`), and `wp varconv undo` reverses a conversion. Run `wp help varconv` for the options.
-* Filters: `varconv_scan_products`, `varconv_brand_names`, `varconv_collections`, `varconv_variation_meta` and `varconv_redirect_url`.
+* Filters: `varconv_scan_products`, `varconv_brand_names`, `varconv_collections`, `varconv_variation_meta`, `varconv_redirect_url` and `varconv_quick_edit_variant_stock` (turn the Quick Edit variant stock box on for other variable products, or off).
 * Source, issues and pull requests on [GitHub](https://github.com/craigpestell/variation-converter).
 
 == Installation ==
@@ -146,6 +146,10 @@ Yes. The attribute name and every label are only suggestions. Edit them before y
 = Why are there two products with the same SKU after a conversion? =
 
 The originals are kept, hidden, so Undo can restore everything exactly. Each SKU is on the hidden original and on its variation. Once you're sure you'll keep the variable product, you can delete the hidden originals yourself.
+
+= How do I change a variation's stock in Quick Edit? =
+
+Each variation keeps its own stock, taken from its original. WooCommerce's own Quick Edit stock fields set a count on the variable product, which none of its variations sell from, so on variable products the plugin made, Quick Edit shows a **Variant stock** box instead, with one number per variation. Change a number and click **Update**. The **Stock** column shows the variations' total; hover over it to see each one's count. You can also edit stock on the product's **Variations** tab.
 
 = I changed some products and the list didn't update. =
 

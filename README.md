@@ -109,7 +109,7 @@ Groups are created as suggested, without products you unticked on the admin page
 
 ## For developers
 
-- Filters: `varconv_scan_products` (leave products out of the scan), `varconv_brand_names` (brand names a product name can start with), `varconv_collections` (change the suggested groups) and `varconv_redirect_url` (change or turn off the old-URL redirect by returning `''`). Click **Scan again** after changing a scan filter.
+- Filters: `varconv_scan_products` (leave products out of the scan), `varconv_brand_names` (brand names a product name can start with), `varconv_collections` (change the suggested groups), `varconv_redirect_url` (change or turn off the old-URL redirect by returning `''`) and `varconv_quick_edit_variant_stock` (`bool $applies, WC_Product $product`: show the Quick Edit **Variant stock** box and variant Stock column on other variable products, or turn them off). Click **Scan again** after changing a scan filter.
 - Build the plugin zip: `git archive --format=zip --prefix=variation-converter-for-woocommerce/ -o variation-converter-for-woocommerce.zip HEAD`
 - Tests and a throwaway WordPress + WooCommerce test site: see [harness/README.md](harness/README.md).
 
