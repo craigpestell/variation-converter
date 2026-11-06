@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 1.0.1
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -179,6 +179,11 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 4. The History tab, where every conversion can be undone.
 
 == Changelog ==
+
+= 1.1.0 =
+* Fix: a variation made from a product that has a price but no regular price (common on imported products) now gets that price. Before, it had no price, so it couldn't be bought, and a variable product with only such variations showed "Read more" in the shop. A $0 price is kept as a price.
+* Combine warns "No price" about a group when one of its products has no price at all, since its variation couldn't be bought. The warnings filter and `wp varconv combine --skip=noprice` can leave such groups out.
+* Split and Undo also fall back to the active price when a product has no regular price.
 
 = 1.0.1 =
 * A combined product's old page now redirects (301) to its variation's own URL, with every option chosen. If that variation is disabled or has an "Any" option, it redirects to the variable product.

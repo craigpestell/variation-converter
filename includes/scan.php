@@ -768,8 +768,8 @@ function varconv_spread( array $members ): int {
 
 /**
  * Things to check before creating, keyed by kind: dupes (another product has a member's SKU; it is left out), label
- * (a missing label, or the SKU standing in for one), repeat (a label used twice), long (long labels), price (prices
- * differ) and cats (categories differ). None of them blocks a create.
+ * (a missing label, or the SKU standing in for one), repeat (a label used twice), long (long labels), noprice (a
+ * member has no price, so its variation can't be bought), price (prices differ) and cats (categories differ). None of them blocks a create.
  *
  * @param array<string,int[]> $duplicates From varconv_duplicate_skus().
  * @param array<int,string>   $names      Product ID => name, to name the products left out.
@@ -805,6 +805,9 @@ function varconv_notes( array $members, array $duplicates = array(), array $name
 			$notes['long'] = __( 'Long labels; check these are variants of one product.', 'variation-converter-for-woocommerce' );
 			break;
 		}
+	}
+	if ( array_filter( $members, static fn( $m ) => array_key_exists( 'price', $m ) && '' === trim( (string) $m['price'] ) ) ) {
+		$notes['noprice'] = __( 'A member has no price, so its variation can\'t be bought until you give it one.', 'variation-converter-for-woocommerce' );
 	}
 	$prices = array_unique( array_filter( array_map( static fn( $m ) => (string) ( $m['price'] ?? '' ), $members ), 'strlen' ) );
 	if ( count( $prices ) > 1 ) {
