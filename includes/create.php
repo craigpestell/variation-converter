@@ -64,13 +64,14 @@ function varconv_products(): array {
 	// varconv_candidates().
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 	$rows = $wpdb->get_results( $wpdb->prepare(
-		"SELECT p.ID, p.post_title, p.post_status, sku.meta_value AS sku, price.meta_value AS price, stock.meta_value AS stock
+		"SELECT p.ID, p.post_title, p.post_status, sku.meta_value AS sku, COALESCE( NULLIF( price.meta_value, '' ), active.meta_value ) AS price, stock.meta_value AS stock
 		FROM {$wpdb->posts} p
 		JOIN {$wpdb->term_relationships} tr ON tr.object_id = p.ID
 		JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = tr.term_taxonomy_id AND tt.taxonomy = 'product_type'
 		JOIN {$wpdb->terms} t ON t.term_id = tt.term_id AND t.slug = 'simple'
 		JOIN {$wpdb->postmeta} sku ON sku.post_id = p.ID AND sku.meta_key = '_sku' AND sku.meta_value <> ''
 		LEFT JOIN {$wpdb->postmeta} price ON price.post_id = p.ID AND price.meta_key = '_regular_price'
+		LEFT JOIN {$wpdb->postmeta} active ON active.post_id = p.ID AND active.meta_key = '_price'
 		LEFT JOIN {$wpdb->postmeta} stock ON stock.post_id = p.ID AND stock.meta_key = '_stock_status'
 		WHERE p.post_type = 'product' AND p.post_status IN ( 'publish', 'private', 'pending', 'draft' )
 		AND p.ID NOT IN ( SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key IN ( %s, %s ) )
@@ -385,7 +386,7 @@ function varconv_make( string $name, array $attribute_names, array $members, arr
 			$variation->set_status( $simple->get_status() === $status ? 'publish' : 'private' );
 			$variation->set_menu_order( $i );
 			$variation->set_sku( $simple->get_sku( 'edit' ) );
-			$variation->set_regular_price( $simple->get_regular_price( 'edit' ) );
+			$variation->set_regular_price( varconv_regular_price( $simple ) );
 			$variation->set_sale_price( $simple->get_sale_price( 'edit' ) );
 			$variation->set_date_on_sale_from( $simple->get_date_on_sale_from( 'edit' ) );
 			$variation->set_date_on_sale_to( $simple->get_date_on_sale_to( 'edit' ) );
@@ -595,7 +596,7 @@ function varconv_twins( int $parent_id, array $simple_ids ): array {
  * brings back current numbers. A variation that leaves its stock to the variable product passes on only its status.
  */
 function varconv_copy_current( WC_Product $from, WC_Product $to ): void {
-	$to->set_regular_price( $from->get_regular_price( 'edit' ) );
+	$to->set_regular_price( varconv_regular_price( $from ) );
 	$to->set_sale_price( $from->get_sale_price( 'edit' ) );
 	$to->set_date_on_sale_from( $from->get_date_on_sale_from( 'edit' ) );
 	$to->set_date_on_sale_to( $from->get_date_on_sale_to( 'edit' ) );
@@ -605,6 +606,16 @@ function varconv_copy_current( WC_Product $from, WC_Product $to ): void {
 		$to->set_backorders( $from->get_backorders( 'edit' ) );
 	}
 	$to->set_stock_status( $from->get_stock_status( 'edit' ) );
+}
+
+/**
+ * The regular price to give a product made from $product: its regular price, or its active price when only that is
+ * set, as on many imported products. Without the fallback such a variation has no price and can't be bought. '0' is a
+ * price (WooCommerce sells it); '' is none.
+ */
+function varconv_regular_price( WC_Product $product ): string {
+	$regular = (string) $product->get_regular_price( 'edit' );
+	return '' !== $regular ? $regular : (string) $product->get_price( 'edit' );
 }
 
 function varconv_delete( int $parent_id ): void {

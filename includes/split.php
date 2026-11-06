@@ -197,7 +197,7 @@ function varconv_split_rows( WC_Product_Variable $parent ): array {
 			'id'      => $variation->get_id(),
 			'name'    => varconv_split_name( $parent->get_name( 'edit' ), $values ),
 			'sku'     => $variation->get_sku( 'edit' ),
-			'price'   => $variation->get_regular_price( 'edit' ),
+			'price'   => varconv_regular_price( $variation ),
 			'stock'   => $variation->get_stock_status( 'edit' ),
 			'image'   => (int) ( $variation->get_image_id( 'edit' ) ?: $parent->get_image_id( 'edit' ) ),
 			'problem' => in_array( '', $values, true ) ? __( 'Set to "Any" for an attribute, so it is not one product; give it a value first.', 'variation-converter-for-woocommerce' ) : '',
@@ -285,7 +285,7 @@ function varconv_split_product( int $parent_id, array $names ): array {
 					$simple->update_meta_data( $data['key'], $data['value'] );
 				}
 			}
-			$simple->set_regular_price( $variation->get_regular_price( 'edit' ) );
+			$simple->set_regular_price( varconv_regular_price( $variation ) );
 			$simple->set_sale_price( $variation->get_sale_price( 'edit' ) );
 			$simple->set_date_on_sale_from( $variation->get_date_on_sale_from( 'edit' ) );
 			$simple->set_date_on_sale_to( $variation->get_date_on_sale_to( 'edit' ) );

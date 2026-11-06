@@ -54,6 +54,18 @@ expect( count( $scan ), 1, 'sizes' );
 expect( $scan[0]['attribute'], 'Size', 'size attribute' );
 expect( $scan[0]['notes'], array( 'price' => 'Prices differ (9.99, 10.99; 10% apart).' ), 'price note' );
 
+// A member without a price is warned about; $0 is a price.
+$scan = varconv_scan( array(
+	$p( 1, 'SE1412-01 BX', 'Ball Spreader Medium', '' ),
+	$p( 2, 'SE1412-02 BX', 'Ball Spreader Large' ),
+) );
+expect( array_keys( $scan[0]['notes'] ), array( 'noprice' ), 'no price note' );
+$scan = varconv_scan( array(
+	$p( 1, 'SE1412-01 BX', 'Ball Spreader Medium', '0' ),
+	$p( 2, 'SE1412-02 BX', 'Ball Spreader Large', '0' ),
+) );
+expect( $scan[0]['notes'], array(), '$0 is a price' );
+
 // Members pair with the member they share the most with; a lone one is not a collection.
 $scan = varconv_scan( array(
 	$p( 1, 'SE1105-05 CL', 'Pocket Exotics Single Bullet Silver' ),

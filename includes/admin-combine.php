@@ -22,6 +22,7 @@ function varconv_note_badges(): array {
 		'label'  => __( 'Check labels', 'variation-converter-for-woocommerce' ),
 		'repeat' => __( 'Repeated label', 'variation-converter-for-woocommerce' ),
 		'long'   => __( 'Long labels', 'variation-converter-for-woocommerce' ),
+		'noprice' => __( 'No price', 'variation-converter-for-woocommerce' ),
 		'price'  => __( 'Prices differ', 'variation-converter-for-woocommerce' ),
 		'cats'   => __( 'Categories differ', 'variation-converter-for-woocommerce' ),
 	);
@@ -30,6 +31,7 @@ function varconv_note_badges(): array {
 /** @return array<string,string> Note kind the warning filter offers => its checkbox text. */
 function varconv_warning_options(): array {
 	return array(
+		'noprice' => __( 'No price', 'variation-converter-for-woocommerce' ),
 		'price' => __( 'Prices differ', 'variation-converter-for-woocommerce' ),
 		'cats'  => __( 'Categories differ', 'variation-converter-for-woocommerce' ),
 		'label' => __( 'Missing or repeated labels', 'variation-converter-for-woocommerce' ),

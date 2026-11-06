@@ -38,7 +38,7 @@ class Varconv_CLI_Command {
 	 * ---
 	 *
 	 * [--skip=<kinds>]
-	 * : Leave out groups with these warnings, comma separated: dupes, label, long, price, cats.
+	 * : Leave out groups with these warnings, comma separated: dupes, label, long, noprice, price, cats.
 	 *
 	 * ## EXAMPLES
 	 *
