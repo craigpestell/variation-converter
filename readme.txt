@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 1.2.0
+Stable tag: 1.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -159,6 +159,10 @@ Scan results are kept for 30 minutes. Click **Scan again** to refresh them.
 
 Yes. Use the **Split** tab, or the **Split into simple products** link under a variable product in **Products > All Products**. Each variation becomes a simple product with its own SKU, price, stock and image.
 
+= Can I make just one variation a simple product? =
+
+Yes. On the product's **Variations** tab, click **Make simple product** on that variation, or check it on the **Split** tab and click **Make checked simple, keep the rest**. You can give the new product its own name and categories. The rest of the variable product stays as it is. The variation is disabled, not deleted, and its old link sends shoppers to the new product. If Combine made the variation, its original simple product comes back instead of a new one. Undo is in **History**.
+
 = Why can't I split some variations? =
 
 A variation set to "Any" for an attribute (for example "Any Size") isn't one specific product, so there's nothing to turn into a simple product. Give it a specific value first.
@@ -183,6 +187,12 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 4. The History tab, where every conversion can be undone.
 
 == Changelog ==
+
+= 1.3.0 =
+* Make simple: turn chosen variations of any variable product, including combined ones, into simple products while the rest stays variable. Use the **Make simple product** link on a variation in the product's Variations panel, or check variations on the Split tab. You choose the new product's name and categories.
+* A variation Combine made brings back its original simple product, with the variation's current price and stock. Any other variation gets a new simple product. The variation is disabled, not deleted, and its old variant URL redirects to the simple product. Undo is in History.
+* WP-CLI: `wp varconv make-simple <variation-id>...`; `wp varconv undo` also undoes these.
+* Developers: actions `varconv_made_simple` and `varconv_made_simple_undone`, and filter `varconv_made_simple_redirect_url`.
 
 = 1.2.0 =
 * Quick Edit on a variable product the plugin made shows a Variant stock box to set each variation's stock. The Stock column shows the variations' total instead of an unused count on the variable product, and saving clears that unused count.
