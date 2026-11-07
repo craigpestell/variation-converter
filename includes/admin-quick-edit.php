@@ -81,7 +81,8 @@ function varconv_variant_stock_rows( WC_Product $product ): array {
 	$rows = array();
 	foreach ( $product->get_children() as $id ) {
 		$variation = wc_get_product( $id );
-		if ( ! $variation instanceof WC_Product_Variation ) {
+		// A variation made into a simple product is disabled; its stock is the simple product's now.
+		if ( ! $variation instanceof WC_Product_Variation || '' !== (string) $variation->get_meta( VARCONV_TAKEN_STATUS_META ) ) {
 			continue;
 		}
 		$qty    = $variation->get_stock_quantity( 'edit' );

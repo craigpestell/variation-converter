@@ -54,7 +54,7 @@ const VARCONV_EXCLUDED_OPTION = 'varconv_excluded';
 const VARCONV_LOCK_OPTION = 'varconv_lock';
 
 /**
- * Simple products with a SKU (published, private, pending or draft), shown in the catalog, not already in a collection or made by a split.
+ * Simple products with a SKU (published, private, pending or draft), shown in the catalog, not already in a collection or made by a split or Make simple.
  *
  * @return array<int,array{id:int,sku:string,name:string,title:string,price:string,stock:string,cats:int[],brands:string[]}>
  */
@@ -74,12 +74,13 @@ function varconv_products(): array {
 		LEFT JOIN {$wpdb->postmeta} active ON active.post_id = p.ID AND active.meta_key = '_price'
 		LEFT JOIN {$wpdb->postmeta} stock ON stock.post_id = p.ID AND stock.meta_key = '_stock_status'
 		WHERE p.post_type = 'product' AND p.post_status IN ( 'publish', 'private', 'pending', 'draft' )
-		AND p.ID NOT IN ( SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key IN ( %s, %s ) )
+		AND p.ID NOT IN ( SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key IN ( %s, %s, %s ) )
 		AND p.ID NOT IN ( SELECT vr.object_id FROM {$wpdb->term_relationships} vr
 			JOIN {$wpdb->term_taxonomy} vt ON vt.term_taxonomy_id = vr.term_taxonomy_id AND vt.taxonomy = 'product_visibility'
 			JOIN {$wpdb->terms} v ON v.term_id = vt.term_id AND v.slug = 'exclude-from-catalog' )",
 		VARCONV_PARENT_META,
-		VARCONV_SPLIT_FROM_META
+		VARCONV_SPLIT_FROM_META,
+		VARCONV_TAKEN_META
 	) );
 	$cats = array();
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -476,6 +477,9 @@ function varconv_undo( int $parent_id ): int {
 			$simple->save();
 		}
 	}
+	// Products made simple from its variations (Make simple) have left it already; they stay as ordinary products.
+	$product = wc_get_product( $parent_id );
+	varconv_forget_taken( $product ? $product->get_children() : array() );
 	varconv_delete( $parent_id );
 	varconv_reindex( $ids );
 	delete_transient( VARCONV_SCAN_TRANSIENT );
@@ -493,12 +497,15 @@ function varconv_conversion_ids( int $id ): array {
 	if ( ! $post ) {
 		return array();
 	}
+	// Make simple: a simple product and the disabled variation it was made from share a SKU and GTIN.
+	$pair = 'product_variation' === $post->post_type ? varconv_taken_simple( $id ) : (int) get_post_meta( $id, VARCONV_TAKEN_META, true );
+	$pair = $pair ? array( $id, $pair ) : array();
 	$parent = 'product_variation' === $post->post_type ? (int) $post->post_parent : $id;
 	$combined = (int) get_post_meta( $id, VARCONV_PARENT_META, true ) ?: ( '' !== (string) get_post_meta( $parent, VARCONV_META, true ) ? $parent : 0 );
 	$split = (int) get_post_meta( $id, VARCONV_SPLIT_FROM_META, true ) ?: ( '' !== (string) get_post_meta( $parent, VARCONV_SPLIT_META, true ) ? $parent : 0 );
 	$variable = $combined ?: $split;
 	if ( ! $variable ) {
-		return array();
+		return $pair;
 	}
 	$simples = (array) json_decode( (string) get_post_meta( $variable, $combined ? VARCONV_META : VARCONV_SPLIT_META, true ), true );
 	$children = get_posts(
@@ -510,7 +517,7 @@ function varconv_conversion_ids( int $id ): array {
 			'fields'      => 'ids',
 		)
 	);
-	return array_values( array_unique( array_map( 'intval', array_merge( array( $variable ), $simples, $children ) ) ) );
+	return array_values( array_unique( array_map( 'intval', array_merge( array( $variable ), $simples, $children, $pair ) ) ) );
 }
 
 /**

@@ -97,14 +97,14 @@ function varconv_split_list(): array {
 }
 
 /**
- * Everything combined or split here, newest first, optionally matching a name or SKU. A conversion made before
+ * Everything combined, split or made simple here, newest first, optionally matching a name or SKU. A conversion made before
  * conversion times were kept is dated by its product's last change.
  *
- * @return array<int,array{id:int,kind:string,time:int}> kind: combined or split.
+ * @return array<int,array{id:int,kind:string,time:int}> kind: combined, split or taken (a variation made simple).
  */
 function varconv_history( string $search = '' ): array {
 	$rows = array();
-	foreach ( array( 'combined' => varconv_created(), 'split' => varconv_split_list() ) as $kind => $ids ) {
+	foreach ( array( 'combined' => varconv_created(), 'split' => varconv_split_list(), 'taken' => varconv_taken_list() ) as $kind => $ids ) {
 		foreach ( $ids as $id ) {
 			$hay = get_post_field( 'post_title', $id, 'raw' ) . ' ' . get_post_meta( $id, '_sku', true );
 			if ( '' !== $search && false === stripos( $hay, $search ) ) {
@@ -141,6 +141,8 @@ function varconv_undo_many( array $ids ): array {
 		try {
 			if ( 'combined' === $kind ) {
 				varconv_undo( $id );
+			} elseif ( 'taken' === $kind ) {
+				varconv_take_out_undo( $id );
 			} else {
 				varconv_split_undo( $id );
 			}
@@ -181,29 +183,138 @@ function varconv_variation_values( WC_Product_Variable $parent, WC_Product_Varia
 }
 
 /**
- * One row per variation for the review card.
+ * Why a variation cannot be made into a simple product, or '' when it can.
  *
- * @return array<int,array{id:int,name:string,sku:string,price:string,stock:string,image:int,problem:string}>
+ * @param string[] $values The variation's attribute values; '' is one set to "Any".
+ * @param int      $taken  The simple product already made from it, if any.
+ */
+function varconv_split_problem( array $values, int $taken ): string {
+	if ( $taken ) {
+		return __( 'Already a simple product. Undo it in History to put it back.', 'variation-converter-for-woocommerce' );
+	}
+	if ( in_array( '', $values, true ) ) {
+		return __( 'Set to "Any" for an attribute, so it is not one product; give it a value first.', 'variation-converter-for-woocommerce' );
+	}
+	return '';
+}
+
+/**
+ * One row per variation for the review card. For a variation Combine made, member is the simple product it was made
+ * from, whose name it shows; taken is the simple product already made from the variation, if any.
+ *
+ * @return array<int,array{id:int,name:string,sku:string,price:string,stock:string,image:int,problem:string,enabled:bool,taken:int,member:int}>
  */
 function varconv_split_rows( WC_Product_Variable $parent ): array {
 	$rows = array();
+	$members = '' !== (string) $parent->get_meta( VARCONV_META ) ? varconv_twins( $parent->get_id(), varconv_members( $parent->get_id() ) ) : array();
 	foreach ( $parent->get_children() as $child ) {
 		$variation = wc_get_product( $child );
 		if ( ! $variation instanceof WC_Product_Variation ) {
 			continue;
 		}
 		$values = varconv_variation_values( $parent, $variation );
+		$member = (int) ( $members[ $variation->get_id() ] ?? 0 );
+		$taken = varconv_taken_simple( $variation->get_id() );
 		$rows[] = array(
 			'id'      => $variation->get_id(),
-			'name'    => varconv_split_name( $parent->get_name( 'edit' ), $values ),
+			'name'    => $member ? (string) get_post_field( 'post_title', $member, 'raw' ) : varconv_split_name( $parent->get_name( 'edit' ), $values ),
 			'sku'     => $variation->get_sku( 'edit' ),
 			'price'   => varconv_regular_price( $variation ),
 			'stock'   => $variation->get_stock_status( 'edit' ),
 			'image'   => (int) ( $variation->get_image_id( 'edit' ) ?: $parent->get_image_id( 'edit' ) ),
-			'problem' => in_array( '', $values, true ) ? __( 'Set to "Any" for an attribute, so it is not one product; give it a value first.', 'variation-converter-for-woocommerce' ) : '',
+			'problem' => varconv_split_problem( $member ? array() : $values, $taken ),
+			'enabled' => 'publish' === $variation->get_status( 'edit' ),
+			'taken'   => $taken,
+			'member'  => $member,
 		);
 	}
 	return $rows;
+}
+
+/**
+ * The taxonomies' terms a simple product made from a variation of this variable product takes: categories, tags,
+ * brands and the like, not its type, visibility or shipping class.
+ *
+ * @return array<string,int[]> Taxonomy => term IDs.
+ */
+function varconv_split_terms( int $parent_id ): array {
+	$terms = array();
+	$skip = array( 'product_type', 'product_visibility', 'product_shipping_class' );
+	foreach ( array_diff( get_object_taxonomies( 'product' ), $skip ) as $taxonomy ) {
+		$ids = wp_get_object_terms( $parent_id, $taxonomy, array( 'fields' => 'ids' ) );
+		if ( $ids && ! is_wp_error( $ids ) ) {
+			$terms[ $taxonomy ] = $ids;
+		}
+	}
+	return $terms;
+}
+
+/**
+ * A new, unsaved simple product made from one variation, with the variable product's status, the variation's SKU,
+ * prices, stock, weight, size and image, and the variable product's descriptions, categories, tags and other
+ * attributes; fields a variation leaves to its parent (weight, tax class, shipping class, image) come from the
+ * variable product. Save it with WooCommerce's duplicate SKU check off, then set $terms on it.
+ *
+ * @param array<string,int[]> $terms From varconv_split_terms().
+ */
+function varconv_simple_from_variation( WC_Product_Variable $parent, WC_Product_Variation $variation, string $name, int $menu_order, array $terms ): WC_Product_Simple {
+	$attributes = array_values( array_filter( $parent->get_attributes( 'edit' ), static fn( $a ) => ! $a->get_variation() ) );
+	$inherit = static fn( string $field ) => '' !== (string) $variation->{"get_$field"}( 'edit' ) ? $variation->{"get_$field"}( 'edit' ) : $parent->{"get_$field"}( 'edit' );
+	$simple = new WC_Product_Simple();
+	$simple->set_name( $name );
+	// The variable product's status, so splitting a private or draft product publishes nothing.
+	$simple->set_status( $parent->get_status() );
+	$simple->set_menu_order( $menu_order );
+	$simple->set_sku( $variation->get_sku( 'edit' ) );
+	if ( method_exists( $variation, 'get_global_unique_id' ) ) {
+		$simple->set_global_unique_id( $variation->get_global_unique_id( 'edit' ) );
+	}
+	$simple->set_low_stock_amount( $variation->get_low_stock_amount( 'edit' ) );
+	$simple->set_download_limit( $variation->get_download_limit( 'edit' ) );
+	$simple->set_download_expiry( $variation->get_download_expiry( 'edit' ) );
+	// The variation's public custom fields (a barcode plugin's, for example), as Combine gives them.
+	foreach ( $variation->get_meta_data() as $entry ) {
+		$data = $entry->get_data();
+		if ( '' !== (string) $data['key'] && '_' !== $data['key'][0] ) {
+			$simple->update_meta_data( $data['key'], $data['value'] );
+		}
+	}
+	$simple->set_regular_price( varconv_regular_price( $variation ) );
+	$simple->set_sale_price( $variation->get_sale_price( 'edit' ) );
+	$simple->set_date_on_sale_from( $variation->get_date_on_sale_from( 'edit' ) );
+	$simple->set_date_on_sale_to( $variation->get_date_on_sale_to( 'edit' ) );
+	// A variation can share its parent's stock count; copying that count to every new product would multiply it.
+	if ( true === $variation->get_manage_stock( 'edit' ) ) {
+		$simple->set_manage_stock( true );
+		$simple->set_stock_quantity( $variation->get_stock_quantity( 'edit' ) );
+		$simple->set_backorders( $variation->get_backorders( 'edit' ) );
+	}
+	$simple->set_stock_status( $variation->get_stock_status( 'edit' ) );
+	$simple->set_virtual( $variation->get_virtual( 'edit' ) );
+	$simple->set_downloadable( $variation->get_downloadable( 'edit' ) );
+	$simple->set_downloads( $variation->get_downloads( 'edit' ) );
+	$simple->set_weight( $inherit( 'weight' ) );
+	$simple->set_length( $inherit( 'length' ) );
+	$simple->set_width( $inherit( 'width' ) );
+	$simple->set_height( $inherit( 'height' ) );
+	$simple->set_image_id( $variation->get_image_id( 'edit' ) ?: $parent->get_image_id( 'edit' ) );
+	$simple->set_gallery_image_ids( $parent->get_gallery_image_ids( 'edit' ) );
+	$simple->set_description( '' !== $variation->get_description( 'edit' ) ? $variation->get_description( 'edit' ) : $parent->get_description( 'edit' ) );
+	$simple->set_short_description( $parent->get_short_description( 'edit' ) );
+	$simple->set_purchase_note( $parent->get_purchase_note( 'edit' ) );
+	$simple->set_reviews_allowed( $parent->get_reviews_allowed( 'edit' ) );
+	$simple->set_tax_status( $parent->get_tax_status( 'edit' ) );
+	$simple->set_tax_class( 'parent' === $variation->get_tax_class( 'edit' ) ? $parent->get_tax_class( 'edit' ) : $variation->get_tax_class( 'edit' ) );
+	$simple->set_shipping_class_id( $variation->get_shipping_class_id( 'edit' ) ?: $parent->get_shipping_class_id( 'edit' ) );
+	$simple->set_attributes( $attributes );
+	// Set on the product, not only as terms after saving: WooCommerce would otherwise give it the default
+	// category, and its cached copy of the product would keep that until the next request.
+	$simple->set_category_ids( $terms['product_cat'] ?? array() );
+	$simple->set_tag_ids( $terms['product_tag'] ?? array() );
+	if ( $parent->get_date_created( 'edit' ) ) {
+		$simple->set_date_created( $parent->get_date_created( 'edit' )->getTimestamp() );
+	}
+	return $simple;
 }
 
 /**
@@ -242,6 +353,9 @@ function varconv_split_product( int $parent_id, array $names ): array {
 		} elseif ( in_array( '', varconv_variation_values( $parent, $variation ), true ) ) {
 			/* translators: %d: variation ID. */
 			$errors[] = sprintf( __( 'Variation %d is set to "Any" for an attribute; give it a value first.', 'variation-converter-for-woocommerce' ), $id );
+		} elseif ( varconv_taken_simple( (int) $id ) ) {
+			/* translators: %d: variation ID. */
+			$errors[] = sprintf( __( 'Variation %d is already a simple product; Undo that in History first.', 'variation-converter-for-woocommerce' ), $id );
 		} else {
 			$sources[] = array( $variation, $name );
 		}
@@ -250,76 +364,14 @@ function varconv_split_product( int $parent_id, array $names ): array {
 		throw new RuntimeException( esc_html( implode( ' ', array_unique( $errors ) ) ) );
 	}
 
-	$attributes = array_values( array_filter( $parent->get_attributes( 'edit' ), static fn( $a ) => ! $a->get_variation() ) );
-	$terms = array();
-	$skip = array( 'product_type', 'product_visibility', 'product_shipping_class' );
-	foreach ( array_diff( get_object_taxonomies( 'product' ), $skip ) as $taxonomy ) {
-		$ids = wp_get_object_terms( $parent_id, $taxonomy, array( 'fields' => 'ids' ) );
-		if ( $ids && ! is_wp_error( $ids ) ) {
-			$terms[ $taxonomy ] = $ids;
-		}
-	}
+	$terms = varconv_split_terms( $parent_id );
 	$created = array();
 	// The simple products reuse the variations' SKUs and GTINs, which WooCommerce otherwise refuses as duplicates.
 	add_filter( 'wc_product_has_unique_sku', '__return_false', 99 );
 	add_filter( 'wc_product_has_global_unique_id', '__return_false', 99 );
 	try {
 		foreach ( $sources as $i => [ $variation, $name ] ) {
-			$inherit = static fn( string $field ) => '' !== (string) $variation->{"get_$field"}( 'edit' ) ? $variation->{"get_$field"}( 'edit' ) : $parent->{"get_$field"}( 'edit' );
-			$simple = new WC_Product_Simple();
-			$simple->set_name( $name );
-			// The variable product's status, so splitting a private or draft product publishes nothing.
-			$simple->set_status( $parent->get_status() );
-			$simple->set_menu_order( $parent->get_menu_order( 'edit' ) + $i );
-			$simple->set_sku( $variation->get_sku( 'edit' ) );
-			if ( method_exists( $variation, 'get_global_unique_id' ) ) {
-				$simple->set_global_unique_id( $variation->get_global_unique_id( 'edit' ) );
-			}
-			$simple->set_low_stock_amount( $variation->get_low_stock_amount( 'edit' ) );
-			$simple->set_download_limit( $variation->get_download_limit( 'edit' ) );
-			$simple->set_download_expiry( $variation->get_download_expiry( 'edit' ) );
-			// The variation's public custom fields (a barcode plugin's, for example), as Combine gives them.
-			foreach ( $variation->get_meta_data() as $entry ) {
-				$data = $entry->get_data();
-				if ( '' !== (string) $data['key'] && '_' !== $data['key'][0] ) {
-					$simple->update_meta_data( $data['key'], $data['value'] );
-				}
-			}
-			$simple->set_regular_price( varconv_regular_price( $variation ) );
-			$simple->set_sale_price( $variation->get_sale_price( 'edit' ) );
-			$simple->set_date_on_sale_from( $variation->get_date_on_sale_from( 'edit' ) );
-			$simple->set_date_on_sale_to( $variation->get_date_on_sale_to( 'edit' ) );
-			// A variation can share its parent's stock count; copying that count to every new product would multiply it.
-			if ( true === $variation->get_manage_stock( 'edit' ) ) {
-				$simple->set_manage_stock( true );
-				$simple->set_stock_quantity( $variation->get_stock_quantity( 'edit' ) );
-				$simple->set_backorders( $variation->get_backorders( 'edit' ) );
-			}
-			$simple->set_stock_status( $variation->get_stock_status( 'edit' ) );
-			$simple->set_virtual( $variation->get_virtual( 'edit' ) );
-			$simple->set_downloadable( $variation->get_downloadable( 'edit' ) );
-			$simple->set_downloads( $variation->get_downloads( 'edit' ) );
-			$simple->set_weight( $inherit( 'weight' ) );
-			$simple->set_length( $inherit( 'length' ) );
-			$simple->set_width( $inherit( 'width' ) );
-			$simple->set_height( $inherit( 'height' ) );
-			$simple->set_image_id( $variation->get_image_id( 'edit' ) ?: $parent->get_image_id( 'edit' ) );
-			$simple->set_gallery_image_ids( $parent->get_gallery_image_ids( 'edit' ) );
-			$simple->set_description( '' !== $variation->get_description( 'edit' ) ? $variation->get_description( 'edit' ) : $parent->get_description( 'edit' ) );
-			$simple->set_short_description( $parent->get_short_description( 'edit' ) );
-			$simple->set_purchase_note( $parent->get_purchase_note( 'edit' ) );
-			$simple->set_reviews_allowed( $parent->get_reviews_allowed( 'edit' ) );
-			$simple->set_tax_status( $parent->get_tax_status( 'edit' ) );
-			$simple->set_tax_class( 'parent' === $variation->get_tax_class( 'edit' ) ? $parent->get_tax_class( 'edit' ) : $variation->get_tax_class( 'edit' ) );
-			$simple->set_shipping_class_id( $variation->get_shipping_class_id( 'edit' ) ?: $parent->get_shipping_class_id( 'edit' ) );
-			$simple->set_attributes( $attributes );
-			// Set on the product, not only as terms after saving: WooCommerce would otherwise give it the default
-			// category, and its cached copy of the product would keep that until the next request.
-			$simple->set_category_ids( $terms['product_cat'] ?? array() );
-			$simple->set_tag_ids( $terms['product_tag'] ?? array() );
-			if ( $parent->get_date_created( 'edit' ) ) {
-				$simple->set_date_created( $parent->get_date_created( 'edit' )->getTimestamp() );
-			}
+			$simple = varconv_simple_from_variation( $parent, $variation, $name, $parent->get_menu_order( 'edit' ) + $i, $terms );
 			$simple->update_meta_data( VARCONV_SPLIT_FROM_META, (string) $parent_id );
 			$simple->update_meta_data( VARCONV_TWIN_META, (string) $variation->get_id() );
 			$id = $simple->save();

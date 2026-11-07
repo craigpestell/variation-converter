@@ -52,6 +52,11 @@ function varconv_variable_price( WC_Product_Variable $product ): string {
 
 /** The Split tab: variable products, with the chosen one's card open inside the table. */
 function varconv_render_split(): void {
+	$make_simple = isset( $_GET['make_simple'] ) ? absint( wp_unslash( $_GET['make_simple'] ) ) : 0;
+	if ( $make_simple ) {
+		varconv_render_take_one( $make_simple );
+		return;
+	}
 	$open = isset( $_GET['product'] ) ? absint( wp_unslash( $_GET['product'] ) ) : 0;
 	$search = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '';
 	$view = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : '';
@@ -76,7 +81,7 @@ function varconv_render_split(): void {
 	/* translators: %s: number of variable products. */
 	$label = sprintf( _n( '%s variable product', '%s variable products', $found['total'], 'variation-converter-for-woocommerce' ), number_format_i18n( $found['total'] ) );
 	?>
-	<p class="varconv-lead"><?php esc_html_e( 'Turn a variable product into one simple product per variation. The variable product is hidden, not deleted, and Undo in History brings it back.', 'variation-converter-for-woocommerce' ); ?></p>
+	<p class="varconv-lead"><?php esc_html_e( 'Turn a variable product into one simple product per variation, or make just the variations you pick into simple products and keep the rest variable. Nothing is deleted, and Undo in History puts it back.', 'variation-converter-for-woocommerce' ); ?></p>
 	<?php varconv_views_list( $labels, $counts, $view, array_filter( array( 'tab' => 'split', 's' => $search ) ) ); ?>
 	<form method="get" class="search-form">
 		<input type="hidden" name="post_type" value="product">
@@ -145,16 +150,13 @@ function varconv_render_split(): void {
 			<tr class="<?php echo $is_open ? 'varconv-open' : ''; ?>">
 				<td class="column-primary has-row-actions">
 					<strong>
-						<?php if ( $combined ) : ?>
-							<a class="row-title" href="<?php echo esc_url( (string) get_edit_post_link( $pid ) ); ?>"><?php echo esc_html( $title ); ?></a><?php echo varconv_status_label( $pid ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped where it is built. ?>
-						<?php else : ?>
-							<a class="row-title" href="<?php echo esc_url( $card_url ); ?>" aria-expanded="<?php echo $is_open ? 'true' : 'false'; ?>"><span class="varconv-toggle" aria-hidden="true"><?php echo $is_open ? '&#9662;' : '&#9656;'; ?></span> <?php echo esc_html( $title ); ?></a><?php echo varconv_status_label( $pid ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped where it is built. ?>
-						<?php endif; ?>
+						<a class="row-title" href="<?php echo esc_url( $card_url ); ?>" aria-expanded="<?php echo $is_open ? 'true' : 'false'; ?>"><span class="varconv-toggle" aria-hidden="true"><?php echo $is_open ? '&#9662;' : '&#9656;'; ?></span> <?php echo esc_html( $title ); ?></a><?php echo varconv_status_label( $pid ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped where it is built. ?>
 					</strong>
 					<div class="row-actions">
 						<?php if ( ! $combined ) : ?>
 							<span class="split"><a href="<?php echo esc_url( $card_url ); ?>"><?php esc_html_e( 'Split', 'variation-converter-for-woocommerce' ); ?></a> | </span>
 						<?php endif; ?>
+						<span class="make-simple"><a href="<?php echo esc_url( $card_url ); ?>"><?php esc_html_e( 'Make variations simple', 'variation-converter-for-woocommerce' ); ?></a> | </span>
 						<span class="edit"><a href="<?php echo esc_url( (string) get_edit_post_link( $pid ) ); ?>"><?php esc_html_e( 'Edit', 'variation-converter-for-woocommerce' ); ?></a> | </span>
 						<span class="view"><a href="<?php echo esc_url( (string) get_permalink( $pid ) ); ?>"><?php esc_html_e( 'View', 'variation-converter-for-woocommerce' ); ?></a></span>
 					</div>
@@ -170,7 +172,7 @@ function varconv_render_split(): void {
 					<?php endif; ?>
 				</td>
 			</tr>
-			<?php if ( $is_open && ! $combined ) : ?>
+			<?php if ( $is_open ) : ?>
 				<tr class="varconv-review"><td colspan="5"><div class="varconv-review-inner" id="varconv-split-<?php echo (int) $pid; ?>">
 					<?php varconv_render_split_card( $p, $args ); ?>
 				</div></td></tr>
@@ -183,15 +185,15 @@ function varconv_render_split(): void {
 	varconv_tablenav( 'bottom', $found['total'], $paged, VARCONV_PER_PAGE, $args, $label );
 }
 
-/** The card for one variable product: its variations to make into simple products. */
+/**
+ * The card for one variable product: its variations, to split into simple products (the variable product is hidden)
+ * or to make just the checked ones simple while the rest stays variable. A product Combine made can only have
+ * variations made simple, which shows their original simple products again; Undo in History undoes the whole combine.
+ */
 function varconv_render_split_card( WC_Product_Variable $product, array $args ): void {
 	$id = $product->get_id();
 	$cancel = varconv_url( $args );
-	if ( '' !== (string) $product->get_meta( VARCONV_META ) ) {
-		echo '<p>' . esc_html__( 'This was combined by Variation Converter. Undo restores the original products.', 'variation-converter-for-woocommerce' ) . '</p>';
-		varconv_undo_form( 'varconv_undo', $id );
-		return;
-	}
+	$combined = '' !== (string) $product->get_meta( VARCONV_META );
 	if ( '' !== (string) $product->get_meta( VARCONV_SPLIT_META ) ) {
 		echo '<p>' . esc_html__( 'This product is already split. Undo deletes the simple products made from it and shows it again.', 'variation-converter-for-woocommerce' ) . '</p>';
 		varconv_undo_form( 'varconv_split_undo', $id );
@@ -210,7 +212,10 @@ function varconv_render_split_card( WC_Product_Variable $product, array $args ):
 	?>
 	<?php if ( isset( $_GET['varconv_failed'] ) ) : ?>
 		<?php // The error itself is the notice above the tabs. ?>
-		<div class="notice notice-error inline"><p><?php esc_html_e( 'Not split. See the message above.', 'variation-converter-for-woocommerce' ); ?></p></div>
+		<div class="notice notice-error inline"><p><?php esc_html_e( 'Nothing changed. See the message above.', 'variation-converter-for-woocommerce' ); ?></p></div>
+	<?php endif; ?>
+	<?php if ( $combined ) : ?>
+		<p><?php esc_html_e( 'Combined by Variation Converter. Make a variation simple to show its original simple product again, with the variation\'s current price and stock, while the rest stays variable. Undo in History restores every original product.', 'variation-converter-for-woocommerce' ); ?></p>
 	<?php endif; ?>
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 		<input type="hidden" name="action" value="varconv_split">
@@ -220,26 +225,47 @@ function varconv_render_split_card( WC_Product_Variable $product, array $args ):
 		<div class="varconv-table-wrap">
 			<table class="widefat varconv-members">
 				<thead><tr>
-					<td class="check-column"><span class="screen-reader-text"><?php esc_html_e( 'Include', 'variation-converter-for-woocommerce' ); ?></span></td>
+					<td class="manage-column column-cb check-column"><input type="checkbox" aria-label="<?php esc_attr_e( 'Select all', 'variation-converter-for-woocommerce' ); ?>"<?php checked( ! $combined ); ?>></td>
 					<th class="thumb"><span class="screen-reader-text"><?php esc_html_e( 'Image', 'variation-converter-for-woocommerce' ); ?></span></th>
-					<th><?php esc_html_e( 'New product name', 'variation-converter-for-woocommerce' ); ?></th>
+					<th><?php echo $combined ? esc_html__( 'Original product', 'variation-converter-for-woocommerce' ) : esc_html__( 'New product name', 'variation-converter-for-woocommerce' ); ?></th>
 					<th class="col-sku"><?php esc_html_e( 'SKU', 'variation-converter-for-woocommerce' ); ?></th>
 					<th class="col-price"><?php esc_html_e( 'Price', 'variation-converter-for-woocommerce' ); ?></th>
 					<th class="col-stock"><?php esc_html_e( 'Stock', 'variation-converter-for-woocommerce' ); ?></th>
 				</tr></thead>
 				<tbody>
 				<?php foreach ( $rows as $r ) : ?>
+					<?php $ok = '' === $r['problem']; ?>
 					<tr>
 						<th scope="row" class="check-column">
 							<?php /* translators: %s: new product name. */ ?>
-							<input type="checkbox" name="rows[<?php echo (int) $r['id']; ?>][use]" value="1" <?php checked( '' === $r['problem'] ); ?> <?php disabled( '' !== $r['problem'] ); ?> aria-label="<?php echo esc_attr( sprintf( __( 'Include %s', 'variation-converter-for-woocommerce' ), $r['name'] ) ); ?>">
+							<input type="checkbox" name="rows[<?php echo (int) $r['id']; ?>][use]" value="1" <?php checked( $ok && ! $combined ); ?> <?php disabled( ! $ok ); ?> aria-label="<?php echo esc_attr( sprintf( __( 'Include %s', 'variation-converter-for-woocommerce' ), $r['name'] ) ); ?>">
 						</th>
 						<td class="thumb"><?php echo varconv_thumb_html( (int) $r['image'], 40, (string) $r['name'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped where it is built. ?></td>
 						<td>
-							<?php /* translators: %d: variation ID. */ ?>
-							<input type="text" name="rows[<?php echo (int) $r['id']; ?>][name]" value="<?php echo esc_attr( $r['name'] ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'New product name for variation %d', 'variation-converter-for-woocommerce' ), $r['id'] ) ); ?>">
-							<?php if ( $r['problem'] ) : ?>
+							<?php if ( $r['member'] ) : ?>
+								<a href="<?php echo esc_url( (string) get_edit_post_link( $r['member'] ) ); ?>"><?php echo esc_html( $r['name'] ); ?></a>
+							<?php elseif ( $r['taken'] ) : ?>
+								<?php echo esc_html( $r['name'] ); ?>
+							<?php else : ?>
+								<?php /* translators: %d: variation ID. */ ?>
+								<input type="text" name="rows[<?php echo (int) $r['id']; ?>][name]" value="<?php echo esc_attr( $r['name'] ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'New product name for variation %d', 'variation-converter-for-woocommerce' ), $r['id'] ) ); ?>">
+							<?php endif; ?>
+							<?php if ( $r['taken'] ) : ?>
+								<p class="varconv-notes">
+									<?php esc_html_e( 'Made simple:', 'variation-converter-for-woocommerce' ); ?>
+									<a href="<?php echo esc_url( (string) get_edit_post_link( $r['taken'] ) ); ?>"><?php echo esc_html( get_post_field( 'post_title', $r['taken'], 'raw' ) ); ?></a>.
+									<a href="<?php echo esc_url( varconv_url( array( 'tab' => 'history', 'view' => 'taken' ) ) ); ?>"><?php esc_html_e( 'Undo in History', 'variation-converter-for-woocommerce' ); ?></a>
+								</p>
+							<?php elseif ( ! $ok ) : ?>
 								<p class="varconv-notes"><?php echo esc_html( $r['problem'] ); ?></p>
+							<?php else : ?>
+								<div class="varconv-row-actions">
+									<?php if ( ! $r['enabled'] ) : ?>
+										<span class="varconv-muted"><?php esc_html_e( 'Disabled.', 'variation-converter-for-woocommerce' ); ?></span>
+									<?php endif; ?>
+									<?php /* translators: %s: product name. */ ?>
+									<a href="<?php echo esc_url( varconv_take_one_url( (int) $r['id'], 'split' ) ); ?>" aria-label="<?php echo esc_attr( sprintf( __( 'Make %s a simple product', 'variation-converter-for-woocommerce' ), $r['name'] ) ); ?>"><?php esc_html_e( 'Make simple product', 'variation-converter-for-woocommerce' ); ?></a>
+								</div>
 							<?php endif; ?>
 						</td>
 						<td class="col-sku"><span class="varconv-mono"><?php echo esc_html( $r['sku'] ?: '#' . $r['id'] ); ?></span></td>
@@ -251,14 +277,23 @@ function varconv_render_split_card( WC_Product_Variable $product, array $args ):
 			</table>
 		</div>
 		<div class="varconv-review-foot">
-			<span class="varconv-muted"><?php esc_html_e( 'Each new product copies the description, categories and tags. Unchecked variations stay only in the hidden variable product.', 'variation-converter-for-woocommerce' ); ?></span>
-			<a class="button" href="<?php echo esc_url( $cancel ); ?>"><?php esc_html_e( 'Cancel', 'variation-converter-for-woocommerce' ); ?></a>
-			<button class="button button-primary">
+			<span class="varconv-muted">
 				<?php
-				/* translators: %d: number of simple products to make. */
-				echo esc_html( sprintf( _n( 'Split into %d simple product', 'Split into %d simple products', $count, 'variation-converter-for-woocommerce' ), $count ) );
+				echo $combined
+					? esc_html__( 'Checked variations are disabled and their original products shown again. The rest stays variable.', 'variation-converter-for-woocommerce' )
+					: esc_html__( 'Make simple: the checked variations become simple products and are disabled; the rest stays variable. Split: every checked variation becomes a simple product and the variable product is hidden. New products copy the description, categories and tags.', 'variation-converter-for-woocommerce' );
 				?>
-			</button>
+			</span>
+			<a class="button" href="<?php echo esc_url( $cancel ); ?>"><?php esc_html_e( 'Cancel', 'variation-converter-for-woocommerce' ); ?></a>
+			<button class="button<?php echo $combined ? ' button-primary' : ''; ?>" name="do" value="take"><?php esc_html_e( 'Make checked simple, keep the rest', 'variation-converter-for-woocommerce' ); ?></button>
+			<?php if ( ! $combined ) : ?>
+				<button class="button button-primary" name="do" value="split">
+					<?php
+					/* translators: %d: number of simple products to make. */
+					echo esc_html( sprintf( _n( 'Split into %d simple product', 'Split into %d simple products', $count, 'variation-converter-for-woocommerce' ), $count ) );
+					?>
+				</button>
+			<?php endif; ?>
 		</div>
 	</form>
 	<?php
@@ -267,7 +302,7 @@ function varconv_render_split_card( WC_Product_Variable $product, array $args ):
 /** The History tab: one table of everything combined or split here, newest first, with Undo. */
 function varconv_render_history(): void {
 	$view = isset( $_GET['view'] ) ? sanitize_key( wp_unslash( $_GET['view'] ) ) : '';
-	$view = in_array( $view, array( 'combined', 'split' ), true ) ? $view : '';
+	$view = in_array( $view, array( 'combined', 'split', 'taken' ), true ) ? $view : '';
 	$search = isset( $_GET['s'] ) ? sanitize_text_field( wp_unslash( $_GET['s'] ) ) : '';
 	$paged = max( 1, isset( $_GET['paged'] ) ? absint( wp_unslash( $_GET['paged'] ) ) : 1 );
 	$all = varconv_history( $search );
@@ -275,6 +310,7 @@ function varconv_render_history(): void {
 		''         => count( $all ),
 		'combined' => count( array_filter( $all, static fn( $r ) => 'combined' === $r['kind'] ) ),
 		'split'    => count( array_filter( $all, static fn( $r ) => 'split' === $r['kind'] ) ),
+		'taken'    => count( array_filter( $all, static fn( $r ) => 'taken' === $r['kind'] ) ),
 	);
 	$rows = '' === $view ? $all : array_values( array_filter( $all, static fn( $r ) => $view === $r['kind'] ) );
 	$shown = array_slice( $rows, ( $paged - 1 ) * VARCONV_PER_PAGE, VARCONV_PER_PAGE );
@@ -282,6 +318,7 @@ function varconv_render_history(): void {
 		''         => __( 'All', 'variation-converter-for-woocommerce' ),
 		'combined' => __( 'Combined', 'variation-converter-for-woocommerce' ),
 		'split'    => __( 'Split', 'variation-converter-for-woocommerce' ),
+		'taken'    => __( 'Made simple', 'variation-converter-for-woocommerce' ),
 	);
 	$args = array_filter( array( 'tab' => 'history', 'view' => $view, 's' => $search ) );
 	/* translators: %s: number of conversions. */
@@ -317,7 +354,7 @@ function varconv_render_history(): void {
 		</p>
 	</form>
 	<?php // The rows' checkboxes and the Bulk actions menus belong to this form by its id, as each row also holds its own Undo form. ?>
-	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" id="varconv-undo-checked" class="varconv-undo-checked" data-confirm="<?php esc_attr_e( 'Undo every checked conversion? Variable products made by combining are deleted and their simple products shown again; simple products made by a split are deleted and the variable product shown again.', 'variation-converter-for-woocommerce' ); ?>">
+	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" id="varconv-undo-checked" class="varconv-undo-checked" data-confirm="<?php esc_attr_e( 'Undo every checked conversion? Variable products made by combining are deleted and their simple products shown again; simple products made by a split are deleted and the variable product shown again; variations made simple are enabled again.', 'variation-converter-for-woocommerce' ); ?>">
 		<input type="hidden" name="action" value="varconv_undo_checked">
 		<input type="hidden" name="tab" value="history">
 		<?php if ( '' !== $search ) : ?>
@@ -330,13 +367,20 @@ function varconv_render_history(): void {
 		<thead><?php $headers( 'top' ); ?></thead>
 		<tbody>
 		<?php if ( ! $shown ) : ?>
-			<tr class="no-items"><td class="colspanchange" colspan="5"><?php echo '' !== $search ? esc_html__( 'No conversions match your search.', 'variation-converter-for-woocommerce' ) : esc_html__( 'Nothing combined or split yet.', 'variation-converter-for-woocommerce' ); ?></td></tr>
+			<tr class="no-items"><td class="colspanchange" colspan="5"><?php echo '' !== $search ? esc_html__( 'No conversions match your search.', 'variation-converter-for-woocommerce' ) : esc_html__( 'Nothing combined, split or made simple yet.', 'variation-converter-for-woocommerce' ); ?></td></tr>
 		<?php endif; ?>
 		<?php foreach ( $shown as $r ) : ?>
 			<?php
 			$id = $r['id'];
-			$combined = 'combined' === $r['kind'];
-			$ids = json_decode( (string) get_post_meta( $id, $combined ? VARCONV_META : VARCONV_SPLIT_META, true ), true ) ?: array();
+			$kind = $r['kind'];
+			$combined = 'combined' === $kind;
+			$ids = 'taken' === $kind ? array() : ( json_decode( (string) get_post_meta( $id, $combined ? VARCONV_META : VARCONV_SPLIT_META, true ), true ) ?: array() );
+			$undo = array( 'combined' => 'varconv_undo', 'split' => 'varconv_split_undo', 'taken' => 'varconv_take_undo' )[ $kind ];
+			$badges = array(
+				'combined' => __( 'Combined', 'variation-converter-for-woocommerce' ),
+				'split'    => __( 'Split', 'variation-converter-for-woocommerce' ),
+				'taken'    => __( 'Made simple', 'variation-converter-for-woocommerce' ),
+			);
 			?>
 			<tr>
 				<th scope="row" class="check-column"><input type="checkbox" name="products[]" value="<?php echo (int) $id; ?>" form="varconv-undo-checked" aria-label="<?php echo esc_attr( sprintf( /* translators: %s: product name. */ __( 'Select %s', 'variation-converter-for-woocommerce' ), get_post_field( 'post_title', $id, 'raw' ) ) ); ?>"></th>
@@ -345,21 +389,31 @@ function varconv_render_history(): void {
 					<div class="row-actions">
 						<span class="edit"><a href="<?php echo esc_url( (string) get_edit_post_link( $id ) ); ?>"><?php esc_html_e( 'Edit', 'variation-converter-for-woocommerce' ); ?></a> | </span>
 						<span class="view"><a href="<?php echo esc_url( (string) get_permalink( $id ) ); ?>"><?php esc_html_e( 'View', 'variation-converter-for-woocommerce' ); ?></a> | </span>
-						<span class="trash"><?php varconv_undo_form( $combined ? 'varconv_undo' : 'varconv_split_undo', $id, '', true ); ?></span>
+						<span class="trash"><?php varconv_undo_form( $undo, $id, '', true ); ?></span>
 					</div>
 					<button type="button" class="toggle-row"><span class="screen-reader-text"><?php esc_html_e( 'Show more details', 'variation-converter-for-woocommerce' ); ?></span></button>
 				</td>
 				<td class="column-change" data-colname="<?php esc_attr_e( 'Change', 'variation-converter-for-woocommerce' ); ?>">
-					<span class="varconv-badge <?php echo $combined ? 'varconv-badge-combined' : 'varconv-badge-split'; ?>"><?php echo $combined ? esc_html__( 'Combined', 'variation-converter-for-woocommerce' ) : esc_html__( 'Split', 'variation-converter-for-woocommerce' ); ?></span>
+					<span class="varconv-badge varconv-badge-<?php echo esc_attr( $kind ); ?>"><?php echo esc_html( $badges[ $kind ] ); ?></span>
 				</td>
 				<td class="column-products" data-colname="<?php esc_attr_e( 'Products', 'variation-converter-for-woocommerce' ); ?>">
 					<?php
-					echo esc_html( $combined
+					if ( 'taken' === $kind ) {
+						$variation = (int) get_post_meta( $id, VARCONV_TAKEN_META, true );
+						$parent = (int) wp_get_post_parent_id( $variation );
+						echo wp_kses_post( sprintf(
+							/* translators: %s: link to the variable product. */
+							__( 'Made from a variation of %s, which is disabled there.', 'variation-converter-for-woocommerce' ),
+							$parent ? sprintf( '<a href="%s">%s</a>', esc_url( (string) get_edit_post_link( $parent ) ), esc_html( get_post_field( 'post_title', $parent, 'raw' ) ) ) : esc_html__( 'a variable product that no longer exists', 'variation-converter-for-woocommerce' )
+						) );
+					} else {
+						echo esc_html( $combined
 						/* translators: %d: number of simple products. */
 						? sprintf( _n( 'Made from %d simple product:', 'Made from %d simple products:', count( $ids ), 'variation-converter-for-woocommerce' ), count( $ids ) )
 						/* translators: %d: number of simple products. */
 						: sprintf( _n( 'Made into %d simple product (this one is hidden):', 'Made into %d simple products (this one is hidden):', count( $ids ), 'variation-converter-for-woocommerce' ), count( $ids ) ) );
-					echo ' ' . wp_kses_post( varconv_product_links( $ids ) );
+						echo ' ' . wp_kses_post( varconv_product_links( $ids ) );
+					}
 					?>
 				</td>
 				<td class="column-date varconv-muted" data-colname="<?php esc_attr_e( 'Date', 'variation-converter-for-woocommerce' ); ?>">
