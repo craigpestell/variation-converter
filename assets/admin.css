@@ -162,3 +162,15 @@ p.varconv-notes { color: #996800; margin: 4px 0 0; }
 .varconv-grid-table td.is-missing { color: #8c8f94; font-family: inherit; font-style: italic; }
 .varconv-grid-table td.is-twice { color: #b32d2e; font-weight: 600; }
 .varconv-grid p { margin: 6px 0 0; }
+
+/* Make simple (includes/admin-split.php). */
+.varconv-badge-taken { background: #f0f6fc; color: #0a4b78; border: 0; border-radius: 2px; line-height: 22px; display: inline-block; }
+.varconv-members .varconv-row-actions { margin: 4px 0 0; font-size: 13px; }
+.varconv-members .varconv-row-actions .varconv-muted { margin-right: 6px; }
+.varconv-take-one { max-width: 900px; }
+.varconv-take-one h2 { margin-top: 0; }
+.varconv-take-one .varconv-members input[type="text"] { width: 100%; }
+.varconv-take-cats { margin: 16px 0 0; }
+.varconv-take-cats legend { font-weight: 600; }
+.varconv-take-cats .categorychecklist { max-height: 260px; overflow: auto; margin: 6px 0 0; padding: 8px 12px; border: 1px solid #dcdcde; background: #fff; }
+.varconv-take-cats .categorychecklist ul.children { margin-left: 18px; }

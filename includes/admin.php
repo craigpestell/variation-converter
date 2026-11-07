@@ -19,6 +19,7 @@ require_once __DIR__ . '/ajax.php';
 require_once __DIR__ . '/admin-products.php';
 require_once __DIR__ . '/admin-quick-edit.php';
 require_once __DIR__ . '/admin-split.php';
+require_once __DIR__ . '/admin-variations.php';
 
 add_action( 'admin_menu', 'varconv_menu', 60 );
 
@@ -382,6 +383,16 @@ function varconv_handle_split(): void {
 			$names[ absint( $variation ) ] = (string) ( $row['name'] ?? '' );
 		}
 	}
+	// Make simple: the checked variations become simple products and the rest stays variable.
+	if ( isset( $_POST['do'] ) && 'take' === sanitize_key( wp_unslash( $_POST['do'] ) ) ) {
+		try {
+			$made = varconv_take_out( $id, $names );
+		} catch ( RuntimeException $e ) {
+			varconv_fail( $e->getMessage(), array( 'product' => $id, 'varconv_failed' => 1 ) );
+		}
+		varconv_candidates();
+		varconv_back( array( 'product' => $id, 'varconv_done' => 'taken', 'varconv_product' => $id, 'varconv_count' => count( $made ), 'varconv_made' => (int) reset( $made ) ), 'varconv-split-' . $id );
+	}
 	try {
 		$created = varconv_split_product( $id, $names );
 	} catch ( RuntimeException $e ) {
@@ -407,6 +418,23 @@ function varconv_handle_split_undo(): void {
 	// Scan again now, so the page this returns to can show the Combine tab's count.
 	varconv_candidates();
 	varconv_back( array( 'varconv_done' => 'split_undone', 'varconv_product' => $id, 'varconv_count' => $deleted ) );
+}
+
+add_action( 'admin_post_varconv_take_undo', 'varconv_handle_take_undo' );
+function varconv_handle_take_undo(): void {
+	if ( ! current_user_can( VARCONV_CAP ) ) {
+		wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'variation-converter-for-woocommerce' ), 403 );
+	}
+	$id = isset( $_POST['product'] ) ? absint( wp_unslash( $_POST['product'] ) ) : 0;
+	check_admin_referer( 'varconv_take_undo_' . $id );
+	$title = get_post_field( 'post_title', $id, 'raw' );
+	try {
+		$variation = varconv_take_out_undo( $id );
+	} catch ( RuntimeException $e ) {
+		varconv_fail( $e->getMessage(), array() );
+	}
+	varconv_candidates();
+	varconv_back( array( 'varconv_done' => 'take_undone', 'varconv_product' => wp_get_post_parent_id( $variation ), 'varconv_name' => $title ) );
 }
 
 /**
@@ -454,7 +482,7 @@ function varconv_render(): void {
 	$counts = array(
 		'combine' => is_array( $scan ) ? count( $scan['collections'] ) : null,
 		'split'   => null,
-		'history' => count( varconv_created() ) + count( varconv_split_list() ),
+		'history' => count( varconv_created() ) + count( varconv_split_list() ) + count( varconv_taken_list() ),
 	);
 	if ( 'combine' === $tab && ! varconv_combine_ids() ) {
 		$scan = varconv_candidates();
@@ -651,9 +679,15 @@ function varconv_tablenav( string $which, int $total, int $paged, int $per_page,
  * table's row actions it is drawn as a link.
  */
 function varconv_undo_form( string $action, int $id, string $label = '', bool $link = false ): void {
-	$confirm = 'varconv_undo' === $action
-		? __( 'Delete this variable product and show its simple products again?', 'variation-converter-for-woocommerce' )
-		: __( 'Delete the simple products made from this product and show it again?', 'variation-converter-for-woocommerce' );
+	if ( 'varconv_undo' === $action ) {
+		$confirm = __( 'Delete this variable product and show its simple products again?', 'variation-converter-for-woocommerce' );
+	} elseif ( 'varconv_take_undo' === $action ) {
+		$confirm = '1' === (string) get_post_meta( $id, VARCONV_TAKEN_NEW_META, true )
+			? __( 'Delete this simple product and enable its variation again, with this product\'s price and stock?', 'variation-converter-for-woocommerce' )
+			: __( 'Hide this product again and enable its variation, with this product\'s price and stock?', 'variation-converter-for-woocommerce' );
+	} else {
+		$confirm = __( 'Delete the simple products made from this product and show it again?', 'variation-converter-for-woocommerce' );
+	}
 	?>
 	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" class="varconv-undo" data-confirm="<?php echo esc_attr( $confirm ); ?>">
 		<input type="hidden" name="action" value="<?php echo esc_attr( $action ); ?>">
@@ -735,6 +769,24 @@ function varconv_notice(): void {
 					/* translators: 1: number of simple products deleted, 2: product name. */
 					_n( 'Deleted %1$d simple product; %2$s is visible again.', 'Deleted %1$d simple products; %2$s is visible again.', $count, 'variation-converter-for-woocommerce' ),
 					$count,
+					get_post_field( 'post_title', $id, 'raw' )
+				) )
+			);
+			break;
+		case 'taken':
+			$count = isset( $_GET['varconv_count'] ) ? absint( wp_unslash( $_GET['varconv_count'] ) ) : 0;
+			$made  = isset( $_GET['varconv_made'] ) ? absint( wp_unslash( $_GET['varconv_made'] ) ) : 0;
+			printf( '<div class="notice notice-success"><p>%s</p></div>', wp_kses_post( varconv_taken_notice_html( $count, $made ) ) );
+			break;
+		case 'take_undone':
+			$id   = isset( $_GET['varconv_product'] ) ? absint( wp_unslash( $_GET['varconv_product'] ) ) : 0;
+			$name = isset( $_GET['varconv_name'] ) ? sanitize_text_field( wp_unslash( $_GET['varconv_name'] ) ) : '';
+			printf(
+				'<div class="notice notice-success"><p>%s</p></div>',
+				esc_html( sprintf(
+					/* translators: 1: simple product name, 2: variable product name. */
+					__( '%1$s is a variation of %2$s again.', 'variation-converter-for-woocommerce' ),
+					$name,
 					get_post_field( 'post_title', $id, 'raw' )
 				) )
 			);

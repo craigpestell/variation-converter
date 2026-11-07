@@ -1,6 +1,6 @@
 <?php
 /**
- * WP-CLI commands: wp varconv combine | undo.
+ * WP-CLI commands: wp varconv combine | make-simple | undo.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -107,13 +107,50 @@ class Varconv_CLI_Command {
 	}
 
 	/**
+	 * Makes variations into simple products while the rest of each variable product stays variable, as Make simple
+	 * product on the admin page does. A variation Combine made shows its original simple product again; any other
+	 * gets a new simple product. The variations are disabled.
+	 *
+	 * ## OPTIONS
+	 *
+	 * <variation-id>...
+	 * : IDs of the variations.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp varconv make-simple 1236
+	 *
+	 * @subcommand make-simple
+	 * @param string[] $args
+	 */
+	public function make_simple( $args ) {
+		$by_parent = array();
+		foreach ( array_map( 'intval', $args ) as $id ) {
+			$by_parent[ (int) wp_get_post_parent_id( $id ) ][ $id ] = '';
+		}
+		$done = 0;
+		foreach ( $by_parent as $parent => $names ) {
+			try {
+				foreach ( varconv_take_out( $parent, $names ) as $simple ) {
+					WP_CLI::log( sprintf( "MADE\t%d\t%s", $simple, get_post_field( 'post_title', $simple, 'raw' ) ) );
+					++$done;
+				}
+			} catch ( RuntimeException $e ) {
+				WP_CLI::warning( implode( ',', array_keys( $names ) ) . "\t" . varconv_message( $e ) );
+			}
+		}
+		$summary = sprintf( 'Made %d of %d variations simple.', $done, count( $args ) );
+		$done < count( $args ) ? WP_CLI::error( $summary ) : WP_CLI::success( $summary );
+	}
+
+	/**
 	 * Undoes conversions, as the admin page's Undo does. For a variable product made by combining, deletes it and shows
 	 * its simple products again; for a split variable product, deletes the simple products made from it and shows it again.
 	 *
 	 * ## OPTIONS
 	 *
 	 * [<id>...]
-	 * : IDs of the variable products to undo.
+	 * : IDs of the variable products to undo, or of simple products made by make-simple.
 	 *
 	 * [--all]
 	 * : Undo every conversion, in both directions.
@@ -130,7 +167,7 @@ class Varconv_CLI_Command {
 	 * @param array    $options
 	 */
 	public function undo( $args, $options ) {
-		$ids = ! empty( $options['all'] ) ? array_merge( varconv_created(), varconv_split_list() ) : array_map( 'intval', $args );
+		$ids = ! empty( $options['all'] ) ? array_merge( varconv_taken_list(), varconv_created(), varconv_split_list() ) : array_map( 'intval', $args );
 		if ( ! $ids ) {
 			WP_CLI::error( empty( $options['all'] ) ? 'Give the IDs of the products to undo, or --all.' : 'Nothing to undo.' );
 		}
@@ -138,7 +175,9 @@ class Varconv_CLI_Command {
 		$done = 0;
 		foreach ( $ids as $id ) {
 			try {
-				if ( '' !== (string) get_post_meta( $id, VARCONV_META, true ) ) {
+				if ( '' !== (string) get_post_meta( $id, VARCONV_TAKEN_META, true ) ) {
+					WP_CLI::log( sprintf( "UNDONE\t%d\tmade simple; variation %d enabled again", $id, varconv_take_out_undo( $id ) ) );
+				} elseif ( '' !== (string) get_post_meta( $id, VARCONV_META, true ) ) {
 					WP_CLI::log( sprintf( "UNDONE\t%d\tcombined; %d simple products visible again", $id, varconv_undo( $id ) ) );
 				} else {
 					WP_CLI::log( sprintf( "UNDONE\t%d\tsplit; %d simple products deleted", $id, varconv_split_undo( $id ) ) );
