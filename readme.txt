@@ -109,7 +109,9 @@ No. The products you convert from are hidden from your shop and search results, 
 
 = What happens to existing orders, reviews and links? =
 
-Past orders still point to the original products. Old product URLs send shoppers to the variable product with the right option chosen. Reviews stay on the original products and aren't copied.
+Past orders still point to the original products. An original's old URL redirects (301) to its variation's own link: the variable product's URL with that variation's options added, such as `?attribute_color=Black`. WooCommerce uses those to preselect the options on the product page, so shoppers usually land on the right variant, though some themes ignore them. Reviews stay on the original products and aren't copied.
+
+If you later make every variation of a variable product simple, the variable product moves to the Trash and its old link, and each variant link, redirects to the new simple products.
 
 = What if I undo after customers have ordered the variable product? =
 

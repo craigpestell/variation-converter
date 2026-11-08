@@ -58,7 +58,7 @@ Whatever follows the shared words becomes the variant label. The plugin guesses 
 
 **What the variable product gets.** Each variation takes its original's SKU, regular and sale price, sale dates, stock settings, weight, dimensions and image. The variable product takes the first product's descriptions, image, categories, tags, tax and shipping class, and adds the other products' images to its gallery. It has no SKU of its own. When the products are in different categories, you choose the new product's categories in the group. If WooCommerce fails to save any part, the partial product is removed.
 
-**What happens to the originals.** They are hidden from your shop and search, not deleted. Past orders still point to them. Their old URLs redirect (301) to the variable product with that option selected. Reviews are not copied. Each SKU now exists twice, on the hidden original and on the variation, so that Undo can restore everything. Once you are sure you will keep the new product, you can delete the hidden originals yourself.
+**What happens to the originals.** They are hidden from your shop and search, not deleted. Past orders still point to them. Their old URLs redirect (301) to their variation's own URL, the variable product's URL with `attribute_*` query values (`?attribute_color=Black`). The plugin only redirects: WooCommerce preselects the options from those values, and themes with their own variation picker may not. Reviews are not copied. Each SKU now exists twice, on the hidden original and on the variation, so that Undo can restore everything. Once you are sure you will keep the new product, you can delete the hidden originals yourself.
 
 ## Split a variable product into simple products
 

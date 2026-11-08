@@ -85,7 +85,7 @@
 			<li>
 				<div class="step-text">
 					<h3>One click makes the variable product</h3>
-					<p>Each original becomes a variation with its SKU, regular and sale price, sale dates, stock, weight, dimensions and image. The variable product takes the first member's description, categories, tags, tax and shipping class, with every member's image in its gallery. The originals are hidden from your shop, not deleted, and their old URLs redirect to the new product with the right option selected.</p>
+					<p>Each original becomes a variation with its SKU, regular and sale price, sale dates, stock, weight, dimensions and image. The variable product takes the first member's description, categories, tags, tax and shipping class, with every member's image in its gallery. The originals are hidden from your shop, not deleted, and their old URLs redirect to the variable product with their options in the link, which WooCommerce uses to preselect them.</p>
 				</div>
 			</li>
 			<li>
@@ -125,7 +125,7 @@
 			<li><h3>Review before anything changes</h3><p>Rename, change the attribute, fix labels and leave products out. Skip a group that isn't really variants.</p></li>
 			<li><h3>Keeps your data</h3><p>SKUs, prices, sale dates, stock, weight, dimensions and images move to the variations.</p></li>
 			<li><h3>Non-destructive</h3><p>Originals are hidden, never deleted. Their orders, reviews and links stay as they were.</p></li>
-			<li><h3>Old links keep working</h3><p>An original simple product's old URL sends a 301 to the variable product with that option chosen.</p></li>
+			<li><h3>Old links keep working</h3><p>An original simple product's old URL sends a 301 to its variation's link on the variable product. WooCommerce preselects the options from that link.</p></li>
 			<li><h3>One-click Undo</h3><p>Every conversion can be reversed from History, in either direction.</p></li>
 			<li><h3>All or nothing</h3><p>If WooCommerce fails to save any part of a variable product, the partial product is removed.</p></li>
 			<li><h3>Bulk when you're ready</h3><p>Tick many groups and click <b>Create a product for each group</b>, or select products in <b>All Products</b> and choose "Combine into variable product".</p></li>
@@ -161,7 +161,7 @@ wp varconv undo --all --yes</code></pre>
 		</details>
 		<details>
 			<summary>What happens to existing orders, reviews and links?</summary>
-			<p>They stay with the original simple products. Past orders still point to them, and old product URLs redirect to the new variable product with that option selected. Reviews are not copied to the new variable product.</p>
+			<p>They stay with the original simple products. Past orders still point to them, and old product URLs redirect to the variable product, with the variation's options in the link for WooCommerce to preselect. Reviews are not copied to the new variable product.</p>
 		</details>
 		<details>
 			<summary>My products don't have SKUs. Will it work?</summary>
