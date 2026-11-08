@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Publishes this checkout to the wordpress.org plugin directory over SVN: trunk, tags/<version> and the listing
-# assets in .wordpress-org/. The plugin files are what `git archive` gives, so export-ignore decides what ships.
+# assets in .wordpress-org/ (images, and blueprints/blueprint.json for the Live Preview in WordPress Playground).
+# The plugin files are what `git archive` gives, so export-ignore decides what ships.
 #
 #   bin/svn-release.sh --dry-run                      # build the SVN working copy and show what would change
 #   bin/svn-release.sh --password-file ~/path/to/file # commit (SVN password from your wordpress.org profile)
@@ -48,12 +49,15 @@ git archive HEAD | tar -x -C "$work/svn/trunk"
 echo "==> assets <- .wordpress-org"
 find "$work/svn/assets" -mindepth 1 -maxdepth 1 ! -name .svn -exec rm -rf {} +
 find .wordpress-org -maxdepth 1 -type f \( -name '*.png' -o -name '*.jpg' -o -name '*.svg' -o -name '*.gif' \) -exec cp {} "$work/svn/assets/" \;
+mkdir -p "$work/svn/assets/blueprints"
+cp .wordpress-org/blueprints/blueprint.json "$work/svn/assets/blueprints/"
 
 cd "$work/svn"
 svn add --quiet --force trunk assets
 svn status | { grep '^!' || true; } | cut -c9- | while IFS= read -r gone; do svn rm --quiet "$gone"; done
 for f in assets/*.png; do if [ -e "$f" ]; then svn propset --quiet svn:mime-type image/png "$f"; fi; done
 for f in assets/*.svg; do if [ -e "$f" ]; then svn propset --quiet svn:mime-type image/svg+xml "$f"; fi; done
+svn propset --quiet svn:mime-type application/json assets/blueprints/blueprint.json
 svn copy --quiet trunk "tags/$version"
 svn status
 

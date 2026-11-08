@@ -12,7 +12,7 @@ Every role reads this file first. It holds everything specific to the variation 
 ## Stack
 
 - PHP 7.4+ (WordPress 6.5+, WooCommerce 8.0+), no build step, no Composer dependencies.
-- Code map: `variation-converter-for-woocommerce.php` (plugin header and bootstrap), `includes/` (scanner, converter, undo, redirects, admin page, WP-CLI), `assets/` (admin JS and CSS), `uninstall.php`, `tests/` (offline `test-*.php`, `integration-*.php` run inside WordPress, `browser-*.mjs` Playwright checks), `harness/` (throwaway WordPress + WooCommerce site), `site/` (GitHub Pages marketing site), `.wordpress-org/` (directory banners, icons, screenshots), `bin/svn-release.sh`.
+- Code map: `variation-converter-for-woocommerce.php` (plugin header and bootstrap), `includes/` (scanner, converter, undo, redirects, admin page, WP-CLI), `assets/` (admin JS and CSS), `uninstall.php`, `tests/` (offline `test-*.php`, `integration-*.php` run inside WordPress, `browser-*.mjs` Playwright checks), `harness/` (throwaway WordPress + WooCommerce site), `site/` (GitHub Pages marketing site), `.wordpress-org/` (directory banners, icons, screenshots, and `blueprints/blueprint.json` for the Live Preview), `bin/svn-release.sh`.
 
 ## Commands
 
