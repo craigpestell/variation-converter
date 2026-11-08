@@ -12,6 +12,12 @@
  * combined product) or deletes the one made here. A shopper opening the variation's old URL is sent to the simple
  * product (redirect.php).
  *
+ * When no variation is left for sale, the variable product has nothing to sell, so it is moved to the Trash (with
+ * its variations, which keeps them for Undo and past orders) and its old URL, and each variant URL, sends shoppers
+ * to the simple products. Undo of any of its simple products restores it from the Trash. If the Trash is turned off
+ * (EMPTY_TRASH_DAYS is 0) it is made private instead. If it is emptied from the Trash, the simple products stay as
+ * ordinary products and leave History.
+ *
  * Markers:
  *   _varconv_taken          on the simple product: the variation it was made from
  *   _varconv_taken_new      on the simple product: "1" when it was made here, so Undo deletes it
@@ -19,10 +25,13 @@
  *   _varconv_taken_status   on the variation: its status before it was disabled
  *   _varconv_taken_default  on the variation: the variable product's default attributes, when they named it and were
  *                           cleared
+ *   _varconv_taken_all      on the variable product, when it was removed because no variation was left for sale: JSON
+ *                           {"variations":[IDs in order],"status":"its status before"}
  *
  * Hooks: action varconv_made_simple( $simple_id, $variation_id, $parent_id, $reused ) after the simple product is saved
  * and while the variation is still enabled, so a site can copy its own fields; varconv_made_simple_undone( $simple_id,
- * $variation_id, $parent_id ) after Undo, before a simple product made here is deleted.
+ * $variation_id, $parent_id ) after Undo, before a simple product made here is deleted; varconv_made_simple_removed(
+ * $parent_id ) after the variable product was removed because none of its variations was left for sale.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -33,17 +42,17 @@ const VARCONV_TAKEN_META = '_varconv_taken';
 const VARCONV_TAKEN_NEW_META = '_varconv_taken_new';
 const VARCONV_TAKEN_STATUS_META = '_varconv_taken_status';
 const VARCONV_TAKEN_DEFAULT_META = '_varconv_taken_default';
+const VARCONV_TAKEN_ALL_META = '_varconv_taken_all';
 
 /**
  * Checks which variations the admin chose to make simple. Returns the problems, none when it can be done.
  *
  * @param int[] $chosen   Variation IDs.
  * @param int[] $children The variable product's variations.
- * @param int[] $enabled  Those that are enabled (for sale).
  * @param int[] $taken    Those already made into simple products.
  * @return string[]
  */
-function varconv_take_out_validate( array $chosen, array $children, array $enabled, array $taken ): array {
+function varconv_take_out_validate( array $chosen, array $children, array $taken ): array {
 	$errors = array();
 	if ( ! $chosen ) {
 		$errors[] = __( 'Choose at least 1 variation.', 'variation-converter-for-woocommerce' );
@@ -57,10 +66,27 @@ function varconv_take_out_validate( array $chosen, array $children, array $enabl
 			$errors[] = sprintf( __( 'Variation %d is already a simple product.', 'variation-converter-for-woocommerce' ), $id );
 		}
 	}
-	if ( $chosen && ! array_diff( $enabled, $chosen ) ) {
-		$errors[] = __( 'That would leave no variation for sale. To make every variation a simple product, use Split, or Undo a combined product in History.', 'variation-converter-for-woocommerce' );
-	}
 	return $errors;
+}
+
+/**
+ * Whether making these variations simple leaves none for sale, so the variable product is removed.
+ *
+ * @param int[] $chosen  Variation IDs.
+ * @param int[] $enabled The variable product's enabled (for sale) variations.
+ */
+function varconv_take_out_empties( array $chosen, array $enabled ): bool {
+	return (bool) $chosen && ! array_diff( $enabled, $chosen );
+}
+
+/** The variable product's variations that are enabled (for sale). @return int[] */
+function varconv_enabled_children( WC_Product_Variable $parent ): array {
+	return array_values( array_filter( array_map( 'intval', $parent->get_children() ), static fn( $id ) => 'publish' === get_post_status( $id ) ) );
+}
+
+/** Whether Make simple removed this variable product (to the Trash, or private) because no variation was left for sale. */
+function varconv_taken_all( int $parent_id ): bool {
+	return '' !== (string) get_post_meta( $parent_id, VARCONV_TAKEN_ALL_META, true );
 }
 
 /** The simple product made from a variation by Make simple, or 0. */
@@ -168,10 +194,10 @@ function varconv_take_out( int $parent_id, array $names, array $categories = arr
 		throw new RuntimeException( esc_html( sprintf( __( 'Product %d is already split. Undo the split in History first.', 'variation-converter-for-woocommerce' ), $parent_id ) ) );
 	}
 	$children = array_map( 'intval', $parent->get_children() );
-	$enabled = array_values( array_filter( $children, static fn( $id ) => 'publish' === get_post_status( $id ) ) );
+	$enabled = varconv_enabled_children( $parent );
 	$taken = array_values( array_filter( $children, static fn( $id ) => varconv_taken_simple( $id ) > 0 ) );
 	$chosen = array_values( array_unique( array_map( 'intval', array_keys( $names ) ) ) );
-	$errors = varconv_take_out_validate( $chosen, $children, $enabled, $taken );
+	$errors = varconv_take_out_validate( $chosen, $children, $taken );
 	$members = '' !== (string) $parent->get_meta( VARCONV_META ) ? varconv_twins( $parent_id, varconv_members( $parent_id ) ) : array();
 	$jobs = array();
 	foreach ( $errors ? array() : $chosen as $id ) {
@@ -267,9 +293,64 @@ function varconv_take_out( int $parent_id, array $names, array $categories = arr
 	varconv_take_out_defaults( $parent_id, array_map( static fn( $job ) => $job[0], $jobs ) );
 	WC_Product_Variable::sync( $parent_id );
 	wc_delete_product_transients( $parent_id );
+	if ( varconv_take_out_empties( $chosen, $enabled ) ) {
+		varconv_take_out_remove( $parent_id, $children );
+	}
 	varconv_reindex( array_merge( $done, array( $parent_id ) ) );
 	delete_transient( VARCONV_SCAN_TRANSIENT );
 	return $done;
+}
+
+/**
+ * Removes a variable product none of whose variations is for sale any more: to the Trash with its variations, or,
+ * when the Trash is turned off, made private. Kept either way, so Undo can bring it back.
+ *
+ * @param int[] $children Its variations, in order, kept for the old variant URLs' redirects.
+ */
+function varconv_take_out_remove( int $parent_id, array $children ): void {
+	update_post_meta( $parent_id, VARCONV_TAKEN_ALL_META, wp_json_encode( array( 'variations' => array_values( $children ), 'status' => (string) get_post_status( $parent_id ) ) ) );
+	if ( EMPTY_TRASH_DAYS ) {
+		wp_trash_post( $parent_id );
+	} else {
+		wp_update_post( array( 'ID' => $parent_id, 'post_status' => 'private' ) );
+	}
+	wc_delete_product_transients( $parent_id );
+	/**
+	 * Fires when Make simple left a variable product with no variation for sale and it was moved to the Trash (or made
+	 * private, when the Trash is turned off).
+	 *
+	 * @param int $parent_id The variable product.
+	 */
+	do_action( 'varconv_made_simple_removed', $parent_id );
+}
+
+/** Brings back a variable product varconv_take_out_remove() removed, with the status it had. */
+function varconv_take_out_restore( int $parent_id ): void {
+	$saved = json_decode( (string) get_post_meta( $parent_id, VARCONV_TAKEN_ALL_META, true ), true );
+	if ( ! is_array( $saved ) ) {
+		return;
+	}
+	// The variations share SKUs and GTINs with the simple products, which WooCommerce would otherwise change on restore.
+	add_filter( 'wc_product_has_unique_sku', '__return_false', 99 );
+	add_filter( 'wc_product_has_global_unique_id', '__return_false', 99 );
+	if ( 'trash' === get_post_status( $parent_id ) ) {
+		wp_untrash_post( $parent_id );
+	} elseif ( 'private' === get_post_status( $parent_id ) && varconv_status_ok( (string) ( $saved['status'] ?? '' ) ) ) {
+		wp_update_post( array( 'ID' => $parent_id, 'post_status' => $saved['status'] ) );
+	}
+	remove_filter( 'wc_product_has_unique_sku', '__return_false', 99 );
+	remove_filter( 'wc_product_has_global_unique_id', '__return_false', 99 );
+	delete_post_meta( $parent_id, VARCONV_TAKEN_ALL_META );
+	wc_delete_product_transients( $parent_id );
+}
+
+// A removed variable product emptied from the Trash: its simple products stay, as ordinary products.
+add_action( 'before_delete_post', 'varconv_take_out_deleted' );
+function varconv_take_out_deleted( $post_id ): void {
+	$saved = json_decode( (string) get_post_meta( (int) $post_id, VARCONV_TAKEN_ALL_META, true ), true );
+	if ( is_array( $saved ) && ! empty( $saved['variations'] ) ) {
+		varconv_forget_taken( array_map( 'intval', (array) $saved['variations'] ) );
+	}
 }
 
 /**
@@ -321,6 +402,9 @@ function varconv_take_out_undo( int $simple_id ): int {
 		throw new RuntimeException( esc_html( sprintf( __( '%1$s cannot go back: its variation %2$d no longer exists.', 'variation-converter-for-woocommerce' ), $simple->get_name( 'edit' ), $variation_id ) ) );
 	}
 	$parent_id = $variation->get_parent_id();
+	// Back from the Trash first, which restores the variations as they were when it was removed.
+	varconv_take_out_restore( $parent_id );
+	$variation = wc_get_product( $variation_id );
 	$new = '1' === (string) $simple->get_meta( VARCONV_TAKEN_NEW_META );
 	$combined = ! $new && '' !== (string) get_post_meta( $parent_id, VARCONV_META, true );
 	varconv_copy_current( $simple, $variation );
@@ -398,8 +482,7 @@ function varconv_take_out_problem( WC_Product_Variation $variation ): string {
 		return __( 'This variation is set to "Any" for an attribute, so it is not one product; give it a value first.', 'variation-converter-for-woocommerce' );
 	}
 	$children = array_map( 'intval', $parent->get_children() );
-	$enabled = array_values( array_filter( $children, static fn( $id ) => 'publish' === get_post_status( $id ) ) );
 	$taken = array_values( array_filter( $children, static fn( $id ) => varconv_taken_simple( $id ) > 0 ) );
-	$errors = varconv_take_out_validate( array( $variation->get_id() ), $children, $enabled, $taken );
+	$errors = varconv_take_out_validate( array( $variation->get_id() ), $children, $taken );
 	return $errors ? (string) $errors[0] : '';
 }

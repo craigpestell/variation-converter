@@ -3,12 +3,27 @@
  * Old product pages keep working after a combine: a simple product that is now a variation sends shoppers (and
  * search engines, with a 301) to that variation's own URL, the variable product with its options chosen. Undo removes
  * the link, so the page shows again. A variant made into a simple product (Make simple) sends its old variant URL to
- * that product. A combined product cannot be split (it is undone instead), and products split into simple products are
+ * that product, and when every variant was made simple and the variable product removed, its old URL sends shoppers to
+ * the first of them (or to the one its variant URL names). A combined product cannot be split (it is undone instead), and products split into simple products are
  * left as they are.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
 	exit;
+}
+
+// Before redirect_canonical(), which would guess a similar product for the old URL of a removed one.
+add_action( 'template_redirect', 'varconv_redirect_removed', 9 );
+function varconv_redirect_removed(): void {
+	$slug = get_query_var( 'product' );
+	if ( ! is_404() || ! is_string( $slug ) || '' === $slug ) {
+		return;
+	}
+	$url = varconv_removed_url( $slug, map_deep( wp_unslash( $_GET ), 'sanitize_text_field' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- reads the URL only, changes nothing.
+	if ( '' !== $url ) {
+		wp_safe_redirect( $url, 301 );
+		exit;
+	}
 }
 
 add_action( 'template_redirect', 'varconv_redirect_combined' );
@@ -36,6 +51,52 @@ function varconv_redirect_combined(): void {
  * @param array<string,mixed> $query The request's query values.
  */
 function varconv_made_simple_url( int $parent_id, array $query ): string {
+	$chosen = varconv_query_attributes( $query );
+	$parent = $chosen ? wc_get_product( $parent_id ) : null;
+	if ( ! $parent instanceof WC_Product_Variable ) {
+		return '';
+	}
+	return varconv_made_simple_redirect( varconv_made_simple_target( array_map( 'intval', $parent->get_children() ), $chosen, false ), $parent_id );
+}
+
+/**
+ * Where the old URL of a variable product Make simple removed (every variant made simple, take-out.php) goes: the
+ * simple product its variant URL names, else the first of its published simple products. Empty when $slug names no
+ * such product.
+ *
+ * @param string              $slug  The product slug the request asked for.
+ * @param array<string,mixed> $query The request's query values.
+ */
+function varconv_removed_url( string $slug, array $query ): string {
+	global $wpdb;
+	$slug = sanitize_title( $slug );
+	// A trashed product's slug gets a __trashed suffix and keeps the old one in _wp_desired_post_slug; a private one
+	// (the Trash turned off) keeps its slug.
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	$parent_id = (int) $wpdb->get_var( $wpdb->prepare(
+		"SELECT p.ID FROM {$wpdb->posts} p JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = %s
+		LEFT JOIN {$wpdb->postmeta} d ON d.post_id = p.ID AND d.meta_key = '_wp_desired_post_slug'
+		WHERE p.post_type = 'product' AND ( ( p.post_status = 'trash' AND d.meta_value = %s ) OR ( p.post_status = 'private' AND p.post_name = %s ) )
+		ORDER BY p.ID DESC LIMIT 1",
+		VARCONV_TAKEN_ALL_META,
+		$slug,
+		$slug
+	) );
+	$saved = $parent_id ? json_decode( (string) get_post_meta( $parent_id, VARCONV_TAKEN_ALL_META, true ), true ) : null;
+	if ( ! is_array( $saved ) || empty( $saved['variations'] ) ) {
+		return '';
+	}
+	return varconv_made_simple_redirect( varconv_made_simple_target( array_map( 'intval', (array) $saved['variations'] ), varconv_query_attributes( $query ), true ), $parent_id );
+}
+
+/**
+ * The attribute_* values of a request, keys lowercased and values as slugs, so they match without regard to case or
+ * URL encoding.
+ *
+ * @param array<string,mixed> $query
+ * @return array<string,string>
+ */
+function varconv_query_attributes( array $query ): array {
 	$chosen = array();
 	foreach ( $query as $key => $value ) {
 		$key = strtolower( rawurldecode( (string) $key ) );
@@ -43,18 +104,32 @@ function varconv_made_simple_url( int $parent_id, array $query ): string {
 			$chosen[ $key ] = sanitize_title( rawurldecode( (string) $value ) );
 		}
 	}
-	$parent = $chosen ? wc_get_product( $parent_id ) : null;
-	if ( ! $parent instanceof WC_Product_Variable ) {
-		return '';
-	}
+	return $chosen;
+}
+
+/**
+ * The published simple product made from the variation with these values, or 0; 0 too when an enabled variation has
+ * them, so a live variant is never hidden. With $first, a request that names no such variant gets the first of the
+ * variations' published simple products.
+ *
+ * @param int[]                $children Variation IDs, in order.
+ * @param array<string,string> $chosen   From varconv_query_attributes().
+ */
+function varconv_made_simple_target( array $children, array $chosen, bool $first ): int {
 	$target = 0;
-	foreach ( $parent->get_children() as $child ) {
+	$fallback = 0;
+	foreach ( $children as $child ) {
 		$variation = wc_get_product( $child );
 		if ( ! $variation instanceof WC_Product_Variation ) {
 			continue;
 		}
+		$simple = varconv_taken_simple( $child );
+		$live = $simple && 'publish' === get_post_status( $simple );
+		if ( $live && ! $fallback ) {
+			$fallback = $simple;
+		}
 		$attributes = $variation->get_variation_attributes();
-		if ( count( $attributes ) !== count( $chosen ) ) {
+		if ( ! $chosen || count( $attributes ) !== count( $chosen ) ) {
 			continue;
 		}
 		foreach ( $attributes as $key => $value ) {
@@ -63,13 +138,17 @@ function varconv_made_simple_url( int $parent_id, array $query ): string {
 			}
 		}
 		if ( 'publish' === $variation->get_status() ) {
-			return '';
+			return 0;
 		}
-		$simple = varconv_taken_simple( (int) $child );
-		if ( $simple && 'publish' === get_post_status( $simple ) ) {
+		if ( $live ) {
 			$target = $simple;
 		}
 	}
+	return $target ?: ( $first ? $fallback : 0 );
+}
+
+/** The URL of the simple product varconv_made_simple_target() chose, through the filter; empty for none. */
+function varconv_made_simple_redirect( int $target, int $parent_id ): string {
 	if ( ! $target ) {
 		return '';
 	}

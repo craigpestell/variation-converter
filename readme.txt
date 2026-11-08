@@ -161,7 +161,7 @@ Yes. Use the **Split** tab, or the **Split into simple products** link under a v
 
 = Can I make just one variation a simple product? =
 
-Yes. On the product's **Variations** tab, click **Make simple product** on that variation, or check it on the **Split** tab and click **Make checked simple, keep the rest**. You can give the new product its own name and categories. The rest of the variable product stays as it is. The variation is disabled, not deleted, and its old link sends shoppers to the new product. If Combine made the variation, its original simple product comes back instead of a new one. Undo is in **History**.
+Yes. On the product's **Variations** tab, click **Make simple product** on that variation, or check it on the **Split** tab and click **Make checked simple, keep the rest**. You can give the new product its own name and categories. The rest of the variable product stays as it is. The variation is disabled, not deleted, and its old link sends shoppers to the new product. If Combine made the variation, its original simple product comes back instead of a new one. When you make the last variation for sale simple, the variable product has nothing left to sell, so it moves to the Trash and its old link sends shoppers to the new products. Undo is in **History**, and it restores the variable product too.
 
 = Why can't I split some variations? =
 

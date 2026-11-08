@@ -79,7 +79,38 @@ try {
 	check( wc_get_product( $simple->get_id() )->get_regular_price(), '30', 'simple product saves with the shared SKU' );
 
 	throws( fn() => varconv_take_out( $parent_id, array( $variations['Medium'] => '' ) ), 'already a simple product', 'twice refused' );
-	throws( fn() => varconv_take_out( $parent_id, array( $variations['Small'] => '', $variations['Large'] => '' ) ), 'leave no variation for sale', 'last ones refused' );
+
+	// The last variations for sale: the variable product goes to the Trash, its old URLs go to the simple products.
+	$slug = get_post_field( 'post_name', $parent_id );
+	$removed = array();
+	add_action( 'varconv_made_simple_removed', static function ( $id ) use ( &$removed ) {
+		$removed[] = $id;
+	} );
+	$rest = varconv_take_out( $parent_id, array( $variations['Small'] => '', $variations['Large'] => '' ) );
+	$cleanup = array_merge( $cleanup, $rest );
+	check( count( $rest ), 2, 'the last two made simple' );
+	check( get_post_status( $parent_id ), 'trash', 'variable product in the Trash' );
+	check( $removed, array( $parent_id ), 'removed hook fired' );
+	check( varconv_taken_all( $parent_id ), true, 'marked as removed' );
+	check( get_post_status( $variations['Small'] ), 'trash', 'its variations in the Trash too' );
+	check( get_post_status( $rest[0] ), 'publish', 'simple products published' );
+	check( count( array_intersect( array( $simple->get_id(), $rest[0], $rest[1] ), array_column( varconv_history(), 'id' ) ) ), 3, 'all three in History' );
+	check( varconv_removed_url( $slug, array() ), (string) get_permalink( $rest[0] ), 'old URL goes to the first simple product' );
+	check( varconv_removed_url( $slug, array( 'attribute_size' => 'Medium' ) ), (string) get_permalink( $simple->get_id() ), 'old variant URL goes to its simple product' );
+	check( varconv_removed_url( 'no-such-' . $tag, array() ), '', 'other slugs left alone' );
+	check( varconv_take_out_problem( wc_get_product( $variations['Medium'] ) ) !== '', true, 'nothing more to make simple' );
+
+	// Undo of one of them restores it from the Trash, with the others still disabled.
+	varconv_take_out_undo( $rest[1] );
+	check( get_post_status( $parent_id ), 'publish', 'variable product restored' );
+	check( get_post_field( 'post_name', $parent_id ), $slug, 'slug back' );
+	check( varconv_taken_all( $parent_id ), false, 'marker cleared' );
+	check( get_post_status( $variations['Large'] ), 'publish', 'undone variation enabled' );
+	check( get_post_status( $variations['Small'] ), 'private', 'still made simple: disabled' );
+	check( wc_get_product( $variations['Small'] )->get_sku(), strtoupper( $tag ) . '-0', 'restored variation keeps its SKU' );
+	check( varconv_removed_url( $slug, array() ), '', 'no redirect once restored' );
+	varconv_take_out_undo( $rest[0] );
+	check( get_post_status( $variations['Small'] ), 'publish', 'second undo enables it' );
 	throws( fn() => varconv_split_product( $parent_id, array( $variations['Medium'] => 'X' ) ), 'already a simple product', 'Split refuses it' );
 
 	// Undo: the variation is enabled again with the simple product's current numbers, and the simple product deleted.
@@ -182,6 +213,19 @@ try {
 	check( wc_get_product( $combined )->get_default_attributes(), array( 'color' => 'Blue' ), 'default back' );
 	check( varconv_combined_url( $keys[1] ) !== '', true, 'redirect back' );
 
+	// Every variation of a combined product: all three originals come back and the combined product is in the Trash.
+	$all = varconv_take_out( $combined, array_fill_keys( array_values( $twins ), '' ) );
+	check( count( $all ), 3, 'three originals back' );
+	check( get_post_status( $combined ), 'trash', 'combined product in the Trash' );
+	check( in_array( $combined, varconv_created(), true ), false, 'combined row leaves History' );
+	check( wc_get_product( $keys[0] )->get_catalog_visibility(), 'visible', 'originals shown' );
+	$undo = varconv_undo_many( $all );
+	check( $undo['errors'], array(), 'Undo all of them' );
+	check( get_post_status( $combined ), 'publish', 'combined product back' );
+	check( count( varconv_members( $combined ) ), 3, 'all members again' );
+	check( count( wc_get_product( $combined )->get_visible_children() ), 3, 'all for sale again' );
+	check( in_array( $combined, varconv_created(), true ), true, 'combined row back in History' );
+
 	// Made simple, then the whole combine undone: Undo brings back the other two and leaves this one as it is.
 	varconv_take_out( $combined, array( $blue_variation => '' ) );
 	$blue = wc_get_product( $keys[1] );
@@ -193,6 +237,15 @@ try {
 	check( $blue->get_meta( VARCONV_TAKEN_META ), '', 'link cleared' );
 	check( $blue->get_catalog_visibility(), 'visible', 'still visible' );
 	check( in_array( $keys[1], array_column( varconv_history(), 'id' ), true ), false, 'gone from History' );
+
+	// A removed variable product emptied from the Trash: its simple products stay, out of History.
+	$last = varconv_take_out( $parent_id, array_fill_keys( array_values( $variations ), '' ) );
+	$cleanup = array_merge( $cleanup, $last );
+	check( get_post_status( $parent_id ), 'trash', 'trashed again' );
+	wp_delete_post( $parent_id, true );
+	check( get_post_status( $last[0] ), 'publish', 'simple product stays' );
+	check( get_post_meta( $last[0], VARCONV_TAKEN_META, true ), '', 'link forgotten' );
+	check( in_array( $last[0], array_column( varconv_history(), 'id' ), true ), false, 'out of History' );
 
 	echo "Make simple integration tests passed.\n";
 } finally {
