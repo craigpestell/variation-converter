@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 1.4.0
+Stable tag: 1.4.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -109,7 +109,9 @@ No. The products you convert from are hidden from your shop and search results, 
 
 = What happens to existing orders, reviews and links? =
 
-Past orders still point to the original products. Old product URLs send shoppers to the variable product with the right option chosen. Reviews stay on the original products and aren't copied.
+Past orders still point to the original products. An original's old URL redirects (301) to its variation's own link: the variable product's URL with that variation's options added, such as `?attribute_color=Black`. WooCommerce uses those to preselect the options on the product page, so shoppers usually land on the right variant, though some themes ignore them. Reviews stay on the original products and aren't copied.
+
+If you later make every variation of a variable product simple, the variable product moves to the Trash and its old link, and each variant link, redirects to the new simple products.
 
 = What if I undo after customers have ordered the variable product? =
 
@@ -187,6 +189,9 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 4. The History tab, where every conversion can be undone.
 
 == Changelog ==
+
+= 1.4.1 =
+* FAQ and docs: the plugin redirects an old product URL to its variation's link, and WooCommerce preselects the options from that link (some themes don't). The FAQ also covers old links when every variation is made simple.
 
 = 1.4.0 =
 * Make simple works on every variation: when no variation is left for sale, the variable product moves to the Trash and its old link, and each variant link, sends shoppers to the new simple products. Undo in History brings it back. This also works on products made by Combine.
