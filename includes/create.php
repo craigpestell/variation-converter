@@ -192,14 +192,16 @@ function varconv_product_name( int $id ): string {
 	return (string) get_post_field( 'post_title', wp_get_post_parent_id( $id ) ?: $id, 'raw' );
 }
 
-/** Variable products made here, newest first. */
+/** Variable products made here, newest first, leaving out any Make simple removed (their simple products are in History). */
 function varconv_created(): array {
 	global $wpdb;
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 	return array_map( 'intval', $wpdb->get_col( $wpdb->prepare(
 		"SELECT p.ID FROM {$wpdb->posts} p JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = %s
-		WHERE p.post_type = 'product' ORDER BY p.ID DESC",
-		VARCONV_META
+		WHERE p.post_type = 'product' AND NOT EXISTS ( SELECT 1 FROM {$wpdb->postmeta} t WHERE t.post_id = p.ID AND t.meta_key = %s )
+		ORDER BY p.ID DESC",
+		VARCONV_META,
+		VARCONV_TAKEN_ALL_META
 	) ) );
 }
 

@@ -84,7 +84,7 @@ function varconv_render_take_one( int $variation_id ): void {
 	}
 	$member = (int) $row['member'];
 	$cats = varconv_take_out_categories( $variation );
-	$left = count( array_filter( $parent->get_children(), static fn( $id ) => 'publish' === get_post_status( $id ) && (int) $id !== $variation_id ) );
+	$left = count( array_diff( varconv_enabled_children( $parent ), array( $variation_id ) ) );
 	$shared_stock = true !== $variation->get_manage_stock( 'edit' ) && $parent->get_manage_stock( 'edit' );
 	?>
 	<div class="varconv-review-inner varconv-review-alone varconv-take-one">
@@ -105,7 +105,14 @@ function varconv_render_take_one( int $variation_id ): void {
 			esc_html_e( 'The variation is disabled, not deleted, and its old link sends shoppers to the simple product. The rest of the variable product stays as it is. Undo is in History.', 'variation-converter-for-woocommerce' );
 			?>
 		</p>
-		<?php if ( 1 === $left ) : ?>
+		<?php if ( 0 === $left ) : ?>
+			<div class="notice notice-warning inline"><p>
+				<?php
+				/* translators: %s: variable product name. */
+				echo esc_html( sprintf( __( 'This is the last variation of %s for sale, so the variable product will be moved to the Trash. Its old link will send shoppers to the simple products made from it. Undo in History restores it.', 'variation-converter-for-woocommerce' ), $parent_title ) );
+				?>
+			</p></div>
+		<?php elseif ( 1 === $left ) : ?>
 			<div class="notice notice-info inline"><p>
 				<?php
 				/* translators: %s: variable product name. */
@@ -195,15 +202,33 @@ function varconv_handle_take_one(): void {
 	}
 	varconv_candidates();
 	$args = array( 'varconv_done' => 'taken', 'varconv_product' => $parent, 'varconv_count' => count( $made ), 'varconv_made' => (int) reset( $made ) );
-	$url = varconv_take_back_url( $back, $parent );
+	if ( varconv_taken_all( $parent ) ) {
+		// The variable product was removed, so its edit screen and Split card are gone: show the new product instead.
+		$args['varconv_removed'] = 1;
+		$url = 'edit' === $back ? (string) get_edit_post_link( (int) reset( $made ), 'url' ) : varconv_take_back_url( 'split', 0 );
+	} else {
+		$url = varconv_take_back_url( $back, $parent );
+	}
 	$hash = strpos( $url, '#' );
 	wp_safe_redirect( false === $hash ? add_query_arg( $args, $url ) : add_query_arg( $args, substr( $url, 0, $hash ) ) . substr( $url, $hash ) );
 	exit;
 }
 
-/** The message after Make simple, on the product edit screen and the Split tab. */
-function varconv_taken_notice_html( int $count, int $made ): string {
+/**
+ * The message after Make simple, on the product edit screen and the Split tab. $removed is the variable product when
+ * it was removed because no variation was left for sale.
+ */
+function varconv_taken_notice_html( int $count, int $made, int $removed = 0 ): string {
 	$history = varconv_url( array( 'tab' => 'history' ) );
+	if ( $removed ) {
+		return sprintf(
+			/* translators: 1: number of simple products, 2: variable product name, 3: link to the History tab. */
+			_n( 'Made %1$d variation a simple product. %2$s had no variation left for sale, so it is in the Trash now; Undo in <a href="%3$s">History</a> restores it.', 'Made %1$d variations simple products. %2$s had no variation left for sale, so it is in the Trash now; Undo in <a href="%3$s">History</a> restores it.', $count, 'variation-converter-for-woocommerce' ),
+			$count,
+			esc_html( get_post_field( 'post_title', $removed, 'raw' ) ),
+			esc_url( $history )
+		);
+	}
 	if ( 1 === $count && $made ) {
 		return sprintf(
 			/* translators: 1: link to the simple product, 2: link to the History tab. */
@@ -230,6 +255,7 @@ function varconv_edit_screen_notice(): void {
 	}
 	$count = isset( $_GET['varconv_count'] ) ? absint( wp_unslash( $_GET['varconv_count'] ) ) : 0;
 	$made = isset( $_GET['varconv_made'] ) ? absint( wp_unslash( $_GET['varconv_made'] ) ) : 0;
+	$removed = ! empty( $_GET['varconv_removed'] ) && isset( $_GET['varconv_product'] ) ? absint( wp_unslash( $_GET['varconv_product'] ) ) : 0;
 	// phpcs:enable WordPress.Security.NonceVerification.Recommended
-	printf( '<div class="notice notice-success is-dismissible"><p>%s</p></div>', wp_kses_post( varconv_taken_notice_html( $count, $made ) ) );
+	printf( '<div class="notice notice-success is-dismissible"><p>%s</p></div>', wp_kses_post( varconv_taken_notice_html( $count, $made, $removed ) ) );
 }

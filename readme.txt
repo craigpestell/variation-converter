@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 1.3.2
+Stable tag: 1.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -161,7 +161,7 @@ Yes. Use the **Split** tab, or the **Split into simple products** link under a v
 
 = Can I make just one variation a simple product? =
 
-Yes. On the product's **Variations** tab, click **Make simple product** on that variation, or check it on the **Split** tab and click **Make checked simple, keep the rest**. You can give the new product its own name and categories. The rest of the variable product stays as it is. The variation is disabled, not deleted, and its old link sends shoppers to the new product. If Combine made the variation, its original simple product comes back instead of a new one. Undo is in **History**.
+Yes. On the product's **Variations** tab, click **Make simple product** on that variation, or check it on the **Split** tab and click **Make checked simple, keep the rest**. You can give the new product its own name and categories. The rest of the variable product stays as it is. The variation is disabled, not deleted, and its old link sends shoppers to the new product. If Combine made the variation, its original simple product comes back instead of a new one. When you make the last variation for sale simple, the variable product has nothing left to sell, so it moves to the Trash and its old link sends shoppers to the new products. Undo is in **History**, and it restores the variable product too.
 
 = Why can't I split some variations? =
 
@@ -187,6 +187,9 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 4. The History tab, where every conversion can be undone.
 
 == Changelog ==
+
+= 1.4.0 =
+* Make simple works on every variation: when no variation is left for sale, the variable product moves to the Trash and its old link, and each variant link, sends shoppers to the new simple products. Undo in History brings it back. This also works on products made by Combine.
 
 = 1.3.2 =
 * The Live Preview demo store has 32 products, including tees in color and size and coffee in weight and grind, so you can try combining products with two attributes.

@@ -391,6 +391,10 @@ function varconv_handle_split(): void {
 			varconv_fail( $e->getMessage(), array( 'product' => $id, 'varconv_failed' => 1 ) );
 		}
 		varconv_candidates();
+		if ( varconv_taken_all( $id ) ) {
+			// The variable product was removed, so there is no card to go back to.
+			varconv_back( array( 'varconv_done' => 'taken', 'varconv_product' => $id, 'varconv_count' => count( $made ), 'varconv_made' => (int) reset( $made ), 'varconv_removed' => 1 ) );
+		}
 		varconv_back( array( 'product' => $id, 'varconv_done' => 'taken', 'varconv_product' => $id, 'varconv_count' => count( $made ), 'varconv_made' => (int) reset( $made ) ), 'varconv-split-' . $id );
 	}
 	try {
@@ -776,7 +780,8 @@ function varconv_notice(): void {
 		case 'taken':
 			$count = isset( $_GET['varconv_count'] ) ? absint( wp_unslash( $_GET['varconv_count'] ) ) : 0;
 			$made  = isset( $_GET['varconv_made'] ) ? absint( wp_unslash( $_GET['varconv_made'] ) ) : 0;
-			printf( '<div class="notice notice-success"><p>%s</p></div>', wp_kses_post( varconv_taken_notice_html( $count, $made ) ) );
+			$removed = ! empty( $_GET['varconv_removed'] ) && isset( $_GET['varconv_product'] ) ? absint( wp_unslash( $_GET['varconv_product'] ) ) : 0;
+			printf( '<div class="notice notice-success"><p>%s</p></div>', wp_kses_post( varconv_taken_notice_html( $count, $made, $removed ) ) );
 			break;
 		case 'take_undone':
 			$id   = isset( $_GET['varconv_product'] ) ? absint( wp_unslash( $_GET['varconv_product'] ) ) : 0;

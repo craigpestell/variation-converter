@@ -280,8 +280,8 @@ function varconv_render_split_card( WC_Product_Variable $product, array $args ):
 			<span class="varconv-muted">
 				<?php
 				echo $combined
-					? esc_html__( 'Checked variations are disabled and their original products shown again. The rest stays variable.', 'variation-converter-for-woocommerce' )
-					: esc_html__( 'Make simple: the checked variations become simple products and are disabled; the rest stays variable. Split: every checked variation becomes a simple product and the variable product is hidden. New products copy the description, categories and tags.', 'variation-converter-for-woocommerce' );
+					? esc_html__( 'Checked variations are disabled and their original products shown again. The rest stays variable; with every variation checked, the variable product moves to the Trash.', 'variation-converter-for-woocommerce' )
+					: esc_html__( 'Make simple: the checked variations become simple products and are disabled; the rest stays variable, or moves to the Trash when none is left for sale. Split: every checked variation becomes a simple product and the variable product is hidden. New products copy the description, categories and tags.', 'variation-converter-for-woocommerce' );
 				?>
 			</span>
 			<a class="button" href="<?php echo esc_url( $cancel ); ?>"><?php esc_html_e( 'Cancel', 'variation-converter-for-woocommerce' ); ?></a>
@@ -401,11 +401,19 @@ function varconv_render_history(): void {
 					if ( 'taken' === $kind ) {
 						$variation = (int) get_post_meta( $id, VARCONV_TAKEN_META, true );
 						$parent = (int) wp_get_post_parent_id( $variation );
-						echo wp_kses_post( sprintf(
+						if ( $parent && varconv_taken_all( $parent ) ) {
+							echo esc_html( sprintf(
+								/* translators: %s: variable product name. */
+								__( 'Made from a variation of %s, which had no variation left for sale and is in the Trash. Undo restores it.', 'variation-converter-for-woocommerce' ),
+								get_post_field( 'post_title', $parent, 'raw' )
+							) );
+						} else {
+							echo wp_kses_post( sprintf(
 							/* translators: %s: link to the variable product. */
 							__( 'Made from a variation of %s, which is disabled there.', 'variation-converter-for-woocommerce' ),
 							$parent ? sprintf( '<a href="%s">%s</a>', esc_url( (string) get_edit_post_link( $parent ) ), esc_html( get_post_field( 'post_title', $parent, 'raw' ) ) ) : esc_html__( 'a variable product that no longer exists', 'variation-converter-for-woocommerce' )
-						) );
+							) );
+						}
 					} else {
 						echo esc_html( $combined
 						/* translators: %d: number of simple products. */
