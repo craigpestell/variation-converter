@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 1.3.0
+Stable tag: 1.3.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -187,6 +187,9 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 4. The History tab, where every conversion can be undone.
 
 == Changelog ==
+
+= 1.3.1 =
+* The plugin page on wordpress.org gets a Live Preview: a demo store in WordPress Playground with 20 simple products ready to combine.
 
 = 1.3.0 =
 * Make simple: turn chosen variations of any variable product, including combined ones, into simple products while the rest stays variable. Use the **Make simple product** link on a variation in the product's Variations panel, or check variations on the Split tab. You choose the new product's name and categories.
