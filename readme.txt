@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 1.3.1
+Stable tag: 1.3.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -187,6 +187,9 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 4. The History tab, where every conversion can be undone.
 
 == Changelog ==
+
+= 1.3.2 =
+* The Live Preview demo store has 32 products, including tees in color and size and coffee in weight and grind, so you can try combining products with two attributes.
 
 = 1.3.1 =
 * The plugin page on wordpress.org gets a Live Preview: a demo store in WordPress Playground with 20 simple products ready to combine.
