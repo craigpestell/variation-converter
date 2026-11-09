@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 1.4.2
+Stable tag: 1.4.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -191,6 +191,9 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 5. The History tab, where every conversion can be undone.
 
 == Changelog ==
+
+= 1.4.3 =
+* The first screenshot on the plugin page is now an animated demo: six coffee products combined into one variable product with Grind and Weight attributes.
 
 = 1.4.2 =
 * The Live Preview demo store gives each of its 32 products its own image, so combined products show a different picture for each variation.
