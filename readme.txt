@@ -197,6 +197,7 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 = 1.5.0 =
 * Trash originals: once you are sure you will keep a combined product, move its hidden original simple products to the Trash from its History row, or check several rows and use the Bulk action. Their reviews move to the variable product, and their old links keep redirecting (301) to the variation, even after the Trash is emptied. Undo and Make simple restore them while they are in the Trash.
 * Undo refuses a combine whose originals were deleted for good, because deleting the variations would lose those products.
+* An original restored from the Trash by hand keeps the status it had, instead of coming back as a draft.
 * Developers: action `varconv_originals_trashed`.
 
 = 1.4.4 =
