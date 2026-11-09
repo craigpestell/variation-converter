@@ -229,6 +229,11 @@ function varconv_take_out( int $parent_id, array $names, array $categories = arr
 	add_filter( 'wc_product_has_global_unique_id', '__return_false', 99 );
 	try {
 		foreach ( $jobs as $i => [ $variation, $member, $name, $cats ] ) {
+			if ( $member && 'trash' === $member->get_status( 'edit' ) ) {
+				// Moved to the Trash by Trash originals: restored first, with its reviews.
+				varconv_untrash_original( $member->get_id() );
+				$member = wc_get_product( $member->get_id() );
+			}
 			if ( $member ) {
 				// The original simple product, with what changed while it was a variation, out of the combined product.
 				varconv_copy_back( $variation, $member, $parent );

@@ -324,7 +324,14 @@ function varconv_render_history(): void {
 	/* translators: %s: number of conversions. */
 	$label = sprintf( _n( '%s item', '%s items', count( $rows ), 'variation-converter-for-woocommerce' ), number_format_i18n( count( $rows ) ) );
 	$bulk = static function ( string $which ): void {
-		varconv_bulk_actions( array( 'undo' => __( 'Undo', 'variation-converter-for-woocommerce' ) ), $which, 'varconv-undo-checked' );
+		varconv_bulk_actions(
+			array(
+				'undo'            => __( 'Undo', 'variation-converter-for-woocommerce' ),
+				'trash_originals' => __( 'Move originals to Trash', 'variation-converter-for-woocommerce' ),
+			),
+			$which,
+			'varconv-undo-checked'
+		);
 	};
 	$headers = static function ( string $which ): void {
 		?>
@@ -354,7 +361,7 @@ function varconv_render_history(): void {
 		</p>
 	</form>
 	<?php // The rows' checkboxes and the Bulk actions menus belong to this form by its id, as each row also holds its own Undo form. ?>
-	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" id="varconv-undo-checked" class="varconv-undo-checked" data-confirm="<?php esc_attr_e( 'Undo every checked conversion? Variable products made by combining are deleted and their simple products shown again; simple products made by a split are deleted and the variable product shown again; variations made simple are enabled again.', 'variation-converter-for-woocommerce' ); ?>">
+	<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" id="varconv-undo-checked" class="varconv-undo-checked" data-confirm-trash="<?php echo esc_attr( varconv_trash_originals_confirm() ); ?>" data-confirm="<?php esc_attr_e( 'Undo every checked conversion? Variable products made by combining are deleted and their simple products shown again; simple products made by a split are deleted and the variable product shown again; variations made simple are enabled again.', 'variation-converter-for-woocommerce' ); ?>">
 		<input type="hidden" name="action" value="varconv_undo_checked">
 		<input type="hidden" name="tab" value="history">
 		<?php if ( '' !== $search ) : ?>
@@ -376,6 +383,7 @@ function varconv_render_history(): void {
 			$combined = 'combined' === $kind;
 			$ids = 'taken' === $kind ? array() : ( json_decode( (string) get_post_meta( $id, $combined ? VARCONV_META : VARCONV_SPLIT_META, true ), true ) ?: array() );
 			$undo = array( 'combined' => 'varconv_undo', 'split' => 'varconv_split_undo', 'taken' => 'varconv_take_undo' )[ $kind ];
+			$originals = $combined ? varconv_originals( $id ) : array( 'hidden' => array(), 'trash' => array(), 'gone' => array() );
 			$badges = array(
 				'combined' => __( 'Combined', 'variation-converter-for-woocommerce' ),
 				'split'    => __( 'Split', 'variation-converter-for-woocommerce' ),
@@ -389,7 +397,12 @@ function varconv_render_history(): void {
 					<div class="row-actions">
 						<span class="edit"><a href="<?php echo esc_url( (string) get_edit_post_link( $id ) ); ?>"><?php esc_html_e( 'Edit', 'variation-converter-for-woocommerce' ); ?></a> | </span>
 						<span class="view"><a href="<?php echo esc_url( (string) get_permalink( $id ) ); ?>"><?php esc_html_e( 'View', 'variation-converter-for-woocommerce' ); ?></a> | </span>
-						<span class="trash"><?php varconv_undo_form( $undo, $id, '', true ); ?></span>
+						<?php if ( ! $originals['gone'] ) : ?>
+							<span class="undo"><?php varconv_undo_form( $undo, $id, '', true ); ?><?php echo $originals['hidden'] ? ' | ' : ''; ?></span>
+						<?php endif; ?>
+						<?php if ( $originals['hidden'] ) : ?>
+							<span class="trash"><?php varconv_undo_form( 'varconv_trash_originals', $id, __( 'Trash originals', 'variation-converter-for-woocommerce' ), true ); ?></span>
+						<?php endif; ?>
 					</div>
 					<button type="button" class="toggle-row"><span class="screen-reader-text"><?php esc_html_e( 'Show more details', 'variation-converter-for-woocommerce' ); ?></span></button>
 				</td>
@@ -421,6 +434,20 @@ function varconv_render_history(): void {
 						/* translators: %d: number of simple products. */
 						: sprintf( _n( 'Made into %d simple product (this one is hidden):', 'Made into %d simple products (this one is hidden):', count( $ids ), 'variation-converter-for-woocommerce' ), count( $ids ) ) );
 						echo ' ' . wp_kses_post( varconv_product_links( $ids ) );
+						if ( $originals['trash'] ) {
+							echo '<br><span class="varconv-muted">' . esc_html( sprintf(
+								/* translators: %d: number of simple products. */
+								_n( '%d in the Trash, with its reviews moved here. Undo restores it.', '%d in the Trash, with their reviews moved here. Undo restores them.', count( $originals['trash'] ), 'variation-converter-for-woocommerce' ),
+								count( $originals['trash'] )
+							) ) . '</span>';
+						}
+						if ( $originals['gone'] ) {
+							echo '<br><span class="varconv-muted">' . esc_html( sprintf(
+								/* translators: %d: number of simple products. */
+								_n( '%d deleted from the Trash, so this can no longer be undone.', '%d deleted from the Trash, so this can no longer be undone.', count( $originals['gone'] ), 'variation-converter-for-woocommerce' ),
+								count( $originals['gone'] )
+							) ) . '</span>';
+						}
 					}
 					?>
 				</td>

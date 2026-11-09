@@ -108,9 +108,11 @@ Yes. The plugin scans your catalog and suggests every group of products that loo
 
 No. The products you convert from are hidden from your shop and search results, not deleted, and Undo shows them again. Deleting the plugin doesn't change your products either.
 
+Once you're sure you'll keep a combined product, you can choose **Trash originals** on its History row to move the hidden originals to the Trash. Their reviews move to the variable product and their old links keep redirecting. Undo restores them while they're in the Trash; after the Trash is emptied, that combine can no longer be undone.
+
 = What happens to existing orders, reviews and links? =
 
-Past orders still point to the original products. An original's old URL redirects (301) to its variation's own link: the variable product's URL with that variation's options added, such as `?attribute_color=Black`. WooCommerce uses those to preselect the options on the product page, so shoppers usually land on the right variant, though some themes ignore them. Reviews stay on the original products and aren't copied.
+Past orders still point to the original products. An original's old URL redirects (301) to its variation's own link: the variable product's URL with that variation's options added, such as `?attribute_color=Black`. WooCommerce uses those to preselect the options on the product page, so shoppers usually land on the right variant, though some themes ignore them. Reviews stay on the original products and aren't copied, until you use **Trash originals**, which moves them to the variable product.
 
 If you later make every variation of a variable product simple, the variable product moves to the Trash and its old link, and each variant link, redirects to the new simple products.
 

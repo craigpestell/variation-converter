@@ -24,6 +24,7 @@ require_once __DIR__ . '/includes/scan.php';
 require_once __DIR__ . '/includes/create.php';
 require_once __DIR__ . '/includes/split.php';
 require_once __DIR__ . '/includes/take-out.php';
+require_once __DIR__ . '/includes/trash-originals.php';
 require_once __DIR__ . '/includes/job.php';
 require_once __DIR__ . '/includes/redirect.php';
 

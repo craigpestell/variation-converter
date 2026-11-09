@@ -457,13 +457,26 @@ function varconv_undo( int $parent_id ): int {
 		/* translators: %d: product ID. */
 		throw new RuntimeException( esc_html( sprintf( __( 'Product %d was not made by Variation Converter.', 'variation-converter-for-woocommerce' ), $parent_id ) ) );
 	}
-	global $wpdb;
-	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
-	$ids = array_map( 'intval', $wpdb->get_col( $wpdb->prepare(
-		"SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s AND meta_value = %s",
-		VARCONV_PARENT_META,
-		(string) $parent_id
-	) ) );
+	// Originals moved to the Trash (Trash originals) come back first; once deleted for good, the variation is the only
+	// copy of that product, and deleting it would lose the product.
+	$originals = varconv_originals( $parent_id );
+	if ( $originals['gone'] ) {
+		throw new RuntimeException( esc_html( sprintf(
+			/* translators: 1: product name, 2: number of products. */
+			_n(
+				'%1$s can no longer be undone: %2$d of its original simple products was deleted from the Trash, and Undo would delete the variation that is now its only copy. Make simple on a variation gives it a simple product again.',
+				'%1$s can no longer be undone: %2$d of its original simple products were deleted from the Trash, and Undo would delete the variations that are now their only copy. Make simple on a variation gives it a simple product again.',
+				count( $originals['gone'] ),
+				'variation-converter-for-woocommerce'
+			),
+			get_post_field( 'post_title', $parent_id, 'raw' ),
+			count( $originals['gone'] )
+		) ) );
+	}
+	foreach ( $originals['trash'] as $id ) {
+		varconv_untrash_original( $id );
+	}
+	$ids = varconv_members( $parent_id );
 	// The variations sold while the simple products were hidden; give those their current prices and stock.
 	$twins = array_flip( varconv_twins( $parent_id, $ids ) );
 	foreach ( $ids as $id ) {

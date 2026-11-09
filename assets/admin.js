@@ -572,7 +572,8 @@
 		if ( form.matches( 'form.varconv-undo-checked' ) ) {
 			var menu = document.querySelector( '[name="' + ( event.submitter && 'bottom' === event.submitter.value ? 'bulk_action2' : 'bulk_action' ) + '"]' );
 			var checked = document.querySelector( 'input[name="products[]"]:checked' );
-			if ( menu && 'undo' === menu.value && checked && ! window.confirm( form.dataset.confirm ) ) {
+			var ask = menu && checked ? { undo: form.dataset.confirm, trash_originals: form.dataset.confirmTrash }[ menu.value ] : '';
+			if ( ask && ! window.confirm( ask ) ) {
 				event.preventDefault();
 			}
 			return;

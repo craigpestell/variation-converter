@@ -1,6 +1,6 @@
 <?php
 /**
- * WP-CLI commands: wp varconv combine | make-simple | undo.
+ * WP-CLI commands: wp varconv combine | make-simple | undo | trash-originals.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -188,6 +188,50 @@ class Varconv_CLI_Command {
 			}
 		}
 		$summary = sprintf( 'Undid %d of %d conversions.', $done, count( $ids ) );
+		$done < count( $ids ) ? WP_CLI::error( $summary ) : WP_CLI::success( $summary );
+	}
+
+	/**
+	 * Moves the hidden original simple products of combined variable products to the Trash. Their reviews move to the
+	 * variable product and their old URLs keep redirecting to it. Undo of the combine restores them while they are in
+	 * the Trash; once the Trash is emptied it can no longer be undone. Refuses when the Trash is turned off.
+	 *
+	 * ## OPTIONS
+	 *
+	 * [<id>...]
+	 * : IDs of variable products made by combining.
+	 *
+	 * [--all]
+	 * : Every variable product made by combining that still has hidden originals.
+	 *
+	 * [--yes]
+	 * : Do not ask first.
+	 *
+	 * ## EXAMPLES
+	 *
+	 *     wp varconv trash-originals 1234
+	 *     wp varconv trash-originals --all --yes
+	 *
+	 * @param string[] $args
+	 * @param array    $options
+	 */
+	public function trash_originals( $args, $options ) {
+		$all = ! empty( $options['all'] );
+		$ids = $all ? array_values( array_filter( varconv_created(), static fn( $id ) => (bool) varconv_originals( $id )['hidden'] ) ) : array_map( 'intval', $args );
+		if ( ! $ids ) {
+			WP_CLI::error( $all ? 'No combined product has hidden originals.' : 'Give the IDs of combined variable products, or --all.' );
+		}
+		WP_CLI::confirm( sprintf( 'Move the hidden originals of %d combined products to the Trash?', count( $ids ) ), $options );
+		$done = 0;
+		foreach ( $ids as $id ) {
+			try {
+				WP_CLI::log( sprintf( "TRASHED\t%d\t%d originals", $id, varconv_trash_originals( $id ) ) );
+				++$done;
+			} catch ( RuntimeException $e ) {
+				WP_CLI::warning( $id . "\t" . $e->getMessage() );
+			}
+		}
+		$summary = sprintf( 'Moved the originals of %d of %d combined products to the Trash.', $done, count( $ids ) );
 		$done < count( $ids ) ? WP_CLI::error( $summary ) : WP_CLI::success( $summary );
 	}
 }

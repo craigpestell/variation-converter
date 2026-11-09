@@ -4,7 +4,8 @@
  * search engines, with a 301) to that variation's own URL, the variable product with its options chosen. Undo removes
  * the link, so the page shows again. A variant made into a simple product (Make simple) sends its old variant URL to
  * that product, and when every variant was made simple and the variable product removed, its old URL sends shoppers to
- * the first of them (or to the one its variant URL names). A combined product cannot be split (it is undone instead), and products split into simple products are
+ * the first of them (or to the one its variant URL names). An original moved to the Trash after a combine (Trash
+ * originals) keeps sending its old URL to its variation, even once deleted for good. A combined product cannot be split (it is undone instead), and products split into simple products are
  * left as they are.
  */
 
@@ -20,6 +21,10 @@ function varconv_redirect_removed(): void {
 		return;
 	}
 	$url = varconv_removed_url( $slug, map_deep( wp_unslash( $_GET ), 'sanitize_text_field' ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- reads the URL only, changes nothing.
+	if ( '' === $url ) {
+		// A combined product's original moved to the Trash (trash-originals.php), or deleted from it.
+		$url = varconv_trashed_original_url( $slug );
+	}
 	if ( '' !== $url ) {
 		wp_safe_redirect( $url, 301 );
 		exit;

@@ -330,12 +330,16 @@ function varconv_handle_undo_checked(): void {
 		wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'variation-converter-for-woocommerce' ), 403 );
 	}
 	check_admin_referer( 'varconv_undo_checked' );
-	if ( 'undo' !== varconv_posted_bulk_action() ) {
+	$action = varconv_posted_bulk_action();
+	if ( ! in_array( $action, array( 'undo', 'trash_originals' ), true ) ) {
 		varconv_fail( __( 'Choose a bulk action first.', 'variation-converter-for-woocommerce' ), array( 'tab' => 'history' ) );
 	}
 	$ids = isset( $_POST['products'] ) ? array_map( 'absint', (array) wp_unslash( $_POST['products'] ) ) : array();
 	if ( ! $ids ) {
-		varconv_fail( __( 'Check at least one conversion to undo.', 'variation-converter-for-woocommerce' ), array() );
+		varconv_fail( __( 'Check at least one conversion first.', 'variation-converter-for-woocommerce' ), array() );
+	}
+	if ( 'trash_originals' === $action ) {
+		varconv_trash_originals_back( $ids );
 	}
 	// Not while a bulk create is making products from the same simple products.
 	if ( varconv_job_running( varconv_job() ) || ! varconv_lock() ) {
@@ -352,6 +356,34 @@ function varconv_handle_undo_checked(): void {
 	if ( $result['errors'] ) {
 		/* translators: 1: number of conversions undone, 2: why the others were not, one reason after another. */
 		varconv_fail( sprintf( __( 'Undid %1$d. Not undone: %2$s', 'variation-converter-for-woocommerce' ), $result['undone'], implode( ' ', $result['errors'] ) ), $args );
+	}
+	varconv_back( $args );
+}
+
+add_action( 'admin_post_varconv_trash_originals', 'varconv_handle_trash_originals' );
+function varconv_handle_trash_originals(): void {
+	if ( ! current_user_can( VARCONV_CAP ) ) {
+		wp_die( esc_html__( 'Sorry, you are not allowed to do that.', 'variation-converter-for-woocommerce' ), 403 );
+	}
+	$id = isset( $_POST['product'] ) ? absint( wp_unslash( $_POST['product'] ) ) : 0;
+	check_admin_referer( 'varconv_trash_originals_' . $id );
+	varconv_trash_originals_back( array( $id ) );
+}
+
+/** Trash originals for these combines, then back to History with what happened. Callers have checked the nonce. */
+function varconv_trash_originals_back( array $ids ): void {
+	if ( varconv_job_running( varconv_job() ) || ! varconv_lock() ) {
+		varconv_fail( __( 'A bulk create is running. Try again when it has finished.', 'variation-converter-for-woocommerce' ), array() );
+	}
+	try {
+		$result = varconv_trash_originals_many( $ids );
+	} finally {
+		varconv_unlock();
+	}
+	$args = array( 'varconv_done' => 'trashed_originals', 'varconv_count' => $result['products'] );
+	if ( $result['errors'] ) {
+		/* translators: 1: number of products moved to the Trash, 2: why others were not, one reason after another. */
+		varconv_fail( sprintf( __( 'Moved %1$d originals to the Trash. Not moved: %2$s', 'variation-converter-for-woocommerce' ), $result['products'], implode( ' ', $result['errors'] ) ), $args );
 	}
 	varconv_back( $args );
 }
@@ -685,6 +717,8 @@ function varconv_tablenav( string $which, int $total, int $paged, int $per_page,
 function varconv_undo_form( string $action, int $id, string $label = '', bool $link = false ): void {
 	if ( 'varconv_undo' === $action ) {
 		$confirm = __( 'Delete this variable product and show its simple products again?', 'variation-converter-for-woocommerce' );
+	} elseif ( 'varconv_trash_originals' === $action ) {
+		$confirm = varconv_trash_originals_confirm();
 	} elseif ( 'varconv_take_undo' === $action ) {
 		$confirm = '1' === (string) get_post_meta( $id, VARCONV_TAKEN_NEW_META, true )
 			? __( 'Delete this simple product and enable its variation again, with this product\'s price and stock?', 'variation-converter-for-woocommerce' )
@@ -701,6 +735,11 @@ function varconv_undo_form( string $action, int $id, string $label = '', bool $l
 		<button class="<?php echo $link ? 'button-link varconv-undo-link' : 'button'; ?>"><?php echo esc_html( '' !== $label ? $label : __( 'Undo', 'variation-converter-for-woocommerce' ) ); ?></button>
 	</form>
 	<?php
+}
+
+/** What Trash originals asks before it moves anything. */
+function varconv_trash_originals_confirm(): string {
+	return __( 'Move the hidden original simple products to the Trash? Their reviews move to the variable product and their old pages keep redirecting to it. Undo works while they are in the Trash; once the Trash is emptied (WordPress does this after 30 days) this combine can no longer be undone.', 'variation-converter-for-woocommerce' );
 }
 
 /** Links to products by SKU, or by ID when they have none. */
@@ -748,6 +787,17 @@ function varconv_notice(): void {
 				'<div class="notice notice-success"><p>%s</p></div>',
 				/* translators: %d: number of conversions undone. */
 				esc_html( sprintf( _n( 'Undid %d conversion. Its products are back as they were.', 'Undid %d conversions. Their products are back as they were.', $count, 'variation-converter-for-woocommerce' ), $count ) )
+			);
+			break;
+		case 'trashed_originals':
+			$count = isset( $_GET['varconv_count'] ) ? absint( wp_unslash( $_GET['varconv_count'] ) ) : 0;
+			printf(
+				'<div class="notice notice-success"><p>%s</p></div>',
+				esc_html( sprintf(
+					/* translators: %d: number of simple products moved to the Trash. */
+					_n( 'Moved %d original simple product to the Trash. Its reviews are on the variable product now, and its old page redirects there. Undo restores it while it is in the Trash.', 'Moved %d original simple products to the Trash. Their reviews are on the variable product now, and their old pages redirect there. Undo restores them while they are in the Trash.', $count, 'variation-converter-for-woocommerce' ),
+					$count
+				) )
 			);
 			break;
 		case 'split':
