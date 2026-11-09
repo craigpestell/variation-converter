@@ -146,12 +146,14 @@ export default async function ({ browser, context, base, args }) {
 	if (!url) url = await page.evaluate(async (base) => (await (await fetch(base + '/wp-json/wc/store/v1/products?search=House+Blend+Coffee')).json()).find((p) => p.type === 'variable')?.permalink, base);
 	if (url) {
 		await page.goto(url);
-		await page.addStyleTag({ content: '#wpadminbar{display:none!important} html{margin-top:0!important}' });
+		// A smaller main image, so the gallery thumbnails fit in the frame too.
+		await page.addStyleTag({ content: '#wpadminbar{display:none!important} html{margin-top:0!important} .woocommerce-product-gallery{max-width:330px!important}' });
 		await pause(600);
 		const sel = page.locator('form.variations_form select').first();
 		if (await sel.count()) {
 			await sel.scrollIntoViewIfNeeded();
-			await scrollTo(Math.max(0, (await sel.evaluate((el) => el.getBoundingClientRect().top + window.scrollY)) - 300));
+			const gallery = page.locator('.woocommerce-product-gallery').first();
+			await scrollTo(Math.max(0, (await gallery.evaluate((el) => el.getBoundingClientRect().top + window.scrollY)) - 90));
 			const selects = page.locator('form.variations_form select');
 			// A native dropdown's list isn't in a recording, so draw it open: a list under the select with every option.
 			const choose = async (select, index) => {
@@ -183,8 +185,9 @@ export default async function ({ browser, context, base, args }) {
 				await page.mouse.up();
 				await pause(800);
 			};
-			await choose(selects.nth(0), 1);
-			await choose(selects.nth(1), 1);
+			// Espresso in 1kg: not the first product, so the gallery switches to that variation's picture.
+			await choose(selects.nth(0), 2);
+			await choose(selects.nth(1), 2);
 			await pause(1600);
 		}
 	}

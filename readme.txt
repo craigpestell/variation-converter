@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 1.4.3
+Stable tag: 1.4.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -184,13 +184,16 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 
 == Screenshots ==
 
-1. Six coffee products combined into one variable product: the attributes renamed to Grind and Weight, a label shortened, the order changed, then the new product's dropdowns in the shop.
+1. Six coffee products combined into one variable product: the attributes renamed to Grind and Weight, a label shortened, the order changed, then picking Espresso in 1kg from the dropdowns in the shop, which switches the product picture.
 2. Search on the Combine tab: the suggested groups that match, products not in a group, and Combine into one product.
 3. Reviewing a variable product with two attributes, Flavor and Volume, with the grid of pairs that exist.
 4. Splitting a variable product into simple products, with a suggested name for each.
 5. The History tab, where every conversion can be undone.
 
 == Changelog ==
+
+= 1.4.4 =
+* The demo screenshot now picks Espresso in 1kg in the shop, so you can see the product picture change, and shows the gallery thumbnails.
 
 = 1.4.3 =
 * The first screenshot on the plugin page is now an animated demo: six coffee products combined into one variable product with Grind and Weight attributes.

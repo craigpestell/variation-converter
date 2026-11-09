@@ -4,7 +4,7 @@ Short screen recordings for the plugin website, made with Playwright on the wp-h
 
 | Clip | Shows |
 |---|---|
-| `combine-coffee.mjs` | Ticking the House Blend Coffee 340g and 1kg groups on the Combine tab, Combine into one product, renaming the attributes to Weight and Grind, shortening "Espresso Grind" to "Espresso", swapping so Grind comes first, dragging the 340g bags to the top, Create, then the variable product in the shop with each dropdown shown open before an option is picked. |
+| `combine-coffee.mjs` | Ticking the House Blend Coffee 340g and 1kg groups on the Combine tab, Combine into one product, renaming the attributes to Weight and Grind, shortening "Espresso Grind" to "Espresso", swapping so Grind comes first, dragging the 340g bags to the top, Create, then the variable product in the shop with each dropdown shown open before Espresso and 1kg are picked, so the gallery switches to that picture (main image shrunk so the thumbnails show). |
 
 ## Record
 
