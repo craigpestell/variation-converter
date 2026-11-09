@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 1.4.4
+Stable tag: 1.5.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -193,6 +193,11 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 5. The History tab, where every conversion can be undone.
 
 == Changelog ==
+
+= 1.5.0 =
+* Trash originals: once you are sure you will keep a combined product, move its hidden original simple products to the Trash from its History row, or check several rows and use the Bulk action. Their reviews move to the variable product, and their old links keep redirecting (301) to the variation, even after the Trash is emptied. Undo and Make simple restore them while they are in the Trash.
+* Undo refuses a combine whose originals were deleted for good, because deleting the variations would lose those products.
+* Developers: action `varconv_originals_trashed`.
 
 = 1.4.4 =
 * The demo screenshot now picks Espresso in 1kg in the shop, so you can see the product picture change, and shows the gallery thumbnails.
