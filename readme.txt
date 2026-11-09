@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 1.4.1
+Stable tag: 1.4.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -189,6 +189,9 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 4. The History tab, where every conversion can be undone.
 
 == Changelog ==
+
+= 1.4.2 =
+* The Live Preview demo store gives each of its 32 products its own image, so combined products show a different picture for each variation.
 
 = 1.4.1 =
 * FAQ and docs: the plugin redirects an old product URL to its variation's link, and WooCommerce preselects the options from that link (some themes don't). The FAQ also covers old links when every variation is made simple.
