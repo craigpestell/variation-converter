@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 1.5.1
+Stable tag: 1.6.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -193,6 +193,9 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 5. The History tab, where every conversion can be undone.
 
 == Changelog ==
+
+= 1.6.0 =
+* History: Undo and Move originals to Trash on more than 10 conversions now run on the server in the background, like a bulk create, so a large selection no longer times out. The notice shows progress on every tab with a Stop button, the job keeps going if you leave the page, and the page shows the summary when it is done.
 
 = 1.5.1 =
 * History: after checking every row on a page, "Select all N conversions" applies Undo or Move originals to Trash to the whole list, on every page, for the current view and search. Move originals to Trash skips rows with nothing to move instead of reporting them as errors.

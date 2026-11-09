@@ -497,7 +497,7 @@
 	}
 
 	/*
-	 * The bulk create job runs on the server (includes/job.php) and finishes without this page. While any tab of the
+	 * The bulk job (create, or History's undo and trash) runs on the server (includes/job.php) and finishes without this page. While any tab of the
 	 * plugin page is open, this asks for the next batch as soon as one is done, and shows the progress.
 	 */
 	function jobBox() {
@@ -536,6 +536,12 @@
 			return;
 		}
 		bulkButtons( false );
+		// History's undo or trash: the list (and the counts on the tabs) changed, so load the page again, with the
+		// summary the server kept for it.
+		if ( job.kind && 'create' !== job.kind ) {
+			reload( {} );
+			return;
+		}
 		// The Combine list still shows the groups just created: load it again, with the summary.
 		if ( bulk ) {
 			reload( { varconv_done: 'bulk', varconv_made: job.made, varconv_skip: job.skip, varconv_failed_count: job.failed } );

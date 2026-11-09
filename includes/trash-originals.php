@@ -97,15 +97,20 @@ function varconv_trash_originals( int $parent_id ): int {
 /**
  * Trash originals for several History rows. Rows with nothing to move (a split, a Made simple, or a combine whose
  * originals are already in the Trash) are skipped and counted, so "select all" and then this action does every combine
- * it can. A combine that fails is reported and the rest carry on.
+ * it can. A combine that fails is reported and the rest carry on. $stop, checked before each, ends the run early
+ * when it returns true.
  *
  * @param int[] $ids Products listed in History.
- * @return array{done:int,products:int,skipped:int,errors:string[]}
+ * @return array{done:int,products:int,skipped:int,ran:int,errors:string[]}
  */
-function varconv_trash_originals_many( array $ids ): array {
-	$out = array( 'done' => 0, 'products' => 0, 'skipped' => 0, 'errors' => array() );
+function varconv_trash_originals_many( array $ids, ?callable $stop = null ): array {
+	$out = array( 'done' => 0, 'products' => 0, 'skipped' => 0, 'ran' => 0, 'errors' => array() );
 	$combined = varconv_created();
 	foreach ( array_unique( array_map( 'intval', $ids ) ) as $id ) {
+		if ( $stop && $stop() ) {
+			break;
+		}
+		++$out['ran'];
 		if ( ! in_array( $id, $combined, true ) || ! varconv_originals( $id )['hidden'] ) {
 			++$out['skipped'];
 			continue;
@@ -116,6 +121,7 @@ function varconv_trash_originals_many( array $ids ): array {
 		} catch ( RuntimeException $e ) {
 			$out['errors'][] = varconv_message( $e );
 		}
+		varconv_lock_renew();
 	}
 	return $out;
 }

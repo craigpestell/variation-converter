@@ -1,7 +1,7 @@
 <?php
 /**
  * The Combine tab without reloads (assets/admin.js): create, undo and skip a group, remember unchecked products,
- * and start and follow the bulk create job. Each mirrors an admin-post
+ * and start and follow the bulk job (create, or History's undo and trash). Each mirrors an admin-post
  * handler in admin.php, which the page falls back to without scripts.
  */
 
@@ -118,17 +118,21 @@ function varconv_ajax_job_stop(): void {
 	varconv_ajax_job( false );
 }
 
-/** The job's notice for the page. Once it has finished, the summary is shown here and not again on the next page. */
+/**
+ * The job's notice for the page. Once a bulk create has finished, the summary is shown here and not again on the next
+ * page. An undo or trash job's summary waits for the page, which reloads to show the list as it is now.
+ */
 function varconv_ajax_job( bool $worked ): void {
 	$job = varconv_job();
 	if ( ! $job ) {
 		wp_send_json_success( array( 'running' => false, 'html' => '' ) );
 	}
 	$running = varconv_job_running( $job );
-	if ( ! $running ) {
+	if ( ! $running && 'create' === $job['kind'] ) {
 		delete_option( VARCONV_JOB_OPTION );
 	}
 	wp_send_json_success( array(
+		'kind'    => $job['kind'],
 		'running' => $running,
 		'worked'  => $worked,
 		'class'   => varconv_job_class( $job ),

@@ -83,8 +83,8 @@ function varconv_assets(): void {
 			'productOne' => __( '%d product', 'variation-converter-for-woocommerce' ),
 			/* translators: %d: number of products checked. */
 			'productMany' => __( '%d products', 'variation-converter-for-woocommerce' ),
-			'stopping'  => __( 'Stopping after the group being created now...', 'variation-converter-for-woocommerce' ),
-			'stopFailed' => __( 'Could not stop the bulk create. Reload the page and try again.', 'variation-converter-for-woocommerce' ),
+			'stopping'  => __( 'Stopping...', 'variation-converter-for-woocommerce' ),
+			'stopFailed' => __( 'Could not stop the bulk job. Reload the page and try again.', 'variation-converter-for-woocommerce' ),
 			'notSold'   => __( 'Not sold', 'variation-converter-for-woocommerce' ),
 			/* translators: 1: number of variations, 2: number of possible pairs. */
 			'gridCount' => __( '%1$d variations of %2$d possible pairs.', 'variation-converter-for-woocommerce' ),
@@ -344,12 +344,21 @@ function varconv_handle_undo_checked(): void {
 	if ( ! $ids ) {
 		varconv_fail( __( 'Check at least one conversion first.', 'variation-converter-for-woocommerce' ), array() );
 	}
+	// More than a batch runs on the server in the background, so a large selection never times out.
+	if ( count( $ids ) > VARCONV_JOB_BATCH ) {
+		try {
+			varconv_job_start( $ids, 'trash_originals' === $action ? 'trash' : 'undo' );
+		} catch ( RuntimeException $e ) {
+			varconv_fail( $e->getMessage(), array() );
+		}
+		varconv_back( array() );
+	}
 	if ( 'trash_originals' === $action ) {
 		varconv_trash_originals_back( $ids );
 	}
-	// Not while a bulk create is making products from the same simple products.
+	// Not while a bulk job is working on the same products.
 	if ( varconv_job_running( varconv_job() ) || ! varconv_lock() ) {
-		varconv_fail( __( 'A bulk create is running. Undo when it has finished.', 'variation-converter-for-woocommerce' ), array() );
+		varconv_fail( __( 'A bulk job is running. Undo when it has finished.', 'variation-converter-for-woocommerce' ), array() );
 	}
 	try {
 		$result = varconv_undo_many( $ids );
@@ -379,7 +388,7 @@ function varconv_handle_trash_originals(): void {
 /** Trash originals for these combines, then back to History with what happened. Callers have checked the nonce. */
 function varconv_trash_originals_back( array $ids ): void {
 	if ( varconv_job_running( varconv_job() ) || ! varconv_lock() ) {
-		varconv_fail( __( 'A bulk create is running. Try again when it has finished.', 'variation-converter-for-woocommerce' ), array() );
+		varconv_fail( __( 'A bulk job is running. Try again when it has finished.', 'variation-converter-for-woocommerce' ), array() );
 	}
 	try {
 		$result = varconv_trash_originals_many( $ids );
@@ -592,7 +601,7 @@ function varconv_job_notice(): void {
 }
 
 function varconv_job_class( array $job ): string {
-	$kind = varconv_job_running( $job ) ? 'info' : ( $job['failed'] || $job['stopped'] ? 'warning' : 'success' );
+	$kind = varconv_job_running( $job ) ? 'info' : ( $job['failed'] || $job['stopped'] || ( 'create' !== $job['kind'] && ! $job['made'] ) ? 'warning' : 'success' );
 	return 'notice notice-' . $kind . ' inline varconv-job' . ( varconv_job_running( $job ) ? ' is-running' : '' );
 }
 
@@ -601,26 +610,65 @@ function varconv_job_html( array $job ): string {
 	if ( varconv_job_running( $job ) ) {
 		return '<p><span class="varconv-job-text">' . esc_html( varconv_job_text( $job ) ) . '</span>' . ( $job['stopped'] ? '' : ' <button type="button" class="button-link varconv-job-stop">' . esc_html__( 'Stop', 'variation-converter-for-woocommerce' ) . '</button>' ) . '</p>';
 	}
-	$stopped = $job['stopped'] ? esc_html( sprintf(
-		/* translators: 1: groups done, 2: groups selected. */
-		__( 'Bulk create stopped after %1$d of %2$d groups.', 'variation-converter-for-woocommerce' ),
+	if ( 'create' === $job['kind'] ) {
+		$stopped = $job['stopped'] ? esc_html( sprintf(
+			/* translators: 1: groups done, 2: groups selected. */
+			__( 'Bulk create stopped after %1$d of %2$d groups.', 'variation-converter-for-woocommerce' ),
+			$job['done'],
+			$job['total']
+		) ) . ' ' : '';
+		return '<p>' . $stopped . wp_kses_post( varconv_bulk_summary( $job['made'], $job['skip'], $job['failed'] ) ) . '</p>';
+	}
+	$text = $job['stopped'] ? sprintf(
+		/* translators: 1: conversions done, 2: conversions selected. */
+		__( 'Stopped after %1$d of %2$d conversions.', 'variation-converter-for-woocommerce' ),
 		$job['done'],
 		$job['total']
-	) ) . ' ' : '';
-	return '<p>' . $stopped . wp_kses_post( varconv_bulk_summary( $job['made'], $job['skip'], $job['failed'] ) ) . '</p>';
+	) . ' ' : '';
+	if ( 'undo' === $job['kind'] ) {
+		/* translators: %d: number of conversions undone. */
+		$text .= sprintf( _n( 'Undid %d conversion. Its products are back as they were.', 'Undid %d conversions. Their products are back as they were.', $job['made'], 'variation-converter-for-woocommerce' ), $job['made'] );
+		$why = __( 'Not undone:', 'variation-converter-for-woocommerce' );
+	} elseif ( ! $job['made'] && ! $job['failed'] ) {
+		$text .= __( 'Nothing was moved: none of these conversions has hidden originals left. Only combines whose originals are still hidden can move them to the Trash.', 'variation-converter-for-woocommerce' );
+		$why = '';
+	} else {
+		$text .= sprintf(
+			/* translators: 1: number of simple products moved to the Trash, 2: number of conversions they came from. */
+			_n( 'Moved %1$d original simple product to the Trash, from %2$d combined products. Reviews are on the variable products now, and old pages redirect there. Undo restores them while they are in the Trash.', 'Moved %1$d original simple products to the Trash, from %2$d combined products. Reviews are on the variable products now, and old pages redirect there. Undo restores them while they are in the Trash.', $job['products'], 'variation-converter-for-woocommerce' ),
+			$job['products'],
+			$job['made']
+		);
+		$why = __( 'Not moved:', 'variation-converter-for-woocommerce' );
+	}
+	if ( $job['failed'] && $why ) {
+		$text .= ' ' . $why . ' ' . implode( ' ', $job['errors'] );
+		if ( $job['failed'] > count( $job['errors'] ) ) {
+			/* translators: %d: number of other conversions that failed. */
+			$text .= ' ' . sprintf( __( 'And %d more.', 'variation-converter-for-woocommerce' ), $job['failed'] - count( $job['errors'] ) );
+		}
+	}
+	return '<p>' . esc_html( $text ) . '</p>';
 }
 
 /** A running job's progress, or that it is stopping. */
 function varconv_job_text( array $job ): string {
 	if ( $job['stopped'] ) {
-		return __( 'Stopping after the group being created now...', 'variation-converter-for-woocommerce' );
+		return 'create' === $job['kind']
+			? __( 'Stopping after the group being created now...', 'variation-converter-for-woocommerce' )
+			: __( 'Stopping after the conversion being worked on now...', 'variation-converter-for-woocommerce' );
 	}
-	return sprintf(
+	if ( 'undo' === $job['kind'] ) {
+		/* translators: 1: conversions done, 2: conversions selected. */
+		$text = __( 'Undoing conversions: %1$d of %2$d done. This keeps going if you leave the page.', 'variation-converter-for-woocommerce' );
+	} elseif ( 'trash' === $job['kind'] ) {
+		/* translators: 1: conversions done, 2: conversions selected. */
+		$text = __( 'Moving originals to the Trash: %1$d of %2$d conversions done. This keeps going if you leave the page.', 'variation-converter-for-woocommerce' );
+	} else {
 		/* translators: 1: groups done, 2: groups selected. */
-		__( 'Creating groups: %1$d of %2$d done. This keeps going if you leave the page.', 'variation-converter-for-woocommerce' ),
-		$job['done'],
-		$job['total']
-	);
+		$text = __( 'Creating groups: %1$d of %2$d done. This keeps going if you leave the page.', 'variation-converter-for-woocommerce' );
+	}
+	return sprintf( $text, $job['done'], $job['total'] );
 }
 
 /** What a bulk create did, with a link to History. */

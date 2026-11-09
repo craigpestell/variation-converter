@@ -134,20 +134,25 @@ function varconv_history_view( string $search = '', string $view = '' ): array {
 
 /**
  * Undoes several conversions from History, newest first, each as its own Undo would. One that fails is reported and
- * the rest carry on.
+ * the rest carry on. $stop, checked before each, ends the run early when it returns true.
  *
  * @param int[] $ids Variable products combined or split here.
- * @return array{undone:int,errors:string[]}
+ * @return array{undone:int,ran:int,errors:string[]}
  */
-function varconv_undo_many( array $ids ): array {
+function varconv_undo_many( array $ids, ?callable $stop = null ): array {
 	$ids = array_unique( array_map( 'intval', $ids ) );
 	$kinds = array_column( varconv_history(), 'kind', 'id' );
-	$out = array( 'undone' => 0, 'errors' => array() );
+	$out = array( 'undone' => 0, 'ran' => 0, 'errors' => array() );
 	foreach ( array_diff( $ids, array_keys( $kinds ) ) as $id ) {
 		/* translators: %d: product ID. */
 		$out['errors'][] = sprintf( __( 'Product %d is not in History.', 'variation-converter-for-woocommerce' ), $id );
+		++$out['ran'];
 	}
 	foreach ( array_intersect_key( $kinds, array_flip( $ids ) ) as $id => $kind ) {
+		if ( $stop && $stop() ) {
+			break;
+		}
+		++$out['ran'];
 		try {
 			if ( 'combined' === $kind ) {
 				varconv_undo( $id );
@@ -160,6 +165,7 @@ function varconv_undo_many( array $ids ): array {
 		} catch ( RuntimeException $e ) {
 			$out['errors'][] = varconv_message( $e );
 		}
+		varconv_lock_renew();
 	}
 	return $out;
 }
