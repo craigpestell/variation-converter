@@ -80,7 +80,7 @@ function varconv_filters( array $request ): array {
 		'brand'   => $get( 'brand' ),
 		'min'     => min( 5, max( 2, (int) $get( 'min' ) ) ),
 		'warn'    => $warn,
-		'orderby' => in_array( $orderby, array( 'name', 'price' ), true ) ? $orderby : '',
+		'orderby' => in_array( $orderby, array( 'size', 'price' ), true ) ? $orderby : '',
 		'order'   => in_array( $order, array( 'asc', 'desc' ), true ) ? $order : '',
 	);
 }
@@ -107,7 +107,7 @@ function varconv_filtered( array $scan, array $f ): array {
 		$groups = array_values( array_filter( $groups, static fn( $c ) => (bool) $c['notes'] ) );
 	}
 	$groups = varconv_with( varconv_min_size( varconv_of_brand( varconv_matching( $groups, $f['s'] ), $f['brand'] ), $f['min'] ), $f['warn'] );
-	return varconv_sorted( $groups, '' === $f['orderby'] ? 'size' : $f['orderby'], $f['order'] );
+	return varconv_sorted( $groups, '' === $f['orderby'] ? 'name' : $f['orderby'], $f['order'] );
 }
 
 function varconv_per_page(): int {
@@ -199,8 +199,8 @@ function varconv_group_action_url( string $action, string $key, array $f ): stri
 
 /** A sortable column header, as WordPress list tables draw it. */
 function varconv_sortable_header( string $column, string $label, array $f, string $class ): void {
-	$current = $f['orderby'] === $column || ( '' === $column && '' === $f['orderby'] );
-	$default = '' === $column ? 'desc' : 'asc';
+	$current = $f['orderby'] === $column;
+	$default = 'size' === $column ? 'desc' : 'asc';
 	$order = '' !== $f['order'] ? $f['order'] : $default;
 	$next = $current ? ( 'asc' === $order ? 'desc' : 'asc' ) : $default;
 	$args = array_merge( varconv_filter_args( $f ), array( 'orderby' => $column, 'order' => $next ) );
@@ -226,8 +226,8 @@ function varconv_list_headers( array $f, bool $list ): void {
 		<?php if ( $list ) : ?>
 			<td class="manage-column column-cb check-column"><input type="checkbox" class="varconv-pick-page" aria-label="<?php esc_attr_e( 'Select all groups on this page', 'variation-converter-for-woocommerce' ); ?>"></td>
 		<?php endif; ?>
-		<?php $header( 'name', __( 'Group', 'variation-converter-for-woocommerce' ), 'column-primary column-name' ); ?>
-		<?php $header( '', __( 'Products', 'variation-converter-for-woocommerce' ), 'column-products' ); ?>
+		<?php $header( '', __( 'Group', 'variation-converter-for-woocommerce' ), 'column-primary column-name' ); ?>
+		<?php $header( 'size', __( 'Products', 'variation-converter-for-woocommerce' ), 'column-products' ); ?>
 		<th scope="col" class="manage-column column-sku"><?php esc_html_e( 'SKU family', 'variation-converter-for-woocommerce' ); ?></th>
 		<?php $header( 'price', __( 'Price', 'variation-converter-for-woocommerce' ), 'column-price' ); ?>
 		<th scope="col" class="manage-column column-attr"><?php esc_html_e( 'Attribute', 'variation-converter-for-woocommerce' ); ?></th>
