@@ -95,19 +95,19 @@ function varconv_trash_originals( int $parent_id ): int {
 }
 
 /**
- * Trash originals for several History rows. Rows that are not combines, or have nothing hidden left, are reported and
- * the rest carry on.
+ * Trash originals for several History rows. Rows with nothing to move (a split, a Made simple, or a combine whose
+ * originals are already in the Trash) are skipped and counted, so "select all" and then this action does every combine
+ * it can. A combine that fails is reported and the rest carry on.
  *
- * @param int[] $ids Variable products.
- * @return array{done:int,products:int,errors:string[]}
+ * @param int[] $ids Products listed in History.
+ * @return array{done:int,products:int,skipped:int,errors:string[]}
  */
 function varconv_trash_originals_many( array $ids ): array {
-	$out = array( 'done' => 0, 'products' => 0, 'errors' => array() );
+	$out = array( 'done' => 0, 'products' => 0, 'skipped' => 0, 'errors' => array() );
 	$combined = varconv_created();
 	foreach ( array_unique( array_map( 'intval', $ids ) ) as $id ) {
-		if ( ! in_array( $id, $combined, true ) ) {
-			/* translators: %s: product name. */
-			$out['errors'][] = sprintf( __( '%s was not made by combining, so it has no hidden originals.', 'variation-converter-for-woocommerce' ), get_post_field( 'post_title', $id, 'raw' ) ?: '#' . $id );
+		if ( ! in_array( $id, $combined, true ) || ! varconv_originals( $id )['hidden'] ) {
+			++$out['skipped'];
 			continue;
 		}
 		try {

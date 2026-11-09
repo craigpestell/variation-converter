@@ -335,6 +335,12 @@ function varconv_handle_undo_checked(): void {
 		varconv_fail( __( 'Choose a bulk action first.', 'variation-converter-for-woocommerce' ), array( 'tab' => 'history' ) );
 	}
 	$ids = isset( $_POST['products'] ) ? array_map( 'absint', (array) wp_unslash( $_POST['products'] ) ) : array();
+	// "Select all N conversions": every row of the list, on every page, for the view and search it was showing.
+	if ( $ids && ! empty( $_POST['all_matching'] ) ) {
+		$view = isset( $_POST['view'] ) ? sanitize_key( wp_unslash( $_POST['view'] ) ) : '';
+		$search = isset( $_POST['s'] ) ? sanitize_text_field( wp_unslash( $_POST['s'] ) ) : '';
+		$ids = array_column( varconv_history_view( $search, $view ), 'id' );
+	}
 	if ( ! $ids ) {
 		varconv_fail( __( 'Check at least one conversion first.', 'variation-converter-for-woocommerce' ), array() );
 	}
@@ -380,7 +386,10 @@ function varconv_trash_originals_back( array $ids ): void {
 	} finally {
 		varconv_unlock();
 	}
-	$args = array( 'varconv_done' => 'trashed_originals', 'varconv_count' => $result['products'] );
+	$args = array( 'varconv_done' => 'trashed_originals', 'varconv_count' => $result['products'], 'varconv_skip' => $result['skipped'] );
+	if ( ! $result['done'] && ! $result['errors'] ) {
+		varconv_fail( __( 'Nothing was moved: none of these conversions has hidden originals left. Only combines whose originals are still hidden can move them to the Trash.', 'variation-converter-for-woocommerce' ), array() );
+	}
 	if ( $result['errors'] ) {
 		/* translators: 1: number of products moved to the Trash, 2: why others were not, one reason after another. */
 		varconv_fail( sprintf( __( 'Moved %1$d originals to the Trash. Not moved: %2$s', 'variation-converter-for-woocommerce' ), $result['products'], implode( ' ', $result['errors'] ) ), $args );
@@ -742,6 +751,17 @@ function varconv_trash_originals_confirm(): string {
 	return __( 'Move the hidden original simple products to the Trash? Their reviews move to the variable product and their old pages keep redirecting to it. Undo works while they are in the Trash; once the Trash is emptied (WordPress does this after 30 days) this combine can no longer be undone.', 'variation-converter-for-woocommerce' );
 }
 
+/** After Move originals to Trash: how many checked conversions had nothing to move, as a sentence (escaped). */
+function varconv_skipped_note(): string {
+	// phpcs:ignore WordPress.Security.NonceVerification.Recommended -- a count to show.
+	$skipped = isset( $_GET['varconv_skip'] ) ? absint( wp_unslash( $_GET['varconv_skip'] ) ) : 0;
+	return $skipped ? ' ' . esc_html( sprintf(
+		/* translators: %d: number of conversions skipped. */
+		_n( 'Skipped %d conversion with no hidden originals (a split, a Made simple, or originals already in the Trash).', 'Skipped %d conversions with no hidden originals (splits, Made simple, or originals already in the Trash).', $skipped, 'variation-converter-for-woocommerce' ),
+		$skipped
+	) ) : '';
+}
+
 /** Links to products by SKU, or by ID when they have none. */
 function varconv_product_links( array $ids ): string {
 	return implode( ', ', array_map( static fn( $s ) => sprintf(
@@ -797,7 +817,7 @@ function varconv_notice(): void {
 					/* translators: %d: number of simple products moved to the Trash. */
 					_n( 'Moved %d original simple product to the Trash. Its reviews are on the variable product now, and its old page redirects there. Undo restores it while it is in the Trash.', 'Moved %d original simple products to the Trash. Their reviews are on the variable product now, and their old pages redirect there. Undo restores them while they are in the Trash.', $count, 'variation-converter-for-woocommerce' ),
 					$count
-				) )
+				) ) . varconv_skipped_note() // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped where it is built.
 			);
 			break;
 		case 'split':

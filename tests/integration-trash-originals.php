@@ -135,6 +135,16 @@ try {
 	// 6. A product that was not combined.
 	throws( static fn() => varconv_trash_originals( $keys[1] ), 'not a variable product combined', 'refuses other products' );
 
+	// 7. Several rows at once, as "select all" sends them: rows with nothing to move are skipped, not errors.
+	$fresh = $make( 'VC Trash Soap', array( 'Lime', 'Mint' ) );
+	$soap = $parents[] = varconv_create( 'VC Trash Soap', 'Scent', $fresh );
+	$result = varconv_trash_originals_many( array( $parent_id, $keys[1], $soap, $soap ) );
+	check( $result, array( 'done' => 1, 'products' => 2, 'skipped' => 2, 'errors' => array() ), 'many: one combine done, two skipped' );
+	check( varconv_trash_originals_many( array( $soap ) )['skipped'], 1, 'many: nothing left is skipped' );
+	check( count( varconv_history_view( '', 'combined' ) ) <= count( varconv_history_view() ), true, 'views are part of All' );
+	check( in_array( $soap, array_column( varconv_history_view( 'VC Trash Soap', 'combined' ), 'id' ), true ), true, 'view and search find the combine' );
+	check( varconv_history_view( 'VC Trash Soap', 'split' ), array(), 'split view leaves combines out' );
+
 	echo "Trash originals integration tests passed.\n";
 } finally {
 	foreach ( $parents as $p ) {

@@ -312,7 +312,7 @@ function varconv_render_history(): void {
 		'split'    => count( array_filter( $all, static fn( $r ) => 'split' === $r['kind'] ) ),
 		'taken'    => count( array_filter( $all, static fn( $r ) => 'taken' === $r['kind'] ) ),
 	);
-	$rows = '' === $view ? $all : array_values( array_filter( $all, static fn( $r ) => $view === $r['kind'] ) );
+	$rows = varconv_history_view( $search, $view );
 	$shown = array_slice( $rows, ( $paged - 1 ) * VARCONV_PER_PAGE, VARCONV_PER_PAGE );
 	$labels = array(
 		''         => __( 'All', 'variation-converter-for-woocommerce' ),
@@ -367,9 +367,46 @@ function varconv_render_history(): void {
 		<?php if ( '' !== $search ) : ?>
 			<input type="hidden" name="s" value="<?php echo esc_attr( $search ); ?>">
 		<?php endif; ?>
+		<?php if ( '' !== $view ) : ?>
+			<input type="hidden" name="view" value="<?php echo esc_attr( $view ); ?>">
+		<?php endif; ?>
+		<input type="hidden" name="all_matching" value="" class="varconv-all-matching">
 		<?php wp_nonce_field( 'varconv_undo_checked' ); ?>
 	</form>
 	<?php varconv_tablenav( 'top', count( $rows ), $paged, VARCONV_PER_PAGE, $args, $label, $shown ? $bulk : null ); ?>
+	<?php
+	// More rows than this page shows: once every row here is checked, offer every row of the list, as Gmail does.
+	if ( count( $rows ) > count( $shown ) && $shown ) :
+		$total = number_format_i18n( count( $rows ) );
+		$filtered = '' !== $search || '' !== $view;
+		?>
+		<div class="notice notice-info inline varconv-select-all" hidden data-confirm-all="<?php echo esc_attr( sprintf( /* translators: %s: number of conversions. */ __( 'This applies to all %s conversions in the list, on every page.', 'variation-converter-for-woocommerce' ), $total ) ); ?>">
+			<p>
+				<span class="varconv-select-page">
+					<?php
+					/* translators: %s: number of conversions on this page. */
+					echo esc_html( sprintf( __( 'All %s conversions on this page are selected.', 'variation-converter-for-woocommerce' ), number_format_i18n( count( $shown ) ) ) );
+					?>
+					<button type="button" class="button-link varconv-select-matching">
+						<?php
+						echo esc_html( $filtered
+							/* translators: %s: number of conversions. */
+							? sprintf( __( 'Select all %s matching conversions', 'variation-converter-for-woocommerce' ), $total )
+							/* translators: %s: number of conversions. */
+							: sprintf( __( 'Select all %s conversions', 'variation-converter-for-woocommerce' ), $total ) );
+						?>
+					</button>
+				</span>
+				<span class="varconv-select-matched" hidden>
+					<?php
+					/* translators: %s: number of conversions. */
+					echo esc_html( sprintf( __( 'All %s conversions in this list are selected, on every page.', 'variation-converter-for-woocommerce' ), $total ) );
+					?>
+					<button type="button" class="button-link varconv-select-clear"><?php esc_html_e( 'Clear selection', 'variation-converter-for-woocommerce' ); ?></button>
+				</span>
+			</p>
+		</div>
+	<?php endif; ?>
 	<table class="wp-list-table widefat fixed striped table-view-list varconv-history">
 		<thead><?php $headers( 'top' ); ?></thead>
 		<tbody>

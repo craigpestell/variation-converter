@@ -561,6 +561,41 @@
 		} );
 	}
 
+	// History: with every row on this page checked, offer every row of the list (all pages). Unchecking any row, or
+	// Clear selection, goes back to just what is checked. WordPress's own script checks the rows from the header box.
+	function historySelection( matched ) {
+		var banner = document.querySelector( '.varconv-select-all' );
+		var field = document.querySelector( '#varconv-undo-checked .varconv-all-matching' );
+		if ( ! banner || ! field ) {
+			return;
+		}
+		var rows = document.querySelectorAll( '.varconv-history tbody input[name="products[]"]' );
+		var all = rows.length > 0 && Array.prototype.every.call( rows, function ( row ) {
+			return row.checked;
+		} );
+		field.value = all && matched ? '1' : '';
+		banner.hidden = ! all;
+		banner.querySelector( '.varconv-select-page' ).hidden = !! field.value;
+		banner.querySelector( '.varconv-select-matched' ).hidden = ! field.value;
+	}
+
+	document.addEventListener( 'change', function ( event ) {
+		if ( event.target.matches( '.varconv-history input[type="checkbox"]' ) ) {
+			historySelection( false );
+		}
+	} );
+
+	document.addEventListener( 'click', function ( event ) {
+		if ( event.target.closest( '.varconv-select-matching' ) ) {
+			historySelection( true );
+		} else if ( event.target.closest( '.varconv-select-clear' ) ) {
+			document.querySelectorAll( '.varconv-history input[type="checkbox"]' ).forEach( function ( box ) {
+				box.checked = false;
+			} );
+			historySelection( false );
+		}
+	} );
+
 	document.addEventListener( 'submit', function ( event ) {
 		var form = event.target;
 		if ( form.matches( 'form.varconv-confirm' ) && ! window.confirm( form.dataset.confirm ) ) {
@@ -573,6 +608,11 @@
 			var menu = document.querySelector( '[name="' + ( event.submitter && 'bottom' === event.submitter.value ? 'bulk_action2' : 'bulk_action' ) + '"]' );
 			var checked = document.querySelector( 'input[name="products[]"]:checked' );
 			var ask = menu && checked ? { undo: form.dataset.confirm, trash_originals: form.dataset.confirmTrash }[ menu.value ] : '';
+			var matching = form.querySelector( '.varconv-all-matching' );
+			var banner = document.querySelector( '.varconv-select-all' );
+			if ( ask && matching && matching.value && banner ) {
+				ask += '\n\n' + banner.dataset.confirmAll;
+			}
 			if ( ask && ! window.confirm( ask ) ) {
 				event.preventDefault();
 			}
