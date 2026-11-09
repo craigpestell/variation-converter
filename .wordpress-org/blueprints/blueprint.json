@@ -1,43 +1,43 @@
 {
-  "$schema": "https://playground.wordpress.net/blueprint-schema.json",
-  "meta": {
-    "title": "Variation Converter for WooCommerce demo",
-    "description": "WooCommerce with 32 simple products that are really a few products in several variants, including tees in color and size and coffee in grind and weight. Search or scan, then combine them into variable products.",
-    "author": "craigpestell",
-    "categories": [
-      "WooCommerce"
+    "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+    "meta": {
+        "title": "Variation Converter for WooCommerce demo",
+        "description": "WooCommerce with 32 simple products that are really a few products in several variants, including tees in color and size and coffee in grind and weight. Search or scan, then combine them into variable products.",
+        "author": "craigpestell",
+        "categories": [
+            "WooCommerce"
+        ]
+    },
+    "landingPage": "/wp-admin/edit.php?post_type=product&page=varconv",
+    "preferredVersions": {
+        "php": "8.2",
+        "wp": "latest"
+    },
+    "login": true,
+    "steps": [
+        {
+            "step": "installPlugin",
+            "pluginData": {
+                "resource": "wordpress.org/plugins",
+                "slug": "woocommerce"
+            },
+            "options": {
+                "activate": true
+            }
+        },
+        {
+            "step": "installPlugin",
+            "pluginData": {
+                "resource": "wordpress.org/plugins",
+                "slug": "variation-converter-for-woocommerce"
+            },
+            "options": {
+                "activate": true
+            }
+        },
+        {
+            "step": "runPHP",
+            "code": "<?php\n// The Live Preview demo store. This file is the source of the runPHP step in blueprint.json:\n// edit it, then run `php .wordpress-org/blueprints/build.php` and commit both files.\nrequire '/wordpress/wp-load.php';\nrequire_once ABSPATH . 'wp-admin/includes/image.php';\nforeach ( array(\n\t'woocommerce_currency' => 'USD', 'woocommerce_default_country' => 'US:OR', 'woocommerce_coming_soon' => 'no',\n\t'woocommerce_store_pages_only' => 'no', 'woocommerce_allow_tracking' => 'no', 'woocommerce_show_marketplace_suggestions' => 'no',\n\t'woocommerce_task_list_hidden' => 'yes', 'woocommerce_extended_task_list_hidden' => 'yes',\n\t'woocommerce_onboarding_profile' => array( 'skipped' => true ), 'blogname' => 'Demo Store',\n) as $name => $value ) {\n\tupdate_option( $name, $value );\n}\ndelete_transient( '_wc_activation_redirect' );\nfunction demo_cat( $name ) {\n\t$term = term_exists( $name, 'product_cat' ) ?: wp_insert_term( $name, 'product_cat' );\n\treturn (int) $term['term_id'];\n}\n\n// Flat product pictures drawn with GD: a shape in the product's color. One image per look, shared by products that look alike.\nfunction demo_color( $im, $hex, $shade = 1.0 ) {\n\t$c = array_map( 'hexdec', str_split( ltrim( $hex, '#' ), 2 ) );\n\treturn imagecolorallocate( $im, (int) min( 255, $c[0] * $shade ), (int) min( 255, $c[1] * $shade ), (int) min( 255, $c[2] * $shade ) );\n}\nfunction demo_points( array $xy, $s ) {\n\t// Scale around the bottom center, so smaller sizes stand on the same floor.\n\t$out = array();\n\tfor ( $i = 0; $i < count( $xy ); $i += 2 ) {\n\t\t$out[] = (int) round( 300 + ( $xy[ $i ] - 300 ) * $s );\n\t\t$out[] = (int) round( 520 - ( 520 - $xy[ $i + 1 ] ) * $s );\n\t}\n\treturn $out;\n}\nfunction demo_shape( $im, array $xy, $s, $fill, $line ) {\n\t$p = demo_points( $xy, $s );\n\timagefilledpolygon( $im, $p, $fill );\n\timagesetthickness( $im, 4 );\n\timagepolygon( $im, $p, $line );\n\timagesetthickness( $im, 1 );\n}\nfunction demo_text( $im, $text, $cx, $cy, $height, $color ) {\n\t// GD's built-in font, drawn small and scaled up, so no font file is needed.\n\t$w     = imagefontwidth( 5 ) * strlen( $text );\n\t$small = imagecreatetruecolor( $w, 15 );\n\timagealphablending( $small, false );\n\t$clear = imagecolorallocatealpha( $small, 0, 0, 0, 127 );\n\timagefill( $small, 0, 0, $clear );\n\timagesavealpha( $small, true );\n\timagestring( $small, 5, 0, 0, $text, $color );\n\t$k = $height / 15;\n\timagealphablending( $im, true );\n\timagecopyresized( $im, $small, (int) ( $cx - $w * $k / 2 ), (int) ( $cy - $height / 2 ), 0, 0, (int) ( $w * $k ), (int) $height, $w, 15 );\n\timagedestroy( $small );\n}\nfunction demo_image( $shape, $hex, $s = 1.0, $accent = '', $label = '' ) {\n\tstatic $made = array();\n\t$key = sanitize_title( \"$shape-$hex-$s-$accent-$label\" );\n\tif ( isset( $made[ $key ] ) || ! function_exists( 'imagecreatetruecolor' ) ) {\n\t\treturn $made[ $key ] ?? 0;\n\t}\n\t$im   = imagecreatetruecolor( 600, 600 );\n\t$bg   = demo_color( $im, '#f2f1ee' );\n\t$fill = demo_color( $im, $hex );\n\t$line = demo_color( $im, $hex, 0.7 );\n\tif ( hexdec( substr( $hex, 1, 2 ) ) > 230 ) {\n\t\t$line = demo_color( $im, '#c9c6bf' );\n\t}\n\timagefill( $im, 0, 0, $bg );\n\t$shadow = demo_color( $im, '#e2e0db' );\n\timagefilledellipse( $im, 300, 530, (int) ( 360 * $s ), 36, $shadow );\n\tif ( 'tee' === $shape || 'vneck' === $shape ) {\n\t\tdemo_shape( $im, array( 240, 110, 150, 140, 80, 250, 160, 290, 185, 255, 185, 510, 415, 510, 415, 255, 440, 290, 520, 250, 450, 140, 360, 110 ), $s, $fill, $line );\n\t\t$neck = demo_points( array( 300, 108 ), $s );\n\t\timagesetthickness( $im, 4 );\n\t\tif ( 'tee' === $shape ) {\n\t\t\timagefilledellipse( $im, $neck[0], $neck[1], (int) ( 124 * $s ), (int) ( 70 * $s ), $bg );\n\t\t\timagearc( $im, $neck[0], $neck[1], (int) ( 124 * $s ), (int) ( 70 * $s ), 0, 180, $line );\n\t\t} else {\n\t\t\t$v = demo_points( array( 238, 106, 362, 106, 300, 190 ), $s );\n\t\t\timagefilledpolygon( $im, $v, $bg );\n\t\t\timageline( $im, $v[0], $v[1] + 4, $v[4], $v[5], $line );\n\t\t\timageline( $im, $v[4], $v[5], $v[2], $v[3] + 4, $line );\n\t\t}\n\t\timagesetthickness( $im, 1 );\n\t} elseif ( 'mug' === $shape ) {\n\t\timagefilledellipse( $im, 390, 340, 170, 180, $line );\n\t\timagefilledellipse( $im, 390, 340, 110, 120, $bg );\n\t\tdemo_shape( $im, array( 150, 190, 390, 190, 390, 470, 370, 500, 170, 500, 150, 470 ), 1, $fill, $line );\n\t\timagefilledellipse( $im, 270, 190, 240, 40, demo_color( $im, $hex, 0.8 ) );\n\t\tif ( $accent ) {\n\t\t\tmt_srand( 7 );\n\t\t\t$dot = demo_color( $im, $accent );\n\t\t\tfor ( $i = 0; $i < 90; $i++ ) {\n\t\t\t\timagefilledellipse( $im, mt_rand( 165, 375 ), mt_rand( 215, 490 ), 7, 7, $dot );\n\t\t\t}\n\t\t} else {\n\t\t\timagesetthickness( $im, 6 );\n\t\t\timagearc( $im, 270, 190, 240, 40, 0, 360, demo_color( $im, '#ffffff' ) );\n\t\t}\n\t} elseif ( 'bag' === $shape ) {\n\t\tdemo_shape( $im, array( 190, 140, 410, 140, 430, 510, 170, 510 ), $s, $fill, $line );\n\t\tdemo_shape( $im, array( 185, 110, 415, 110, 415, 150, 185, 150 ), $s, demo_color( $im, $hex, 0.75 ), $line );\n\t\tdemo_shape( $im, array( 220, 250, 380, 250, 380, 400, 220, 400 ), $s, demo_color( $im, '#f7f3ea' ), $line );\n\t\tdemo_shape( $im, array( 220, 360, 380, 360, 380, 400, 220, 400 ), $s, demo_color( $im, $accent ), $line );\n\t\t$bean = demo_points( array( 300, 305 ), $s );\n\t\timagefilledellipse( $im, $bean[0], $bean[1], (int) ( 60 * $s ), (int) ( 80 * $s ), demo_color( $im, '#5a3a22' ) );\n\t} elseif ( 'bottle' === $shape ) {\n\t\tdemo_shape( $im, array( 270, 60, 330, 60, 330, 100, 270, 100 ), $s, demo_color( $im, '#2b2b2b' ), demo_color( $im, '#2b2b2b' ) );\n\t\tdemo_shape( $im, array( 275, 100, 325, 100, 325, 180, 380, 240, 380, 510, 220, 510, 220, 240, 275, 180 ), $s, $fill, $line );\n\t\tdemo_shape( $im, array( 220, 320, 380, 320, 380, 430, 220, 430 ), $s, demo_color( $im, '#fbfaf7' ), $line );\n\t}\n\tif ( '' !== $label ) {\n\t\t$at   = array( 'tee' => 330, 'vneck' => 330, 'bag' => 455, 'bottle' => 375 )[ $shape ] ?? 300;\n\t\t$p    = demo_points( array( 300, $at ), $s );\n\t\t$dark = 'bottle' === $shape || hexdec( substr( $hex, 1, 2 ) ) + hexdec( substr( $hex, 3, 2 ) ) + hexdec( substr( $hex, 5, 2 ) ) > 450;\n\t\t$ink  = $dark ? imagecolorallocate( $im, 40, 40, 40 ) : imagecolorallocate( $im, 255, 255, 255 );\n\t\tdemo_text( $im, $label, $p[0], $p[1], (int) ( ( 'bottle' === $shape ? 44 : 90 ) * $s ), $ink );\n\t}\n\tob_start();\n\timagepng( $im );\n\t$png = ob_get_clean();\n\timagedestroy( $im );\n\t$file = wp_upload_bits( \"demo-$key.png\", null, $png );\n\tif ( ! empty( $file['error'] ) ) {\n\t\treturn $made[ $key ] = 0;\n\t}\n\t$id = wp_insert_attachment( array( 'post_mime_type' => 'image/png', 'post_title' => $key, 'post_status' => 'inherit' ), $file['file'] );\n\twp_update_attachment_metadata( $id, wp_generate_attachment_metadata( $id, $file['file'] ) );\n\treturn $made[ $key ] = $id;\n}\n// The pictures are flat 600px PNGs, so skip the resized copies (quicker in Playground).\nadd_filter( 'intermediate_image_sizes_advanced', '__return_empty_array' );\n\n$apparel = demo_cat( 'Apparel' );\n$drink   = demo_cat( 'Drinkware' );\n$coffee  = demo_cat( 'Coffee' );\n$tees    = array( 'Black' => '#26262a', 'Blue' => '#2f6fd0', 'Red' => '#cf3a32', 'White' => '#fbfbf9', 'Navy' => '#1f2f57' );\n$mugs    = array( 'Navy' => '#1f2f57', 'Red' => '#cf3a32', 'Forest Green' => '#2f6b45' );\n// Bag color and label stripe per grind.\n$grinds  = array( 'Whole Bean' => array( '#b7a07a', '#7a4a2a' ), 'Ground' => array( '#4f7a5a', '#c8902f' ), 'Espresso Grind' => array( '#2e2826', '#c0392b' ) );\n$rows    = array();\nforeach ( array( 'Black' => 'BLK', 'Blue' => 'BLU', 'Red' => 'RED', 'White' => 'WHT' ) as $color => $code ) {\n\t$rows[] = array( \"Classic Tee $color\", \"TEE100-$code\", 24, $apparel, array( 'Black' => 18, 'Blue' => 7, 'Red' => 0, 'White' => 25 )[ $color ], array( 'tee', $tees[ $color ] ) );\n}\nforeach ( array( 'Black' => 'BLK', 'White' => 'WHT', 'Navy' => 'NVY' ) as $color => $code ) {\n\tforeach ( array( 'Small' => 'S', 'Medium' => 'M', 'Large' => 'L' ) as $size => $sc ) {\n\t\t$rows[] = array( \"Everyday Tee $color $size\", \"ET-$code-$sc\", 22, $apparel, null, array( 'tee', $tees[ $color ], array( 'S' => 0.85, 'M' => 0.92, 'L' => 1.0 )[ $sc ], '', $sc ) );\n\t}\n}\nforeach ( array( 'Small' => 'S', 'Medium' => 'M', 'Large' => 'L', 'XL' => 'XL' ) as $size => $sc ) {\n\t$rows[] = array( \"Organic V-Neck Tee ($size)\", \"VN220-$sc\", 'XL' === $sc ? 30 : 28, $apparel, null, array( 'vneck', '#6b7a4b', array( 'S' => 0.82, 'M' => 0.88, 'L' => 0.94, 'XL' => 1.0 )[ $sc ], '', $sc ) );\n}\nforeach ( array( 'Navy' => 'NV', 'Red' => 'RD', 'Forest Green' => 'FG' ) as $color => $code ) {\n\t$rows[] = array( \"Enamel Camp Mug 12oz $color\", \"MUG12-$code\", 16, $drink, null, array( 'mug', $mugs[ $color ] ) );\n}\n$rows[] = array( 'Speckled Stoneware Mug', 'MUG-SPK', 22, $drink, null, array( 'mug', '#d9d4ca', 1.0, '#6f6a62' ) );\nforeach ( array( '340g' => array( 'CF340', 15, 0.8, array( 40, 12, 3 ) ), '1kg' => array( 'CF1000', 38, 1.0, array( 20, 8, 5 ) ) ) as $weight => $w ) {\n\t$i = 0;\n\tforeach ( array( 'Whole Bean' => 'WB', 'Ground' => 'GR', 'Espresso Grind' => 'ES' ) as $grind => $gc ) {\n\t\t$rows[] = array( \"House Blend Coffee $grind $weight\", \"{$w[0]}-$gc\", $w[1], $coffee, $w[3][ $i++ ], array( 'bag', $grinds[ $grind ][0], $w[2], $grinds[ $grind ][1], $weight ) );\n\t}\n}\nforeach ( array( 'Vanilla' => array( 'VA', '#efe0b0' ), 'Caramel' => array( 'CA', '#c2772b' ) ) as $flavor => $f ) {\n\tforeach ( array( '250ml' => array( '02', 9, 0.7 ), '750ml' => array( '07', 19, 0.88 ), '1L' => array( '10', 24, 1.0 ) ) as $size => $info ) {\n\t\tif ( 'Vanilla' !== $flavor || '1L' !== $size ) {\n\t\t\t$rows[] = array( \"Barista Syrup $flavor $size\", \"SYR-{$f[0]}-{$info[0]}\", $info[1], $coffee, null, array( 'bottle', $f[1], $info[2], '', $size ) );\n\t\t}\n\t}\n}\nforeach ( $rows as $row ) {\n\tif ( wc_get_product_id_by_sku( $row[1] ) ) {\n\t\tcontinue;\n\t}\n\t$p = new WC_Product_Simple();\n\t$p->set_name( $row[0] );\n\t$p->set_sku( $row[1] );\n\t$p->set_regular_price( (string) $row[2] );\n\t$p->set_category_ids( array( $row[3] ) );\n\tif ( null !== $row[4] ) {\n\t\t$p->set_manage_stock( true );\n\t\t$p->set_stock_quantity( $row[4] );\n\t}\n\t$image = demo_image( ...$row[5] );\n\tif ( $image ) {\n\t\t$p->set_image_id( $image );\n\t}\n\t$p->set_status( 'publish' );\n\t$p->save();\n}\n"
+        }
     ]
-  },
-  "landingPage": "/wp-admin/edit.php?post_type=product&page=varconv",
-  "preferredVersions": {
-    "php": "8.2",
-    "wp": "latest"
-  },
-  "login": true,
-  "steps": [
-    {
-      "step": "installPlugin",
-      "pluginData": {
-        "resource": "wordpress.org/plugins",
-        "slug": "woocommerce"
-      },
-      "options": {
-        "activate": true
-      }
-    },
-    {
-      "step": "installPlugin",
-      "pluginData": {
-        "resource": "wordpress.org/plugins",
-        "slug": "variation-converter-for-woocommerce"
-      },
-      "options": {
-        "activate": true
-      }
-    },
-    {
-      "step": "runPHP",
-      "code": "<?php\nrequire '/wordpress/wp-load.php';\nforeach ( array(\n\t'woocommerce_currency' => 'USD', 'woocommerce_default_country' => 'US:OR', 'woocommerce_coming_soon' => 'no',\n\t'woocommerce_store_pages_only' => 'no', 'woocommerce_allow_tracking' => 'no', 'woocommerce_show_marketplace_suggestions' => 'no',\n\t'woocommerce_task_list_hidden' => 'yes', 'woocommerce_extended_task_list_hidden' => 'yes',\n\t'woocommerce_onboarding_profile' => array( 'skipped' => true ), 'blogname' => 'Demo Store',\n) as $name => $value ) {\n\tupdate_option( $name, $value );\n}\ndelete_transient( '_wc_activation_redirect' );\nfunction demo_cat( $name ) {\n\t$term = term_exists( $name, 'product_cat' ) ?: wp_insert_term( $name, 'product_cat' );\n\treturn (int) $term['term_id'];\n}\n$apparel = demo_cat( 'Apparel' );\n$drink   = demo_cat( 'Drinkware' );\n$coffee  = demo_cat( 'Coffee' );\n$rows = array(\n\tarray( 'Classic Tee Black', 'TEE100-BLK', 24, $apparel, 18 ),\n\tarray( 'Classic Tee Blue', 'TEE100-BLU', 24, $apparel, 7 ),\n\tarray( 'Classic Tee Red', 'TEE100-RED', 24, $apparel, 0 ),\n\tarray( 'Classic Tee White', 'TEE100-WHT', 24, $apparel, 25 ),\n\tarray( 'Everyday Tee Black Small', 'ET-BLK-S', 22, $apparel, null ),\n\tarray( 'Everyday Tee Black Medium', 'ET-BLK-M', 22, $apparel, null ),\n\tarray( 'Everyday Tee Black Large', 'ET-BLK-L', 22, $apparel, null ),\n\tarray( 'Everyday Tee White Small', 'ET-WHT-S', 22, $apparel, null ),\n\tarray( 'Everyday Tee White Medium', 'ET-WHT-M', 22, $apparel, null ),\n\tarray( 'Everyday Tee White Large', 'ET-WHT-L', 22, $apparel, null ),\n\tarray( 'Everyday Tee Navy Small', 'ET-NVY-S', 22, $apparel, null ),\n\tarray( 'Everyday Tee Navy Medium', 'ET-NVY-M', 22, $apparel, null ),\n\tarray( 'Everyday Tee Navy Large', 'ET-NVY-L', 22, $apparel, null ),\n\tarray( 'Organic V-Neck Tee (Small)', 'VN220-S', 28, $apparel, null ),\n\tarray( 'Organic V-Neck Tee (Medium)', 'VN220-M', 28, $apparel, null ),\n\tarray( 'Organic V-Neck Tee (Large)', 'VN220-L', 28, $apparel, null ),\n\tarray( 'Organic V-Neck Tee (XL)', 'VN220-XL', 30, $apparel, null ),\n\tarray( 'Enamel Camp Mug 12oz Navy', 'MUG12-NV', 16, $drink, null ),\n\tarray( 'Enamel Camp Mug 12oz Red', 'MUG12-RD', 16, $drink, null ),\n\tarray( 'Enamel Camp Mug 12oz Forest Green', 'MUG12-FG', 16, $drink, null ),\n\tarray( 'Speckled Stoneware Mug', 'MUG-SPK', 22, $drink, null ),\n\tarray( 'House Blend Coffee Whole Bean 340g', 'CF340-WB', 15, $coffee, 40 ),\n\tarray( 'House Blend Coffee Ground 340g', 'CF340-GR', 15, $coffee, 12 ),\n\tarray( 'House Blend Coffee Espresso Grind 340g', 'CF340-ES', 15, $coffee, 3 ),\n\tarray( 'House Blend Coffee Whole Bean 1kg', 'CF1000-WB', 38, $coffee, 20 ),\n\tarray( 'House Blend Coffee Ground 1kg', 'CF1000-GR', 38, $coffee, 8 ),\n\tarray( 'House Blend Coffee Espresso Grind 1kg', 'CF1000-ES', 38, $coffee, 5 ),\n\tarray( 'Barista Syrup Vanilla 250ml', 'SYR-VA-02', 9, $coffee, null ),\n\tarray( 'Barista Syrup Vanilla 750ml', 'SYR-VA-07', 19, $coffee, null ),\n\tarray( 'Barista Syrup Caramel 250ml', 'SYR-CA-02', 9, $coffee, null ),\n\tarray( 'Barista Syrup Caramel 750ml', 'SYR-CA-07', 19, $coffee, null ),\n\tarray( 'Barista Syrup Caramel 1L', 'SYR-CA-10', 24, $coffee, null ),\n);\nforeach ( $rows as $row ) {\n\tif ( wc_get_product_id_by_sku( $row[1] ) ) {\n\t\tcontinue;\n\t}\n\t$p = new WC_Product_Simple();\n\t$p->set_name( $row[0] );\n\t$p->set_sku( $row[1] );\n\t$p->set_regular_price( (string) $row[2] );\n\t$p->set_category_ids( array( $row[3] ) );\n\tif ( null !== $row[4] ) {\n\t\t$p->set_manage_stock( true );\n\t\t$p->set_stock_quantity( $row[4] );\n\t}\n\t$p->set_status( 'publish' );\n\t$p->save();\n}\n"
-    }
-  ]
 }
