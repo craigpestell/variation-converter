@@ -141,6 +141,8 @@ p.varconv-notes { color: #996800; margin: 4px 0 0; }
 .varconv-badge-combined { background: #edfaef; color: #005c12; }
 .varconv-badge-split { background: #f0f0f1; color: #50575e; }
 .varconv-history td a[href*="post.php"] { white-space: nowrap; }
+.varconv-select-all { margin: 0 0 8px; text-align: center; }
+.varconv-select-all[hidden], .varconv-select-all [hidden] { display: none; }
 .varconv-stock-instock { color: #007017; }
 .varconv-stock-outofstock { color: #b32d2e; }
 .varconv-stock-onbackorder { color: #996800; }

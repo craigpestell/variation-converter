@@ -123,6 +123,16 @@ function varconv_history( string $search = '' ): array {
 }
 
 /**
+ * History's rows for one view (All, Combined, Split or Made simple) and search: what its list shows, on every page.
+ *
+ * @return array<int,array{id:int,kind:string,time:int}>
+ */
+function varconv_history_view( string $search = '', string $view = '' ): array {
+	$rows = varconv_history( $search );
+	return in_array( $view, array( 'combined', 'split', 'taken' ), true ) ? array_values( array_filter( $rows, static fn( $r ) => $view === $r['kind'] ) ) : $rows;
+}
+
+/**
  * Undoes several conversions from History, newest first, each as its own Undo would. One that fails is reported and
  * the rest carry on.
  *
