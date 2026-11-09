@@ -184,7 +184,7 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 
 == Screenshots ==
 
-1. Six coffee products combined into one variable product: the attributes renamed to Grind and Weight, a label shortened, the order changed, then the new product's dropdowns in the shop.
+1. Six coffee products combined into one variable product: the attributes renamed to Grind and Weight, a label shortened, the order changed, then picking Espresso in 1kg from the dropdowns in the shop, which switches the product picture.
 2. Search on the Combine tab: the suggested groups that match, products not in a group, and Combine into one product.
 3. Reviewing a variable product with two attributes, Flavor and Volume, with the grid of pairs that exist.
 4. Splitting a variable product into simple products, with a suggested name for each.
