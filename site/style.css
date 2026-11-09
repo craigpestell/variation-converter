@@ -77,6 +77,9 @@ section:nth-of-type(even) { background: var(--bg-alt); }
 
 .shot { margin: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; box-shadow: var(--shadow); background: #fff; }
 .shot-hero { margin-top: 40px; }
+.shot video { display: block; width: 100%; height: auto; }
+.demo .shot { margin-top: 32px; }
+.demo .caption { margin-top: 12px; text-align: center; font-size: 0.9rem; color: var(--muted); }
 
 .steps { list-style: none; counter-reset: step; padding: 0; margin: 32px 0 0; display: grid; gap: 48px; }
 .steps > li { counter-increment: step; display: grid; gap: 24px; }
