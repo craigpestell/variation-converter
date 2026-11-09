@@ -110,6 +110,16 @@ try {
 	varconv_undo( $parent_id );
 	$parents = array();
 
+	// 4b. Restored from the Trash by hand: its old status, not draft, and its review back.
+	$parent_id = $parents[] = varconv_create( 'VC Trash Candle', 'Scent', $ids );
+	varconv_trash_originals( $parent_id );
+	wp_untrash_post( $keys[0] );
+	check( get_post_status( $keys[0] ), 'publish', 'restored by hand keeps its status' );
+	check( (int) get_comment( $r0 )->comment_post_ID, $keys[0], 'restored by hand takes its review back' );
+	varconv_undo( $parent_id );
+	$parents = array();
+	check( get_post_status( $keys[0] ), 'publish', 'published after a later Undo' );
+
 	// 5. Deleted for good: the old URL still redirects, and Undo refuses.
 	$parent_id = $parents[] = varconv_create( 'VC Trash Candle', 'Scent', $ids );
 	varconv_trash_originals( $parent_id );
