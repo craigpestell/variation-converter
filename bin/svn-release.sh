@@ -56,6 +56,7 @@ cd "$work/svn"
 svn add --quiet --force trunk assets
 svn status | { grep '^!' || true; } | cut -c9- | while IFS= read -r gone; do svn rm --quiet "$gone"; done
 for f in assets/*.png; do if [ -e "$f" ]; then svn propset --quiet svn:mime-type image/png "$f"; fi; done
+for f in assets/*.gif; do if [ -e "$f" ]; then svn propset --quiet svn:mime-type image/gif "$f"; fi; done
 for f in assets/*.svg; do if [ -e "$f" ]; then svn propset --quiet svn:mime-type image/svg+xml "$f"; fi; done
 svn propset --quiet svn:mime-type application/json assets/blueprints/blueprint.json
 svn copy --quiet trunk "tags/$version"

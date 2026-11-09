@@ -61,7 +61,7 @@ export default async function ({ browser, context, base, args }) {
 	const point = async (loc) => {
 		await loc.scrollIntoViewIfNeeded();
 		const b = await loc.boundingBox();
-		await page.mouse.move(b.x + Math.min(b.width / 2, 40), b.y + b.height / 2, { steps: 18 });
+		await page.mouse.move(b.x + Math.min(b.width / 2, 40), b.y + b.height / 2, { steps: 14 });
 		await pause(150);
 	};
 	const click = async (loc) => { await point(loc); await loc.click(); };
@@ -69,24 +69,19 @@ export default async function ({ browser, context, base, args }) {
 		await point(loc);
 		await loc.click({ clickCount: 3 });
 		await pause(150);
-		await loc.pressSequentially(text, { delay: 85 });
+		await loc.pressSequentially(text, { delay: 55 });
 		await pause(250);
 	};
 	const scrollTo = (y) => page.evaluate((y) => window.scrollTo({ top: y, behavior: 'smooth' }), y).then(() => pause(500));
 
-	// Search.
+	// The Combine tab lists the suggested groups A to Z: tick the two House Blend Coffee groups.
 	await go('edit.php?post_type=product&page=varconv');
-	await pause(700);
-	await type(page.locator('#varconv-search'), 'House Blend Coffee');
-	await point(page.locator('.varconv-find .button-primary'));
-	await Promise.all([page.waitForNavigation(), page.locator('.varconv-find .button-primary').click()]);
-	await tidy();
-	await pause(900);
-
-	// Tick both groups, combine into one product.
-	const picks = page.locator('tr.varconv-group-row .varconv-pick');
-	for (let i = 0; i < await picks.count(); i++) { await click(picks.nth(i)); await pause(200); }
-	await pause(400);
+	await pause(600);
+	const coffee = page.locator('tr.varconv-group-row', { hasText: 'House Blend Coffee' });
+	const firstTop = await coffee.first().evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+	await scrollTo(firstTop - 260);
+	for (let i = 0; i < await coffee.count(); i++) { await click(coffee.nth(i).locator('.varconv-pick')); await pause(200); }
+	await pause(300);
 	const combine = page.locator('.varconv-do[value="combine"]').first();
 	await point(combine);
 	await Promise.all([page.waitForNavigation(), combine.click()]);
@@ -143,7 +138,7 @@ export default async function ({ browser, context, base, args }) {
 	await Promise.all([page.waitForNavigation(), create.click()]);
 	await tidy();
 	await scrollTo(0);
-	await pause(1800);
+	await pause(1200);
 
 	// The product in the shop.
 	const view = page.locator('.notice a', { hasText: /View/i }).first();
@@ -158,8 +153,39 @@ export default async function ({ browser, context, base, args }) {
 			await sel.scrollIntoViewIfNeeded();
 			await scrollTo(Math.max(0, (await sel.evaluate((el) => el.getBoundingClientRect().top + window.scrollY)) - 300));
 			const selects = page.locator('form.variations_form select');
-			await point(selects.nth(0)); await selects.nth(0).selectOption({ index: 1 }); await pause(700);
-			await point(selects.nth(1)); await selects.nth(1).selectOption({ index: 1 }); await pause(1800);
+			// A native dropdown's list isn't in a recording, so draw it open: a list under the select with every option.
+			const choose = async (select, index) => {
+				await point(select);
+				await page.mouse.down(); await page.mouse.up();
+				await select.evaluate((el) => {
+					const r = el.getBoundingClientRect();
+					const list = document.createElement('div');
+					list.id = 'clip-options';
+					list.style.cssText = `position:absolute;left:${r.left + window.scrollX}px;top:${r.bottom + window.scrollY + 2}px;min-width:${r.width}px;background:#fff;border:1px solid #8c8f94;border-radius:4px;box-shadow:0 4px 14px rgba(0,0,0,.18);z-index:99999;padding:4px 0;font:15px/1.2 system-ui,sans-serif;color:#1e1e1e`;
+					for (const o of el.options) {
+						const item = document.createElement('div');
+						item.textContent = o.text;
+						item.dataset.value = o.value;
+						item.style.cssText = 'padding:7px 14px;white-space:nowrap' + (o.value ? '' : ';color:#757575');
+						list.appendChild(item);
+					}
+					document.body.appendChild(list);
+				});
+				await pause(900);
+				const item = page.locator('#clip-options > div').nth(index);
+				const b = await item.boundingBox();
+				await page.mouse.move(b.x + 30, b.y + b.height / 2, { steps: 14 });
+				await item.evaluate((el) => { el.style.background = '#2271b1'; el.style.color = '#fff'; });
+				await pause(450);
+				await page.mouse.down();
+				await page.evaluate(() => document.getElementById('clip-options').remove());
+				await select.selectOption({ index });
+				await page.mouse.up();
+				await pause(800);
+			};
+			await choose(selects.nth(0), 1);
+			await choose(selects.nth(1), 1);
+			await pause(1600);
 		}
 	}
 

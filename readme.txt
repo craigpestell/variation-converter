@@ -21,7 +21,6 @@ It finds the products that belong together for you, so you can combine products 
 
 It works the other way too: convert a variable product to simple products, with the same preview and the same Undo.
 
-[Watch a half-minute demo](https://variation-converter.bizrocket.ca/#demo): six coffee products combined into one variable product, with the attributes renamed and reordered before Create.
 
 = How it works =
 
@@ -185,10 +184,11 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 
 == Screenshots ==
 
-1. Search on the Combine tab: the suggested groups that match, products not in a group, and Combine into one product.
-2. Reviewing a variable product with two attributes, Flavor and Volume, with the grid of pairs that exist.
-3. Splitting a variable product into simple products, with a suggested name for each.
-4. The History tab, where every conversion can be undone.
+1. Six coffee products combined into one variable product: the attributes renamed to Grind and Weight, a label shortened, the order changed, then the new product's dropdowns in the shop.
+2. Search on the Combine tab: the suggested groups that match, products not in a group, and Combine into one product.
+3. Reviewing a variable product with two attributes, Flavor and Volume, with the grid of pairs that exist.
+4. Splitting a variable product into simple products, with a suggested name for each.
+5. The History tab, where every conversion can be undone.
 
 == Changelog ==
 
