@@ -1,4 +1,4 @@
-// wordpress.org listing screenshots 1-4, matching the readme captions. Needs the syrup groups:
+// wordpress.org listing screenshots 2-5 (1 is the demo GIF from clips/), matching the readme captions. Needs the syrup groups:
 //   harness/wp-harness reset && harness/wp-harness eval tests/seed-grid.php
 //   harness/wp-harness wp option update blogname 'Demo Store'
 //   harness/wp-harness browse .wordpress-org/screenshots.mjs --out .wordpress-org
@@ -12,7 +12,7 @@ export default async function ({ page, go, shot }) {
 	await page.locator('tr.varconv-group-row .varconv-pick').nth(0).check();
 	await page.locator('tr.varconv-group-row .varconv-pick').nth(1).check();
 	await page.locator('.varconv-loose-table tr', { hasText: 'Hazelnut' }).locator('.varconv-pick-loose').check();
-	await shot('screenshot-1');
+	await shot('screenshot-2');
 	await Promise.all([page.waitForNavigation(), page.locator('.varconv-do[value="combine"]').first().click()]);
 	await tidy();
 	const card = page.locator('form.varconv-card[data-grid]');
@@ -22,7 +22,7 @@ export default async function ({ page, go, shot }) {
 	await card.locator('[name="group_attribute"]').evaluate(el => el.blur());
 	await page.evaluate(() => window.scrollTo(0, 0));
 	await page.waitForTimeout(300);
-	await shot('screenshot-2', page.locator('.varconv-list-table'));
+	await shot('screenshot-3', page.locator('.varconv-list-table'));
 	// A whole-group create reloads the page with its notice.
 	await Promise.all([page.waitForNavigation(), card.locator('.varconv-create').click()]);
 	await go('edit.php?post_type=product&page=varconv&tab=split');
@@ -31,12 +31,12 @@ export default async function ({ page, go, shot }) {
 	await srow.locator('a').first().click();
 	await page.waitForLoadState('networkidle');
 	await tidy();
-	await shot('screenshot-3');
+	await shot('screenshot-4');
 	const split = page.locator('button, input[type=submit]', { hasText: /^Split/ }).first();
 	if (await split.count()) { await Promise.all([page.waitForNavigation(), split.click()]); }
 	await go('edit.php?post_type=product&page=varconv&tab=history');
 	await tidy();
 	// Hover the row so its Undo row action shows.
 	await page.locator('.varconv-history tbody tr').first().hover();
-	await shot('screenshot-4');
+	await shot('screenshot-5');
 }
