@@ -192,6 +192,7 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 
 = 1.4.2 =
 * The Live Preview demo store gives each of its 32 products its own image, so combined products show a different picture for each variation.
+* The Combine tab lists groups A to Z by name. Click the Products column to sort by group size, largest first.
 
 = 1.4.1 =
 * FAQ and docs: the plugin redirects an old product URL to its variation's link, and WooCommerce preselects the options from that link (some themes don't). The FAQ also covers old links when every variation is made simple.
