@@ -68,7 +68,7 @@ try {
 	}
 
 	$result = varconv_undo_many( array( $tee, $parents[1] ) );
-	check( $result, array( 'undone' => 2, 'errors' => array() ), 'A combine and a split undone together' );
+	check( $result, array( 'undone' => 2, 'ran' => 2, 'errors' => array() ), 'A combine and a split undone together' );
 	check( get_post( $parents[1] ), null, 'The other combined product is deleted' );
 	check( get_post( $made[0] ), null, 'The split\'s simple products are deleted' );
 	check( get_post_meta( $tee, VARCONV_SPLIT_META, true ), '', 'The split variable product is back' );

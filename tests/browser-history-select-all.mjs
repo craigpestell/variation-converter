@@ -1,5 +1,6 @@
 // History > select all on every page, then Bulk actions > Move originals to Trash: the header box checks this page,
-// a banner offers every conversion in the list, and the action reaches combines on later pages too. Needs more
+// a banner offers every conversion in the list, and the action reaches combines on later pages too, as a background
+// job with progress and Stop. Needs more
 // conversions than one page shows (25):
 //   harness/wp-harness eval tests/seed-history.php
 //   harness/wp-harness browse tests/browser-history-select-all.mjs --out shots
@@ -23,7 +24,16 @@ export default async function ({ page, go, shot, problems }) {
 	const total = Number((await page.locator('.tablenav.top .displaying-num').innerText()).replace(/\D/g, ''));
 	await page.locator('.tablenav.top select[name="bulk_action"]').selectOption('trash_originals');
 	await Promise.all([page.waitForNavigation(), page.locator('.tablenav.top .varconv-bulk-apply').click()]);
-	const notice = await page.locator('.notice').first().innerText();
+	// More than one batch runs on the server: progress with Stop, then the page reloads with the summary.
+	const running = page.locator('.varconv-job.is-running');
+	if (!(await running.count())) throw new Error('no background job progress shown');
+	console.log('progress:', await running.innerText());
+	if (!(await running.locator('.varconv-job-stop').count())) throw new Error('no Stop button');
+	await shot('trash-running');
+	// The page loads again once the job is done.
+	await page.waitForEvent('load', { timeout: 120000 });
+	await page.locator('.varconv-job:not(.is-running)').waitFor();
+	const notice = await page.locator('.varconv-job').innerText();
 	console.log('notice:', notice);
 	await shot('after-trash');
 	const moved = Number((notice.match(/Moved (\d+)/) || [])[1]);

@@ -1,7 +1,8 @@
 <?php
 /**
- * Bulk create on the server. The admin page saves the groups to create as one job; WooCommerce's Action Scheduler
- * works through it a batch at a time in the background, so it finishes even if the admin leaves the page. While a tab
+ * Bulk jobs on the server: Create on the Combine tab, and Undo and Move originals to Trash on History. The admin page
+ * saves what to do as one job; WooCommerce's Action Scheduler works through it a batch at a time in the background, so
+ * it finishes even if the admin leaves the page. While a tab
  * of the plugin page is open, assets/admin.js runs batches too, so progress is quick to show. The bulk lock keeps any
  * two batches (or a WP-CLI run) from working at once.
  */
@@ -10,11 +11,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
-// The job: the keys still to create, the counts so far, and when it finished (0 while running).
+// The job: its kind, the keys (or History product IDs) still to do, the counts so far, and when it finished (0 while
+// running). One job runs at a time, of any kind.
 const VARCONV_JOB_OPTION = 'varconv_job';
 // The Action Scheduler hook that runs the next batch.
 const VARCONV_JOB_HOOK = 'varconv_bulk_batch';
 const VARCONV_JOB_BATCH = 10;
+// What a job does: create groups, undo conversions, or move combines' originals to the Trash.
+const VARCONV_JOB_KINDS = array( 'create', 'undo', 'trash' );
 
 /**
  * Creates the groups $keys as the scan proposed them, under the bulk lock.
@@ -62,14 +66,17 @@ function varconv_bulk_run( array $keys, ?callable $stop = null ): array {
 }
 
 /**
- * The bulk job, read from the database rather than the request's cache, since other requests change it.
+ * The bulk job, read from the database rather than the request's cache, since other requests change it. "made" counts
+ * groups created, conversions undone, or combines whose originals moved to the Trash; "products" counts the originals
+ * moved; "errors" keeps the first few reasons a conversion failed.
  *
- * @return array{keys:string[],total:int,done:int,made:int,skip:int,failed:int,user:int,started:int,finished:int,stopped:bool}|null
+ * @return array{kind:string,keys:array,total:int,done:int,made:int,skip:int,failed:int,products:int,errors:string[],user:int,started:int,finished:int,stopped:bool}|null
  */
 function varconv_job(): ?array {
 	wp_cache_delete( VARCONV_JOB_OPTION, 'options' );
 	$job = get_option( VARCONV_JOB_OPTION, null );
-	return is_array( $job ) ? $job : null;
+	// A job saved before undo and trash jobs existed is a bulk create.
+	return is_array( $job ) ? $job + array( 'kind' => 'create', 'products' => 0, 'errors' => array() ) : null;
 }
 
 function varconv_job_running( ?array $job ): bool {
@@ -77,23 +84,30 @@ function varconv_job_running( ?array $job ): bool {
 }
 
 /**
- * Starts a job creating the groups $keys, and queues its first batch.
+ * Starts a job, and queues its first batch: creating the groups $keys ("create"), or undoing ("undo") or moving the
+ * originals to the Trash of ("trash") the History products $keys.
  *
- * @param string[] $keys
+ * @param array $keys
  * @throws RuntimeException When a job is already running.
  */
-function varconv_job_start( array $keys ): array {
+function varconv_job_start( array $keys, string $kind = 'create' ): array {
 	if ( varconv_job_running( varconv_job() ) ) {
-		throw new RuntimeException( esc_html__( 'A bulk create is already running. Wait for it to finish, or stop it.', 'variation-converter-for-woocommerce' ) );
+		throw new RuntimeException( esc_html__( 'A bulk job is already running. Wait for it to finish, or stop it.', 'variation-converter-for-woocommerce' ) );
 	}
-	$keys = array_values( array_unique( $keys ) );
+	if ( ! in_array( $kind, VARCONV_JOB_KINDS, true ) ) {
+		throw new InvalidArgumentException( 'Unknown job kind.' );
+	}
+	$keys = 'create' === $kind ? array_values( array_unique( $keys ) ) : array_values( array_unique( array_map( 'intval', $keys ) ) );
 	$job = array(
+		'kind'     => $kind,
 		'keys'     => $keys,
 		'total'    => count( $keys ),
 		'done'     => 0,
 		'made'     => 0,
 		'skip'     => 0,
 		'failed'   => 0,
+		'products' => 0,
+		'errors'   => array(),
 		'user'     => get_current_user_id(),
 		'started'  => time(),
 		'finished' => $keys ? 0 : time(),
@@ -146,17 +160,18 @@ function varconv_job_step(): bool {
 			return false;
 		}
 		$batch = array_slice( $job['keys'], 0, VARCONV_JOB_BATCH );
-		$counts = $batch ? varconv_bulk_run( $batch, 'varconv_job_stopping' ) : array( 'made' => 0, 'skip' => 0, 'failed' => 0, 'results' => array() );
+		$counts = varconv_job_batch( $job['kind'], $batch );
 		// And again, in case Stop was pressed while the batch ran. A job deleted meanwhile stays deleted.
 		$job = varconv_job();
 		if ( ! $job ) {
 			return true;
 		}
 		$job['keys'] = array_values( array_diff( $job['keys'], $batch ) );
-		$job['done'] += $job['stopped'] ? count( $counts['results'] ) : count( $batch );
-		foreach ( array( 'made', 'skip', 'failed' ) as $count ) {
+		$job['done'] += $job['stopped'] ? $counts['ran'] : count( $batch );
+		foreach ( array( 'made', 'skip', 'failed', 'products' ) as $count ) {
 			$job[ $count ] += $counts[ $count ];
 		}
+		$job['errors'] = array_slice( array_merge( $job['errors'], $counts['errors'] ), 0, 10 );
 		if ( ! $job['keys'] && ! $job['finished'] ) {
 			$job['finished'] = time();
 		}
@@ -166,6 +181,43 @@ function varconv_job_step(): bool {
 	}
 	varconv_job_queue();
 	return true;
+}
+
+/**
+ * Works through one batch of a job of $kind; the caller holds the bulk lock. Stops early when Stop is pressed.
+ *
+ * @return array{ran:int,made:int,skip:int,failed:int,products:int,errors:string[]}
+ */
+function varconv_job_batch( string $kind, array $batch ): array {
+	$out = array( 'ran' => 0, 'made' => 0, 'skip' => 0, 'failed' => 0, 'products' => 0, 'errors' => array() );
+	if ( ! $batch ) {
+		return $out;
+	}
+	if ( 'create' === $kind ) {
+		$counts = varconv_bulk_run( $batch, 'varconv_job_stopping' );
+		$failed = array_filter( $counts['results'], static fn( $r ) => 'failed' === $r['status'] );
+		return array(
+			'ran'      => count( $counts['results'] ),
+			'made'     => $counts['made'],
+			'skip'     => $counts['skip'],
+			'failed'   => $counts['failed'],
+			'products' => 0,
+			'errors'   => array_values( array_filter( array_map( static fn( $r ) => (string) ( $r['message'] ?? '' ), $failed ) ) ),
+		);
+	}
+	if ( 'undo' === $kind ) {
+		$result = varconv_undo_many( $batch, 'varconv_job_stopping' );
+		$out['made'] = $result['undone'];
+	} else {
+		$result = varconv_trash_originals_many( $batch, 'varconv_job_stopping' );
+		$out['made'] = $result['done'];
+		$out['skip'] = $result['skipped'];
+		$out['products'] = $result['products'];
+	}
+	$out['ran'] = $result['ran'];
+	$out['failed'] = count( $result['errors'] );
+	$out['errors'] = $result['errors'];
+	return $out;
 }
 
 /**
