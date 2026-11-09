@@ -132,11 +132,19 @@ function varconv_untrash_original( int $id ): void {
 	// Priority 98, so callers that already allow duplicates at 99 (Make simple) keep theirs.
 	add_filter( 'wc_product_has_unique_sku', '__return_false', 98 );
 	add_filter( 'wc_product_has_global_unique_id', '__return_false', 98 );
-	add_filter( 'wp_untrash_post_status', 'wp_untrash_post_set_previous_status', 10, 3 );
 	wp_untrash_post( $id );
-	remove_filter( 'wp_untrash_post_status', 'wp_untrash_post_set_previous_status', 10 );
 	remove_filter( 'wc_product_has_unique_sku', '__return_false', 98 );
 	remove_filter( 'wc_product_has_global_unique_id', '__return_false', 98 );
+}
+
+// An original back from the Trash, by Undo, Make simple or by hand, gets the status it had (WordPress 5.6+ would
+// make it a draft), so it is not a draft after a later Undo or Make simple.
+add_filter( 'wp_untrash_post_status', 'varconv_original_untrash_status', 10, 3 );
+function varconv_original_untrash_status( $status, $post_id, $previous ) {
+	if ( 'product' === get_post_type( (int) $post_id ) && '' !== (string) get_post_meta( (int) $post_id, VARCONV_PARENT_META, true ) && varconv_status_ok( (string) $previous ) ) {
+		return $previous;
+	}
+	return $status;
 }
 
 // An original back from the Trash, by Undo, Make simple or by hand: its reviews and its page are its own again.
