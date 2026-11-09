@@ -21,6 +21,8 @@ It finds the products that belong together for you, so you can combine products 
 
 It works the other way too: convert a variable product to simple products, with the same preview and the same Undo.
 
+[Watch a half-minute demo](https://variation-converter.bizrocket.ca/#demo): six coffee products combined into one variable product, with the attributes renamed and reordered before Create.
+
 = How it works =
 
 1. Go to **Products > Variation Converter** and search for a product name or SKU, such as "Classic Tee".
