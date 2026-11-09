@@ -35,7 +35,7 @@ Every role reads this file first. It holds everything specific to the variation 
 
 ## Rules every role keeps
 
-- Never delete a merchant's products or data. Conversions hide originals and must stay undoable.
+- Never delete a merchant's products or data on the plugin's own initiative. Conversions hide originals and must stay undoable. The one exception is Trash originals, which the merchant chooses per combine: it moves originals to the Trash (never deletes for good, and refuses when the Trash is off), keeps their reviews and redirects, and Undo works until the Trash is emptied.
 - Every admin action checks `manage_woocommerce` and a nonce; input is sanitized and output escaped. Plugin Check must pass.
 - No remote calls, tracking or analytics from the plugin.
 - Keep PHP 7.4 and WordPress 6.5 compatibility unless a release raises the minimums on purpose.
