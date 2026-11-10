@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 1.6.0
+Stable tag: 1.7.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -128,6 +128,8 @@ Two things must match: the SKUs share a family (SE1421-01 CL and SE1421-03 CL, o
 
 Search for it on the **Combine** tab. It shows under **Products not in a group**, and you can tick it along with the group it belongs to.
 
+If you already combined the group, tick the product and click **Add to a combined product**, then choose the variable product and its labels. In **Products > All Products** the bulk action of the same name works for any simple product, even one without a SKU. Undo in History gives it back with the others.
+
 = It grouped products that aren't variants. =
 
 Mark the group **Skip, not variants** and it stops appearing. Skipped groups can be restored from the **Skipped** view.
@@ -193,6 +195,10 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 5. The History tab, where every conversion can be undone.
 
 == Changelog ==
+
+= 1.7.0 =
+* Add to a combined product: add simple products the scan didn't group, including ones with another SKU or no SKU at all, as new variations of a variable product you already combined. Use the button on the Combine tab or the bulk action in Products > All Products, choose the variable product, and check the labels. The added products are hidden, their old pages redirect to their variations, and Undo in History gives them back with the others.
+* Developers: action `varconv_added_to`.
 
 = 1.6.0 =
 * History: Undo and Move originals to Trash on more than 10 conversions now run on the server in the background, like a bulk create, so a large selection no longer times out. The notice shows progress on every tab with a Stop button, the job keeps going if you leave the page, and the page shows the summary when it is done.
