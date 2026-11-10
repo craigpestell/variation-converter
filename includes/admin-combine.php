@@ -236,12 +236,13 @@ function varconv_list_headers( array $f, bool $list ): void {
 	<?php
 }
 
-/** The two ways to turn the checked groups and products into products, with how many are checked. */
+/** The ways to turn the checked groups and products into products, with how many are checked. */
 function varconv_combine_buttons(): void {
 	?>
 	<div class="alignleft actions varconv-do-wrap">
 		<button class="button button-primary varconv-do" form="varconv-bulk" name="do" value="combine"><?php esc_html_e( 'Combine into one product', 'variation-converter-for-woocommerce' ); ?></button>
 		<button class="button varconv-do" form="varconv-bulk" name="do" value="create"><?php esc_html_e( 'Create a product for each group', 'variation-converter-for-woocommerce' ); ?></button>
+		<button class="button varconv-do" form="varconv-bulk" name="do" value="add"><?php esc_html_e( 'Add to a combined product', 'variation-converter-for-woocommerce' ); ?></button>
 		<span class="varconv-picked" aria-live="polite"></span>
 	</div>
 	<?php
@@ -472,14 +473,14 @@ function varconv_render_loose( array $loose, array $f ): void {
 		<p class="description">
 			<?php
 			/* translators: %s: what was searched for. */
-			echo esc_html( sprintf( __( 'Every simple product matching "%s" is in a group above. Only simple products with a SKU, shown in the catalog, can be combined.', 'variation-converter-for-woocommerce' ), $f['s'] ) );
+			echo esc_html( sprintf( __( 'Every simple product matching "%s" is in a group above. Only simple products with a SKU, shown in the catalog, are listed here; to add one without a SKU to a combined product, use Add to a combined product in Products > All Products.', 'variation-converter-for-woocommerce' ), $f['s'] ) );
 			?>
 		</p>
 		<?php
 		return;
 	endif;
 	?>
-	<p class="description"><?php esc_html_e( 'The scan did not group these. Tick them to combine them with each other or with the groups above. A product picked with two or more groups becomes a group of its own.', 'variation-converter-for-woocommerce' ); ?></p>
+	<p class="description"><?php esc_html_e( 'The scan did not group these. Tick them to combine them with each other or with the groups above, or to add them to a product you already combined. A product picked with two or more groups becomes a group of its own.', 'variation-converter-for-woocommerce' ); ?></p>
 	<table class="wp-list-table widefat fixed striped table-view-list varconv-loose-table">
 		<thead>
 			<tr>

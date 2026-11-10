@@ -289,6 +289,43 @@ function varconv_copy_to_variation( $simple, $variation, $parent ) {
 }
 
 /**
+ * Makes the variation of $parent for the simple product $simple, as Combine does: its SKU, prices, stock, sizes,
+ * image and the fields varconv_copy_to_variation() copies, with its twin recorded for Undo. The caller lets the SKU
+ * and GTIN repeat.
+ *
+ * @param array<string,string> $attributes Attribute key => value.
+ * @throws RuntimeException When WooCommerce does not save it.
+ */
+function varconv_new_variation( WC_Product $simple, WC_Product_Variable $parent, array $attributes, string $status, int $menu_order ): WC_Product_Variation {
+	$variation = new WC_Product_Variation();
+	$variation->set_parent_id( $parent->get_id() );
+	$variation->set_attributes( $attributes );
+	$variation->set_status( $status );
+	$variation->set_menu_order( $menu_order );
+	$variation->set_sku( $simple->get_sku( 'edit' ) );
+	$variation->set_regular_price( varconv_regular_price( $simple ) );
+	$variation->set_sale_price( $simple->get_sale_price( 'edit' ) );
+	$variation->set_date_on_sale_from( $simple->get_date_on_sale_from( 'edit' ) );
+	$variation->set_date_on_sale_to( $simple->get_date_on_sale_to( 'edit' ) );
+	$variation->set_manage_stock( $simple->get_manage_stock( 'edit' ) );
+	$variation->set_stock_quantity( $simple->get_stock_quantity( 'edit' ) );
+	$variation->set_stock_status( $simple->get_stock_status( 'edit' ) );
+	$variation->set_backorders( $simple->get_backorders( 'edit' ) );
+	$variation->set_weight( $simple->get_weight( 'edit' ) );
+	$variation->set_length( $simple->get_length( 'edit' ) );
+	$variation->set_width( $simple->get_width( 'edit' ) );
+	$variation->set_height( $simple->get_height( 'edit' ) );
+	$variation->set_image_id( $simple->get_image_id( 'edit' ) );
+	varconv_copy_to_variation( $simple, $variation, $parent );
+	$variation->update_meta_data( VARCONV_TWIN_META, (string) $simple->get_id() );
+	if ( ! $variation->save() ) {
+		/* translators: %d: product ID. */
+		throw new RuntimeException( esc_html( sprintf( __( 'WooCommerce did not save the variation for product %d.', 'variation-converter-for-woocommerce' ), $simple->get_id() ) ) );
+	}
+	return $variation;
+}
+
+/**
  * Makes the variable product for varconv_create() and varconv_create_grid().
  *
  * @param string[] $attribute_names The variation attributes, in order.
@@ -383,31 +420,7 @@ function varconv_make( string $name, array $attribute_names, array $members, arr
 
 		$keys = array_map( static fn( $a ) => sanitize_title( $a->get_name() ), $attributes );
 		foreach ( $sources as $i => [ $simple, $labels ] ) {
-			$variation = new WC_Product_Variation();
-			$variation->set_parent_id( $parent_id );
-			$variation->set_attributes( array_combine( $keys, $labels ) );
-			$variation->set_status( $simple->get_status() === $status ? 'publish' : 'private' );
-			$variation->set_menu_order( $i );
-			$variation->set_sku( $simple->get_sku( 'edit' ) );
-			$variation->set_regular_price( varconv_regular_price( $simple ) );
-			$variation->set_sale_price( $simple->get_sale_price( 'edit' ) );
-			$variation->set_date_on_sale_from( $simple->get_date_on_sale_from( 'edit' ) );
-			$variation->set_date_on_sale_to( $simple->get_date_on_sale_to( 'edit' ) );
-			$variation->set_manage_stock( $simple->get_manage_stock( 'edit' ) );
-			$variation->set_stock_quantity( $simple->get_stock_quantity( 'edit' ) );
-			$variation->set_stock_status( $simple->get_stock_status( 'edit' ) );
-			$variation->set_backorders( $simple->get_backorders( 'edit' ) );
-			$variation->set_weight( $simple->get_weight( 'edit' ) );
-			$variation->set_length( $simple->get_length( 'edit' ) );
-			$variation->set_width( $simple->get_width( 'edit' ) );
-			$variation->set_height( $simple->get_height( 'edit' ) );
-			$variation->set_image_id( $simple->get_image_id( 'edit' ) );
-			varconv_copy_to_variation( $simple, $variation, $parent );
-			$variation->update_meta_data( VARCONV_TWIN_META, (string) $simple->get_id() );
-			if ( ! $variation->save() ) {
-				/* translators: %d: product ID. */
-				throw new RuntimeException( esc_html( sprintf( __( 'WooCommerce did not save the variation for product %d.', 'variation-converter-for-woocommerce' ), $simple->get_id() ) ) );
-			}
+			varconv_new_variation( $simple, $parent, array_combine( $keys, $labels ), $simple->get_status() === $status ? 'publish' : 'private', $i );
 		}
 		WC_Product_Variable::sync( $parent_id );
 	} catch ( Throwable $e ) {
