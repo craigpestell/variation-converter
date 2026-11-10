@@ -15,6 +15,7 @@ const VARCONV_CAP = 'manage_woocommerce';
 const VARCONV_PER_PAGE = 25;
 
 require_once __DIR__ . '/admin-combine.php';
+require_once __DIR__ . '/admin-add.php';
 require_once __DIR__ . '/ajax.php';
 require_once __DIR__ . '/admin-products.php';
 require_once __DIR__ . '/admin-quick-edit.php';
@@ -243,6 +244,23 @@ function varconv_handle_bulk(): void {
 	$ids = isset( $_POST['ids'] ) && is_array( $_POST['ids'] ) ? array_values( array_filter( array_map( 'absint', wp_unslash( $_POST['ids'] ) ) ) ) : array();
 	if ( 'combine' === $action || 'grid' === $action ) {
 		varconv_handle_combine( $keys, $ids );
+	}
+	if ( 'add' === $action ) {
+		// The checked groups' products, as their cards have them, and the products in no group.
+		$add = $ids;
+		foreach ( $keys as $key ) {
+			$add = array_merge( $add, varconv_group_member_ids( $key ) );
+		}
+		$add = array_values( array_unique( $add ) );
+		if ( ! $add ) {
+			varconv_fail( __( 'Select the groups or products to add to a combined product.', 'variation-converter-for-woocommerce' ), array() );
+		}
+		if ( count( $add ) > VARCONV_ADD_MAX ) {
+			/* translators: %d: most products added at once. */
+			varconv_fail( sprintf( __( 'Add at most %d products at a time.', 'variation-converter-for-woocommerce' ), VARCONV_ADD_MAX ), array() );
+		}
+		wp_safe_redirect( varconv_add_url( $add ) );
+		exit;
 	}
 	if ( ! $keys || '' === $action ) {
 		varconv_back( array() );
@@ -538,7 +556,7 @@ function varconv_render(): void {
 		'split'   => null,
 		'history' => count( varconv_created() ) + count( varconv_split_list() ) + count( varconv_taken_list() ),
 	);
-	if ( 'combine' === $tab && ! varconv_combine_ids() ) {
+	if ( 'combine' === $tab && ! varconv_combine_ids() && ! varconv_add_ids() ) {
 		$scan = varconv_candidates();
 		$counts['combine'] = count( $scan['collections'] );
 	}
@@ -573,6 +591,8 @@ function varconv_render(): void {
 			varconv_render_split();
 		} elseif ( 'history' === $tab ) {
 			varconv_render_history();
+		} elseif ( varconv_add_ids() ) {
+			varconv_render_add( varconv_add_ids() );
 		} elseif ( varconv_combine_ids() ) {
 			varconv_render_manual( varconv_combine_ids() );
 		} elseif ( varconv_grid_keys() ) {
@@ -831,6 +851,11 @@ function varconv_notice(): void {
 		case 'created':
 			$id = isset( $_GET['varconv_product'] ) ? absint( wp_unslash( $_GET['varconv_product'] ) ) : 0;
 			echo '<div class="notice notice-success varconv-created">' . varconv_created_html( $id ) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped where it is built.
+			break;
+		case 'added':
+			$id    = isset( $_GET['varconv_product'] ) ? absint( wp_unslash( $_GET['varconv_product'] ) ) : 0;
+			$count = isset( $_GET['varconv_count'] ) ? absint( wp_unslash( $_GET['varconv_count'] ) ) : 0;
+			echo '<div class="notice notice-success">' . varconv_added_html( $id, $count ) . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped where it is built.
 			break;
 		case 'bulk':
 			$made   = isset( $_GET['varconv_made'] ) ? absint( wp_unslash( $_GET['varconv_made'] ) ) : 0;
