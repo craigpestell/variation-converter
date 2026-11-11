@@ -1,21 +1,21 @@
-=== Variation Converter for WooCommerce ===
+=== Variation Converter – Simple to Variable Products for WooCommerce ===
 Contributors: craigpestell
 Tags: simple to variable, variable products, product variations, merge products, combine products
 Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 1.7.0
+Stable tag: 1.7.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Convert simple products to variable products in bulk: merge one-per-color or one-per-size products into variations, or split them back. Undo anytime.
+Convert simple products to variable products in WooCommerce, in bulk: merge one-per-color or one-per-size products into variations. Undo anytime.
 
 == Description ==
 
 Many WooCommerce stores end up with one simple product per color or size: "Classic Tee Black", "Classic Tee Blue", "Classic Tee Red". Shoppers scroll past three listings where there should be one, and you keep three products in sync by hand.
 
-Variation Converter converts simple products to a variable product. It merges them into one product, "Classic Tee", with a Black, Blue and Red variation, and each variation keeps its original's SKU, price, stock and image. The originals are hidden, not deleted, and Undo puts everything back.
+Variation Converter converts simple to variable products in WooCommerce. It merges them into one product, "Classic Tee", with a Black, Blue and Red variation, and each variation keeps its original's SKU, price, stock and image. The originals are hidden, not deleted, and Undo puts everything back.
 
 It finds the products that belong together for you, so you can combine products into variations one at a time or bulk convert a whole catalog, such as one imported from a supplier feed or CSV with a separate product for every size and color.
 
@@ -99,6 +99,10 @@ Undo covers every conversion, but take a database backup before converting many 
 = How do I convert simple products to a variable product in WooCommerce? =
 
 Install this plugin, go to **Products > Variation Converter**, search for the product name, tick the simple products that belong together and click **Combine into one product**. Check the attribute (such as Color or Size) and the label of each variation, then click **Create variable product**. Each simple product becomes a variation of the new variable product.
+
+= How do I change a simple product to a variable product without losing its SKU, price or stock? =
+
+The usual WooCommerce way is to change the product type to Variable and type every variation in by hand. This plugin does it from the products you already have: each simple product becomes one variation and keeps its SKU, price, stock and image. Undo in the **History** tab puts the simple products back.
 
 = Can I bulk convert simple products to variable products? =
 
@@ -195,6 +199,9 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 5. The History tab, where every conversion can be undone.
 
 == Changelog ==
+
+= 1.7.1 =
+* The plugin is now called "Variation Converter – Simple to Variable Products for WooCommerce", which says what it does. Its slug and settings are unchanged. New FAQ: changing a simple product to a variable product without losing its SKU, price or stock.
 
 = 1.7.0 =
 * Add to a combined product: add simple products the scan didn't group, including ones with another SKU or no SKU at all, as new variations of a variable product you already combined. Use the button on the Combine tab or the bulk action in Products > All Products, choose the variable product, and check the labels. The added products are hidden, their old pages redirect to their variations, and Undo in History gives them back with the others.
