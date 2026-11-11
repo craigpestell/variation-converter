@@ -44,17 +44,8 @@ function varconv_render_manual( array $ids ): void {
 	$f = varconv_filters( $_GET );
 	varconv_back_link( $f );
 	echo '<p class="varconv-lead">' . esc_html__( 'Combine the products you selected into one variable product. Check the name, attribute and labels, then create it.', 'variation-converter-for-woocommerce' ) . '</p>';
-	if ( $found['refused'] ) {
-		printf(
-			'<div class="notice notice-warning inline"><p>%s %s</p></div>',
-			esc_html( sprintf(
-				/* translators: %d: number of selected products left out. */
-				_n( '%d selected product is left out: only simple products with a SKU, shown in the catalog and not already combined, can be combined.', '%d selected products are left out: only simple products with a SKU, shown in the catalog and not already combined, can be combined.', count( $found['refused'] ), 'variation-converter-for-woocommerce' ),
-				count( $found['refused'] )
-			) ),
-			wp_kses_post( varconv_product_links( $found['refused'] ) )
-		);
-	}
+	varconv_left_out_notice( array_combine( $found['refused'], array_map( 'varconv_combine_problem', $found['refused'] ) ) ?: array() );
+	varconv_made_simple_notice( array_column( $found['products'], 'id' ) );
 	if ( count( $found['products'] ) < 2 ) {
 		echo '<div class="varconv-empty"><p>' . esc_html__( 'Select at least two products that can be combined.', 'variation-converter-for-woocommerce' ) . '</p></div>';
 		return;

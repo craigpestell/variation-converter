@@ -176,3 +176,4 @@ p.varconv-notes { color: #996800; margin: 4px 0 0; }
 .varconv-take-cats legend { font-weight: 600; }
 .varconv-take-cats .categorychecklist { max-height: 260px; overflow: auto; margin: 6px 0 0; padding: 8px 12px; border: 1px solid #dcdcde; background: #fff; }
 .varconv-take-cats .categorychecklist ul.children { margin-left: 18px; }
+.varconv-left-out ul { list-style: disc; margin: 0 0 8px 2em; }

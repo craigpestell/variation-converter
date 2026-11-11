@@ -27,6 +27,8 @@
  *                           cleared
  *   _varconv_taken_all      on the variable product, when it was removed because no variation was left for sale: JSON
  *                           {"variations":[IDs in order],"status":"its status before"}
+ *   _varconv_taken_was      on the simple product, once Combine or Add to a combined product took it: the variation it
+ *                           was made from. Make simple is then forgotten (no Undo), but the old URLs still find it.
  *
  * Hooks: action varconv_made_simple( $simple_id, $variation_id, $parent_id, $reused ) after the simple product is saved
  * and while the variation is still enabled, so a site can copy its own fields; varconv_made_simple_undone( $simple_id,
@@ -43,6 +45,7 @@ const VARCONV_TAKEN_NEW_META = '_varconv_taken_new';
 const VARCONV_TAKEN_STATUS_META = '_varconv_taken_status';
 const VARCONV_TAKEN_DEFAULT_META = '_varconv_taken_default';
 const VARCONV_TAKEN_ALL_META = '_varconv_taken_all';
+const VARCONV_TAKEN_WAS_META = '_varconv_taken_was';
 
 /**
  * Checks which variations the admin chose to make simple. Returns the problems, none when it can be done.
@@ -97,6 +100,21 @@ function varconv_taken_simple( int $variation_id ): int {
 		"SELECT p.ID FROM {$wpdb->posts} p JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = %s AND m.meta_value = %s
 		WHERE p.post_type = 'product' AND p.post_status <> 'trash' ORDER BY p.ID DESC LIMIT 1",
 		VARCONV_TAKEN_META,
+		(string) $variation_id
+	) );
+}
+
+/**
+ * The simple product a variation was made into before Combine or Add to a combined product took it
+ * (varconv_forget_made_simple()), or 0. Only the old URLs' redirects use it.
+ */
+function varconv_taken_was( int $variation_id ): int {
+	global $wpdb;
+	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+	return (int) $wpdb->get_var( $wpdb->prepare(
+		"SELECT p.ID FROM {$wpdb->posts} p JOIN {$wpdb->postmeta} m ON m.post_id = p.ID AND m.meta_key = %s AND m.meta_value = %s
+		WHERE p.post_type = 'product' AND p.post_status <> 'trash' ORDER BY p.ID DESC LIMIT 1",
+		VARCONV_TAKEN_WAS_META,
 		(string) $variation_id
 	) );
 }
@@ -472,6 +490,46 @@ function varconv_forget_taken( array $variation_ids ): void {
 			}
 		}
 	}
+}
+
+/**
+ * Forgets Make simple on these simple products, which Combine or Add to a combined product just took: they leave
+ * History's Make simple rows, so that Make simple can no longer be undone, and the variation stays disabled. The
+ * variation is kept in _varconv_taken_was, so its old variant URL (and a removed variable product's URL) still sends
+ * shoppers to the simple product, and from there to its new variation.
+ *
+ * @param int[] $simple_ids
+ */
+function varconv_forget_made_simple( array $simple_ids ): void {
+	foreach ( $simple_ids as $id ) {
+		$variation_id = (int) get_post_meta( (int) $id, VARCONV_TAKEN_META, true );
+		if ( ! $variation_id ) {
+			continue;
+		}
+		update_post_meta( (int) $id, VARCONV_TAKEN_WAS_META, (string) $variation_id );
+		foreach ( array( VARCONV_TAKEN_META, VARCONV_TAKEN_NEW_META, VARCONV_TWIN_META, VARCONV_TIME_META ) as $key ) {
+			delete_post_meta( (int) $id, $key );
+		}
+	}
+}
+
+/**
+ * The variable products that the Make simple of any of these simple products came from, by ID => name, for the
+ * warning that combining them ends that Make simple.
+ *
+ * @param int[] $simple_ids
+ * @return array<int,string>
+ */
+function varconv_made_simple_from( array $simple_ids ): array {
+	$out = array();
+	foreach ( $simple_ids as $id ) {
+		$variation_id = (int) get_post_meta( (int) $id, VARCONV_TAKEN_META, true );
+		$parent_id = $variation_id ? wp_get_post_parent_id( $variation_id ) : 0;
+		if ( $parent_id ) {
+			$out[ $parent_id ] = (string) get_post_field( 'post_title', $parent_id, 'raw' );
+		}
+	}
+	return $out;
 }
 
 /** Why this variation cannot be made into a simple product now, or '' when it can. */

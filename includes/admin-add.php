@@ -33,17 +33,8 @@ function varconv_render_add( array $ids ): void {
 	}
 	echo '<p><a href="' . esc_url( varconv_url() ) . '">&larr; ' . esc_html__( 'All suggested groups', 'variation-converter-for-woocommerce' ) . '</a></p>';
 	echo '<h2>' . esc_html__( 'Add to a combined product', 'variation-converter-for-woocommerce' ) . '</h2>';
-	if ( $found['refused'] ) {
-		printf(
-			'<div class="notice notice-warning inline"><p>%s %s</p></div>',
-			esc_html( sprintf(
-				/* translators: %d: number of selected products left out. */
-				_n( '%d selected product is left out: only simple products not already in a combined product, split or Make simple can be added.', '%d selected products are left out: only simple products not already in a combined product, split or Make simple can be added.', count( $found['refused'] ), 'variation-converter-for-woocommerce' ),
-				count( $found['refused'] )
-			) ),
-			wp_kses_post( varconv_product_links( $found['refused'] ) )
-		);
-	}
+	varconv_left_out_notice( array_combine( $found['refused'], array_map( static fn( $id ) => varconv_add_problem( wc_get_product( $id ) ), $found['refused'] ) ) ?: array() );
+	varconv_made_simple_notice( array_column( $products, 'id' ) );
 	if ( ! $products ) {
 		echo '<div class="varconv-empty"><p>' . esc_html__( 'Select at least one simple product to add.', 'variation-converter-for-woocommerce' ) . '</p></div>';
 		return;

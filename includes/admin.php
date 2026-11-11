@@ -830,6 +830,51 @@ function varconv_skipped_note(): string {
 	) ) : '';
 }
 
+/**
+ * The notice for selected products that were left out, one line per reason with the products it applies to.
+ *
+ * @param array<int,string> $reasons Product ID => why it was left out.
+ */
+function varconv_left_out_notice( array $reasons ): void {
+	if ( ! $reasons ) {
+		return;
+	}
+	$by_reason = array();
+	foreach ( $reasons as $id => $reason ) {
+		$by_reason[ $reason ][] = (int) $id;
+	}
+	echo '<div class="notice notice-warning inline varconv-left-out"><p>' . esc_html( sprintf(
+		/* translators: %d: number of selected products left out. */
+		_n( '%d selected product is left out:', '%d selected products are left out:', count( $reasons ), 'variation-converter-for-woocommerce' ),
+		count( $reasons )
+	) ) . '</p><ul>';
+	foreach ( $by_reason as $reason => $ids ) {
+		echo '<li>' . wp_kses_post( varconv_product_links( $ids ) ) . ': ' . esc_html( $reason ) . '</li>';
+	}
+	echo '</ul></div>';
+}
+
+/**
+ * The notice that some of these products came from Make simple, which combining them ends.
+ *
+ * @param int[] $ids
+ */
+function varconv_made_simple_notice( array $ids ): void {
+	$from = varconv_made_simple_from( $ids );
+	if ( ! $from ) {
+		return;
+	}
+	$links = implode( ', ', array_map( static fn( $id, $name ) => sprintf( '<a href="%s">%s</a>', esc_url( (string) get_edit_post_link( $id ) ), esc_html( $name ) ), array_keys( $from ), $from ) );
+	printf(
+		'<div class="notice notice-info inline"><p>%s</p></div>',
+		wp_kses_post( sprintf(
+			/* translators: %s: links to the variable products. */
+			__( 'Some of these products were made by Make simple from %s. Once they are in this product, that Make simple can no longer be undone in History; the old variant URLs still lead here.', 'variation-converter-for-woocommerce' ),
+			$links
+		) )
+	);
+}
+
 /** Links to products by SKU, or by ID when they have none. */
 function varconv_product_links( array $ids ): string {
 	return implode( ', ', array_map( static fn( $s ) => sprintf(

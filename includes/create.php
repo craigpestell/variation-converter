@@ -54,17 +54,19 @@ const VARCONV_EXCLUDED_OPTION = 'varconv_excluded';
 const VARCONV_LOCK_OPTION = 'varconv_lock';
 
 /**
- * Simple products with a SKU (published, private, pending or draft), shown in the catalog, not already in a collection or made by a split or Make simple.
+ * Simple products with a SKU (published, private, pending or draft), shown in the catalog, not already in a collection
+ * or made by a split. Products made by Make simple are only included with $made_simple, marked with made_simple: the
+ * scan leaves them out (the admin took them out of a variable product), but they can be picked by hand.
  *
- * @return array<int,array{id:int,sku:string,name:string,title:string,price:string,stock:string,cats:int[],brands:string[]}>
+ * @return array<int,array{id:int,sku:string,name:string,title:string,price:string,stock:string,cats:int[],brands:string[],made_simple:bool}>
  */
-function varconv_products(): array {
+function varconv_products( bool $made_simple = false ): array {
 	global $wpdb;
 	// One query for the whole catalog: WC_Product_Query would load every product object. The result is cached by
 	// varconv_candidates().
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 	$rows = $wpdb->get_results( $wpdb->prepare(
-		"SELECT p.ID, p.post_title, p.post_status, sku.meta_value AS sku, COALESCE( NULLIF( price.meta_value, '' ), active.meta_value ) AS price, stock.meta_value AS stock
+		"SELECT p.ID, p.post_title, p.post_status, sku.meta_value AS sku, COALESCE( NULLIF( price.meta_value, '' ), active.meta_value ) AS price, stock.meta_value AS stock, taken.meta_value AS taken
 		FROM {$wpdb->posts} p
 		JOIN {$wpdb->term_relationships} tr ON tr.object_id = p.ID
 		JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = tr.term_taxonomy_id AND tt.taxonomy = 'product_type'
@@ -73,14 +75,15 @@ function varconv_products(): array {
 		LEFT JOIN {$wpdb->postmeta} price ON price.post_id = p.ID AND price.meta_key = '_regular_price'
 		LEFT JOIN {$wpdb->postmeta} active ON active.post_id = p.ID AND active.meta_key = '_price'
 		LEFT JOIN {$wpdb->postmeta} stock ON stock.post_id = p.ID AND stock.meta_key = '_stock_status'
+		LEFT JOIN {$wpdb->postmeta} taken ON taken.post_id = p.ID AND taken.meta_key = %s
 		WHERE p.post_type = 'product' AND p.post_status IN ( 'publish', 'private', 'pending', 'draft' )
-		AND p.ID NOT IN ( SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key IN ( %s, %s, %s ) )
+		AND p.ID NOT IN ( SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key IN ( %s, %s ) )
 		AND p.ID NOT IN ( SELECT vr.object_id FROM {$wpdb->term_relationships} vr
 			JOIN {$wpdb->term_taxonomy} vt ON vt.term_taxonomy_id = vr.term_taxonomy_id AND vt.taxonomy = 'product_visibility'
 			JOIN {$wpdb->terms} v ON v.term_id = vt.term_id AND v.slug = 'exclude-from-catalog' )",
+		VARCONV_TAKEN_META,
 		VARCONV_PARENT_META,
-		VARCONV_SPLIT_FROM_META,
-		VARCONV_TAKEN_META
+		VARCONV_SPLIT_FROM_META
 	) );
 	$cats = array();
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -103,6 +106,10 @@ function varconv_products(): array {
 	}
 	$products = array();
 	foreach ( $rows as $row ) {
+		$taken = '' !== (string) $row->taken;
+		if ( $taken && ! $made_simple ) {
+			continue;
+		}
 		$id = (int) $row->ID;
 		$products[] = array(
 			'id'    => $id,
@@ -115,6 +122,7 @@ function varconv_products(): array {
 			'status' => (string) $row->post_status,
 			'cats'   => $cats[ $id ] ?? array(),
 			'brands' => $brands[ $id ] ?? array(),
+			'made_simple' => $taken,
 		);
 	}
 	return $products;
@@ -128,11 +136,32 @@ function varconv_products(): array {
  */
 function varconv_products_by_id( array $ids ): array {
 	$ids = array_values( array_unique( array_filter( array_map( 'intval', $ids ) ) ) );
-	$products = array_values( array_filter( varconv_products(), static fn( $p ) => in_array( (int) $p['id'], $ids, true ) ) );
+	$products = array_values( array_filter( varconv_products( true ), static fn( $p ) => in_array( (int) $p['id'], $ids, true ) ) );
 	return array(
 		'products' => $products,
 		'refused'  => array_values( array_diff( $ids, array_map( static fn( $p ) => (int) $p['id'], $products ) ) ),
 	);
+}
+
+/** Why this product cannot be combined, as varconv_products() picks them, or '' when it can. */
+function varconv_combine_problem( int $id ): string {
+	$product = wc_get_product( $id );
+	if ( ! $product || ! $product->is_type( 'simple' ) || ! varconv_status_ok( $product->get_status() ) ) {
+		return __( 'Not a published, private, pending or draft simple product.', 'variation-converter-for-woocommerce' );
+	}
+	if ( $product->get_meta( VARCONV_PARENT_META ) ) {
+		return __( 'Already in a combined product.', 'variation-converter-for-woocommerce' );
+	}
+	if ( $product->get_meta( VARCONV_SPLIT_FROM_META ) ) {
+		return __( 'Made by a split; undo the split in History instead.', 'variation-converter-for-woocommerce' );
+	}
+	if ( '' === trim( (string) $product->get_sku( 'edit' ) ) ) {
+		return __( 'No SKU; Combine needs one ("Add to a combined product" does not).', 'variation-converter-for-woocommerce' );
+	}
+	if ( in_array( $product->get_catalog_visibility( 'edit' ), array( 'hidden', 'search' ), true ) ) {
+		return __( 'Hidden from the shop: its Catalog visibility is "Hidden" or "Search results only".', 'variation-converter-for-woocommerce' );
+	}
+	return __( 'It cannot be combined.', 'variation-converter-for-woocommerce' );
 }
 
 /** Every brand's name (WooCommerce Brands); titles often start with one, which is not a shared product name. */
@@ -155,7 +184,9 @@ function varconv_candidates( bool $fresh = false ): array {
 	 *
 	 * @param array $products Each with id, sku, name, title, price, stock, cats (term IDs) and brands (names).
 	 */
-	$products = (array) apply_filters( 'varconv_scan_products', varconv_products() );
+	$all_products = varconv_products( true );
+	$made_simple = array_values( array_filter( $all_products, static fn( $p ) => $p['made_simple'] ) );
+	$products = (array) apply_filters( 'varconv_scan_products', array_values( array_filter( $all_products, static fn( $p ) => ! $p['made_simple'] ) ) );
 	/**
 	 * Filters the brand names a product name can start with. A shared brand is not a shared product name, so
 	 * "Acme Plug" and "Acme Wand" are not proposed as variants. Defaults to the WooCommerce Brands terms.
@@ -180,8 +211,9 @@ function varconv_candidates( bool $fresh = false ): array {
 		'collections' => $collections,
 		// Groups the admin skipped ("not variants"), for the list's Skipped view.
 		'skipped'     => $skipped,
-		// Products in no group, which search also finds so they can be combined by hand.
-		'loose'       => varconv_loose( $products, array_merge( $collections, $skipped ) ),
+		// Products in no group, which search also finds so they can be combined by hand, with those Make simple made,
+		// which the scan does not group.
+		'loose'       => varconv_loose( array_merge( $products, $made_simple ), array_merge( $collections, $skipped ) ),
 	);
 	set_transient( VARCONV_SCAN_TRANSIENT, $scan, 30 * MINUTE_IN_SECONDS );
 	return $scan;
@@ -441,6 +473,8 @@ function varconv_make( string $name, array $attribute_names, array $members, arr
 		$simple->set_catalog_visibility( 'hidden' );
 		$simple->save();
 	}
+	// A product Make simple made is now in this product, so that Make simple can no longer be undone.
+	varconv_forget_made_simple( array_map( static fn( $s ) => $s[0]->get_id(), $sources ) );
 	varconv_reindex( array_merge( array( $parent_id ), array_map( static fn( $s ) => $s[0]->get_id(), $sources ) ) );
 	wc_delete_product_transients( $parent_id );
 	delete_transient( VARCONV_SCAN_TRANSIENT );
