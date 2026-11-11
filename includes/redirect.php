@@ -128,7 +128,8 @@ function varconv_made_simple_target( array $children, array $chosen, bool $first
 		if ( ! $variation instanceof WC_Product_Variation ) {
 			continue;
 		}
-		$simple = varconv_taken_simple( $child );
+		// Still made simple, or since combined again (the simple product's page then sends shoppers on to its variation).
+		$simple = varconv_taken_simple( $child ) ?: varconv_taken_was( $child );
 		$live = $simple && 'publish' === get_post_status( $simple );
 		if ( $live && ! $fallback ) {
 			$fallback = $simple;

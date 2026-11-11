@@ -918,6 +918,7 @@ function varconv_render_grid( array $keys ): void {
 		echo '<div class="varconv-empty"><p>' . esc_html__( 'Select at least two groups or products to combine into one product.', 'variation-converter-for-woocommerce' ) . '</p></div>';
 		return;
 	}
+	varconv_made_simple_notice( $ids );
 	$grid = varconv_grid( $collections );
 	// Products unchecked in a group start unchecked here too.
 	$excluded = array();

@@ -137,8 +137,8 @@ function varconv_add_problem( $product ): string {
 	if ( $product->get_meta( VARCONV_PARENT_META ) ) {
 		return __( 'It is already in a combined product.', 'variation-converter-for-woocommerce' );
 	}
-	if ( $product->get_meta( VARCONV_SPLIT_FROM_META ) || $product->get_meta( VARCONV_TAKEN_META ) ) {
-		return __( 'It was made by a split or Make simple; undo that in History instead.', 'variation-converter-for-woocommerce' );
+	if ( $product->get_meta( VARCONV_SPLIT_FROM_META ) ) {
+		return __( 'It was made by a split; undo the split in History instead.', 'variation-converter-for-woocommerce' );
 	}
 	return '';
 }
@@ -335,6 +335,8 @@ function varconv_add_to( int $parent_id, array $members ): array {
 		varconv_collection_list( $parent_id, $simple->get_id(), true );
 		$ids[] = $simple->get_id();
 	}
+	// A product Make simple made is now in this product, so that Make simple can no longer be undone.
+	varconv_forget_made_simple( $ids );
 	WC_Product_Variable::sync( $parent_id );
 	varconv_reindex( array_merge( array( $parent_id ), $ids ) );
 	wc_delete_product_transients( $parent_id );
