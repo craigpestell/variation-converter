@@ -1,52 +1,99 @@
 // Browser walkthrough of the Combine tab on the harness demo catalog, saving screenshots for PRs and the docs:
 //   harness/wp-harness reset && harness/wp-harness browse tests/browser-combine.mjs --out shots
-// Checks labels and notes, a partial create, a whole create, no parent SKU field, bulk create and phone width.
+// Checks the list, a card's labels and notes, a partial create and its Undo, a whole create, skip and restore,
+// Create a product for each group, the filters and phone width.
+import { watch, check, until, text, open, settled, row, notice } from './lib/browser.mjs';
+
 export default async function ({ page, go, shot, problems }) {
-	const row = (name) => page.locator('tr.varconv-group-row', { hasText: name }).first();
-	await go('edit.php?post_type=product&page=varconv');
-	console.log('groups:', (await page.locator('tr.varconv-group-row .row-title').allTextContents()).map(s => s.replace(/\s+/g, ' ').trim()).join(' | '));
+	watch(page, problems);
+	const titles = () => page.locator('.varconv-table .varconv-row-title').allInnerTexts();
+	const card = page.locator('.varconv-table__panel .varconv-card');
+	await open(page, go);
+	check((await titles()).length === 7, 'the demo catalog has 7 suggested groups');
 	await shot('combine');
-	// Labels, size order, duplicate and category notes
-	for (const name of ['Organic V-Neck Tee', 'Enamel Camp Mug', 'House Blend Coffee', 'Soy Candle']) {
-		const r = row(name);
-		await r.locator('.row-title').click();
-		const card = page.locator('#varconv-' + await r.getAttribute('data-key'));
-		const labels = await card.locator('.col-label input').evaluateAll(els => els.map(e => e.value));
-		const notes = (await card.locator('.varconv-notes, .notice').allTextContents()).map(s => s.trim()).filter(Boolean);
-		console.log(name, '| labels:', labels.join(', '), '| parent SKU field:', await card.locator('[name="sku"]').count(), '| notes:', notes.join(' / '));
-		if (name === 'Organic V-Neck Tee') await shot('vneck');
-		await r.locator('.row-title').click();
-	}
-	// Partial create on the candles: first two only
-	let r = row('Soy Candle');
-	let key = await r.getAttribute('data-key');
-	await r.locator('.row-title').click();
-	let card = page.locator('#varconv-' + key);
-	const boxes = card.locator('.varconv-use');
-	await boxes.nth(2).uncheck(); await boxes.nth(3).uncheck();
-	await Promise.all([page.waitForNavigation(), card.locator('.varconv-create').click()]);
-	console.log('after subset url:', page.url().replace(/.*\?/, '?'));
-	console.log('notice:', (await page.locator('.varconv-created').first().innerText()).split('\n')[0]);
-	const open = page.locator('tr.varconv-review:not([hidden])');
-	console.log('open cards:', await open.count(), '| rows:', await open.locator('.varconv-members tbody tr').count(), '| bands:', (await open.locator('.varconv-band-pick').allTextContents()).join(', '), '| notes:', (await open.locator('.varconv-notes').allTextContents()).join(' / '));
+
+	// A card: labels in size order, notes, no parent SKU field.
+	await row(page, 'Organic V-Neck Tee').locator('.varconv-row-title').click();
+	await card.waitFor();
+	const labels = await card.locator('.varconv-pick-table tbody input[type="text"]').evaluateAll((els) => els.map((e) => e.value));
+	check(labels.join(',') === 'Small,Medium,Large,XL', 'the V-Neck labels are in size order');
+	check(/Prices differ/.test(await text(card.locator('.varconv-card__notes'))), 'the card says prices differ');
+	await shot('card');
+	await row(page, 'Organic V-Neck Tee').locator('.varconv-row-title').click();
+	check(await card.count() === 0, 'clicking the name again closes the card');
+
+	// Partial create on the candles: the first two only. The card stays open on what is left.
+	await row(page, 'Soy Candle').locator('.varconv-row-title').click();
+	await card.waitFor();
+	const boxes = card.locator('.varconv-pick-table tbody input[type="checkbox"]');
+	await boxes.nth(2).uncheck();
+	await boxes.nth(3).uncheck();
+	await card.getByRole('button', { name: 'Create variable product' }).click();
+	await notice(page).waitFor();
+	await settled(page);
+	check(/Created/.test(await text(notice(page))), 'creating two of four says so: ' + (await text(notice(page))).slice(0, 80));
+	check(await card.locator('.varconv-pick-table tbody tr').count() === 2, 'the card stays open with the two products left');
 	await shot('after-subset');
-	// Create the rest: whole group, then the list reloads with the notice above it and without the group
-	await Promise.all([page.waitForNavigation(), open.locator('.varconv-create').click()]);
-	console.log('whole group notice:', (await page.locator('.varconv-created').first().innerText()).split('\n')[0]);
-	console.log('candle group gone:', 0 === await page.locator('tr.varconv-group-row', { hasText: 'Soy Candle' }).count(), '| open cards:', await page.locator('tr.varconv-review:not([hidden])').count());
-	// Bulk create with JS ends on the notice
-	await go('edit.php?post_type=product&page=varconv');
-	await row('Northwind Tote').locator('.varconv-pick').check();
-	await Promise.all([page.waitForNavigation({ timeout: 20000 }), page.locator('.varconv-do[value="create"]').first().click()]);
-	console.log('bulk notice:', await page.locator('.notice-success, .notice-warning').first().innerText());
-	console.log('scan again on history:', await (async () => { await go('edit.php?post_type=product&page=varconv&tab=history'); return page.locator('.varconv-rescan').count(); })());
-	console.log('combine count on history:', await page.locator('.nav-tab .count').first().innerText());
-	// Phone width
+
+	// Undo from the notice puts the four back.
+	await notice(page).getByRole('button', { name: 'Undo conversion' }).click();
+	await page.getByRole('dialog').getByRole('button', { name: 'Undo conversion' }).click();
+	await page.waitForFunction(() => /Undone/.test(document.querySelector('.varconv-notices')?.innerText || ''));
+	await settled(page);
+	if (!(await card.count())) await row(page, 'Soy Candle').locator('.varconv-row-title').click();
+	await card.waitFor();
+	check(await card.locator('.varconv-pick-table tbody tr').count() === 4, 'Undo puts the four candles back in the group');
+
+	// The whole group (unticking is remembered, so tick the two again): the list comes back without it.
+	await boxes.nth(2).check();
+	await boxes.nth(3).check();
+	await card.getByRole('button', { name: 'Create variable product' }).click();
+	await page.waitForFunction(() => /Created/.test(document.querySelector('.varconv-notices')?.innerText || ''));
+	await settled(page);
+	await until(page, async () => !(await titles()).some((t) => /Soy Candle/.test(t)), 'the candle group left the list');
+	check(await card.count() === 0, 'no card is open');
+	await until(page, async () => /Combine 6/.test(await text(page.locator('.varconv-tabs'))), 'the Combine tab counts 6');
+
+	// Skip from the row, then restore from the Skipped view.
+	await row(page, 'Northwind Tote').hover();
+	await row(page, 'Northwind Tote').getByRole('button', { name: 'Skip, not variants' }).click();
+	await settled(page);
+	await until(page, async () => !(await titles()).some((t) => /Northwind/.test(t)), 'the skipped group left the list');
+	await page.locator('.varconv-views').getByText('Skipped').click();
+	await settled(page);
+	await until(page, async () => (await titles()).some((t) => /Northwind/.test(t)), 'it is in the Skipped view');
+	await row(page, 'Northwind Tote').locator('input[type="checkbox"]').check();
+	await page.locator('.varconv-bulk-actions select').first().selectOption('restore');
+	await page.locator('.varconv-bulk-actions').first().getByRole('button', { name: 'Apply' }).click();
+	await settled(page);
+	await page.locator('.varconv-views').getByText('All').click();
+	await settled(page);
+	await until(page, async () => (await titles()).some((t) => /Northwind/.test(t)), 'Restore puts it back');
+
+	// Create a product for each group: two checked groups.
+	await row(page, 'Northwind Tote').locator('input[type="checkbox"]').check();
+	await row(page, 'Classic Crew Tee').locator('input[type="checkbox"]').check();
+	check(/Selected: 2 groups/.test(await text(page.locator('.varconv-combine-buttons').first())), 'the toolbar counts the checked groups');
+	await page.getByRole('button', { name: 'Create a product for each group' }).first().click();
+	await page.waitForFunction(() => /Created 2/.test(document.querySelector('.varconv-notices')?.innerText || ''));
+	await settled(page);
+	await until(page, async () => (await titles()).length === 4, 'four groups are left');
+	await shot('after-bulk');
+
+	// Filters: the view and the warnings filter narrow the list and are in the URL.
+	await page.locator('.varconv-views').getByText('Needs review').click();
+	await settled(page);
+	check(/view=review/.test(page.url()), 'the view is in the URL');
+	const review = (await titles()).length;
+	await page.goBack();
+	await settled(page);
+	check((await titles()).length === 4 && review < 4, 'Back returns to every group');
+
+	// Phone width: the list keeps its names and actions.
 	await page.setViewportSize({ width: 390, height: 800 });
-	await go('edit.php?post_type=product&page=varconv');
-	console.log('phone: open cards', await page.locator('tr.varconv-review:not([hidden])').count(), '| visible', await page.locator('tr.varconv-review').evaluateAll(els => els.filter(e => e.offsetHeight > 0).length), '| scroll', await page.evaluate(() => document.documentElement.scrollWidth));
-	await page.locator('.row-title').first().click();
-	console.log('phone open: scroll', await page.evaluate(() => document.documentElement.scrollWidth), '| card width', await page.locator('tr.varconv-review:not([hidden]) .varconv-review-inner').evaluate(e => e.getBoundingClientRect().width));
-	await shot('phone', undefined);
-	if (problems.length) throw new Error(`${problems.length} problems on the way: ${problems.join('; ')}`);
+	await open(page, go);
+	check((await titles()).length === 4, 'the list shows at phone width');
+	check(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth + 1), 'no sideways scroll at phone width');
+	await shot('combine-phone');
+	if (problems.length) throw new Error(problems.join('\n'));
 }

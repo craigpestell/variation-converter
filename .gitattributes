@@ -12,3 +12,10 @@
 /docs export-ignore
 /.claude export-ignore
 /CLAUDE.md export-ignore
+/.storybook export-ignore
+*.stories.js export-ignore
+/build/*.map export-ignore
+/eslint.config.cjs export-ignore
+/package-lock.json export-ignore
+*.mdx export-ignore
+stories-data.js export-ignore

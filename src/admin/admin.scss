@@ -1,0 +1,45 @@
+/*
+ * The Variation Converter page. The components' styles are in src/components/style.scss; this adds what only the
+ * page's own layout needs.
+ */
+@use '../components/style';
+
+.varconv {
+	.varconv-notices:empty { display: none; }
+	.varconv-lead { max-width: 760px; margin: 0 0 8px; font-size: 13px; color: #3c434a; }
+	.varconv-help { max-width: 900px; color: #646970; }
+	.varconv-back { margin: 0 0 12px; }
+	.varconv-list-title { margin: 20px 0 4px; font-size: 1.15em; }
+	.varconv-list-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+	.varconv-empty { padding: 24px; background: #fff; border: 1px solid #c3c4c7; text-align: center; color: #50575e; }
+	.varconv-combine-buttons, .varconv-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+
+	/* The combine card's fields: the name, then one attribute or two with the swap button between them. */
+	.varconv-fields {
+		display: grid; grid-template-columns: minmax(240px, 2fr) minmax(140px, 1fr) minmax(140px, 1fr); gap: 16px;
+		align-items: end; margin-bottom: 14px;
+		&.is-two { grid-template-columns: minmax(240px, 2fr) minmax(140px, 1fr) auto minmax(140px, 1fr); }
+	}
+	.varconv-fields__attribute {
+		display: flex; align-items: flex-end; gap: 2px;
+		.components-base-control { flex: 1; min-width: 0; }
+		.components-button { margin-bottom: 8px; color: #646970; }
+		.components-button:hover { color: #b32d2e; }
+	}
+	.varconv-fields__swap { margin-bottom: 2px; }
+	.varconv-cats {
+		display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0 0 14px; padding: 0; border: 0;
+		legend { margin-bottom: 6px; padding: 0; font-weight: 600; }
+	}
+	.varconv-take-cats {
+		margin: 16px 0 0; padding: 0; border: 0;
+		legend { padding: 0; font-weight: 600; }
+		p { margin: 4px 0; }
+	}
+	.varconv-history td a[href*="post.php"] { white-space: nowrap; }
+	.varconv-table__col-choose { text-align: right; }
+
+	@media screen and (max-width: 782px) {
+		.varconv-fields, .varconv-fields.is-two { grid-template-columns: 1fr; }
+	}
+}

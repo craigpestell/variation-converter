@@ -3,7 +3,7 @@
  * Bulk jobs on the server: Create on the Combine tab, and Undo and Move originals to Trash on History. The admin page
  * saves what to do as one job; WooCommerce's Action Scheduler works through it a batch at a time in the background, so
  * it finishes even if the admin leaves the page. While a tab
- * of the plugin page is open, assets/admin.js runs batches too, so progress is quick to show. The bulk lock keeps any
+ * of the plugin page is open, the admin app (src/admin) runs batches too, so progress is quick to show. The bulk lock keeps any
  * two batches (or a WP-CLI run) from working at once.
  */
 

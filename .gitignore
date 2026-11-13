@@ -5,3 +5,5 @@ HANDOFF.md
 *.zip
 svn-pass.txt
 .vercel
+/site/components/
+/storybook-static/

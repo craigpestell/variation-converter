@@ -15,6 +15,14 @@ Entry format:
 
 ---
 
+## 2026-11-13 · engineering-lead · Admin page rebuilt as a React app
+- Did: the founder asked for React components in place of PHP templates, on every page, with a place to see the components. Products > Variation Converter is now one React app (`src/admin`) on WordPress's components plus 22 of our own (`src/components`), talking to new REST routes (`includes/rest*.php`, namespace `varconv/v1`) that wrap the same functions as before. The PHP templates, `admin-post`/`admin-ajax` handlers and `assets/admin.js`/`admin.css` are gone. A Storybook style guide has a story for every component and is published with the website at `/components/`. Browser tests rewritten (`tests/browser-{combine,search,split,history,links}.mjs`).
+- Decided: Storybook over a page in wp-admin, so components can be seen without a WordPress site, and it costs the plugin zip nothing. Our own list table instead of DataViews, which would have to be bundled, has no rows that open, and is not in WordPress 6.5. `build/` is committed because releases are `git archive` and the dev site pulls `main` with no build step. Hooks into WordPress's own screens stay PHP. URLs are unchanged, so links from the Products list and bookmarks still work. The page now needs JavaScript (the old no-JavaScript fallback is gone).
+- Found on the way: WooCommerce refuses to create a product over REST while another holds its SKU (a guard for its own API). Conversions move SKUs under the bulk lock, so the plugin's routes turn that guard off for themselves. WordPress 6.5 has no `react-jsx-runtime` script; `varconv_jsx_runtime()` makes one there.
+- Blocked: nothing. Needs qa-engineer and security-compliance review (new REST routes that write products). Listing screenshots, website images and the demo clip show the old page and should be retaken at the next release.
+- Cost: est. 900k tokens.
+- Links: this PR.
+
 ## 2026-11-03 · talent-lead · Refresh the project profile
 - Did: brought `project.md` up to date: current version, the founder's standing rules (no parent SKU, American English, never touch the live Ultralove store), the working threads mapped onto the roster, the merge policy, and a proportionate deploy gate (php -l and offline tests for every PR; harness, Plugin Check and screenshots for larger UI changes and releases).
 - Decided: wrote down how the project already runs rather than changing it.

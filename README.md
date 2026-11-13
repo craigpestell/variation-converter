@@ -113,6 +113,17 @@ Groups are created as suggested, without products you unticked on the admin page
 - Build the plugin zip: `git archive --format=zip --prefix=variation-converter-for-woocommerce/ -o variation-converter-for-woocommerce.zip HEAD`
 - Tests and a throwaway WordPress + WooCommerce test site: see [harness/README.md](harness/README.md).
 
+### The admin screens
+
+The page at **Products > Variation Converter** is a React app built from [WordPress's components](https://developer.wordpress.org/block-editor/reference-guides/components/), using the React that ships with WordPress.
+
+- `src/components/`: the plugin's own components (list table, review card, pick table, badges and so on), each with a story beside it. The [component style guide](https://variation-converter.bizrocket.ca/components/) shows them all; `npm run storybook` runs it locally.
+- `src/admin/`: the screens (Combine, Split, History, Add to a combined product, Make simple product). They load their data from the plugin's REST routes and pass it to the components.
+- `includes/rest*.php`: the REST routes (`varconv/v1`). Each needs the `manage_woocommerce` capability and WordPress's REST nonce, and calls the same functions as WP-CLI does.
+- `build/`: the compiled app, which is what WordPress loads. It is committed, so the plugin runs from a plain checkout. After changing anything in `src/`, run `npm install` once, then `npm run build`, and commit `build/` with your change. `npm run lint:js` checks the source.
+
+What WordPress and WooCommerce draw themselves stays PHP: the bulk actions and row action in Products > All Products, the Quick Edit **Variant stock** box, and the **Make simple product** link on a variation.
+
 ## License
 
 GPL-2.0-or-later. See [LICENSE](LICENSE).

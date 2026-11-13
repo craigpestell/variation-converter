@@ -11,8 +11,8 @@ Every role reads this file first. It holds everything specific to the variation 
 
 ## Stack
 
-- PHP 7.4+ (WordPress 6.5+, WooCommerce 8.0+), no build step, no Composer dependencies.
-- Code map: `variation-converter-for-woocommerce.php` (plugin header and bootstrap), `includes/` (scanner, converter, undo, redirects, admin page, WP-CLI), `assets/` (admin JS and CSS), `uninstall.php`, `tests/` (offline `test-*.php`, `integration-*.php` run inside WordPress, `browser-*.mjs` Playwright checks), `harness/` (throwaway WordPress + WooCommerce site), `site/` (GitHub Pages marketing site), `.wordpress-org/` (directory banners, icons, screenshots, and `blueprints/blueprint.json` for the Live Preview), `bin/svn-release.sh`.
+- PHP 7.4+ (WordPress 6.5+, WooCommerce 8.0+), no Composer dependencies. The admin page is a React app built with `@wordpress/scripts` from WordPress's own components; it uses the React that ships with WordPress, and the compiled `build/` is committed.
+- Code map: `variation-converter-for-woocommerce.php` (plugin header and bootstrap), `includes/` (scanner, converter, undo, redirects, WP-CLI, the REST routes in `rest*.php`, and the hooks into WordPress's own screens in `admin*.php`), `src/components/` (the plugin's React components, each with a `Name.stories.js`), `src/admin/` (the screens of the admin page), `build/` (the compiled app WordPress loads; committed), `.storybook/` (the component style guide, published at variation-converter.bizrocket.ca/components/), `assets/` (JS and CSS for Quick Edit and the Variations panel), `uninstall.php`, `tests/` (offline `test-*.php`, `integration-*.php` run inside WordPress, `browser-*.mjs` Playwright checks), `harness/` (throwaway WordPress + WooCommerce site), `site/` (GitHub Pages marketing site), `.wordpress-org/` (directory banners, icons, screenshots, and `blueprints/blueprint.json` for the Live Preview), `bin/svn-release.sh`.
 
 ## Commands
 
@@ -24,6 +24,9 @@ Every role reads this file first. It holds everything specific to the variation 
 | Plugin Check (wordpress.org rules) | `harness/wp-harness check` |
 | Screenshots and browser scripts | `harness/wp-harness shot <path>`, `harness/wp-harness browse tests/browser-*.mjs` |
 | Delete the test site | `harness/wp-harness down` |
+| Build the admin app after changing `src/` (commit `build/` with the change) | `npm install` once, then `npm run build` |
+| Lint the admin app | `npm run lint:js` |
+| Component style guide | `npm run storybook` (local), `npm run build-storybook` (into `site/components`, which the Site workflow does on merge) |
 | What ships | `git archive HEAD \| tar -t` (`.gitattributes` `export-ignore` decides) |
 
 ## Hosting and deploys
@@ -36,7 +39,8 @@ Every role reads this file first. It holds everything specific to the variation 
 ## Rules every role keeps
 
 - Never delete a merchant's products or data on the plugin's own initiative. Conversions hide originals and must stay undoable. The one exception is Trash originals, which the merchant chooses per combine: it moves originals to the Trash (never deletes for good, and refuses when the Trash is off), keeps their reviews and redirects, and Undo works until the Trash is emptied.
-- Every admin action checks `manage_woocommerce` and a nonce; input is sanitized and output escaped. Plugin Check must pass.
+- The admin page is built from WordPress's components (`@wordpress/components`) first and the plugin's own (`src/components`) second; a new component of our own gets a story. Screens that WordPress or WooCommerce draw (Products list, Quick Edit, the Variations panel) stay PHP.
+- Every admin action checks `manage_woocommerce` and a nonce (the REST nonce for the app's routes); input is sanitized and output escaped. Plugin Check must pass.
 - No remote calls, tracking or analytics from the plugin.
 - Keep PHP 7.4 and WordPress 6.5 compatibility unless a release raises the minimums on purpose.
 - Only plugin files ship; tests, harness, site and listing assets are `export-ignore`.
@@ -61,7 +65,7 @@ PRs may merge to `main` without asking the founder once the Code review and publ
 
 Keep checks proportionate; the founder dislikes long test runs.
 
-- **Every PR:** `php -l` on changed PHP files and the offline tests (`php tests/test-*.php`) pass on the exact commit, with results posted on the PR. (No CI test workflow yet; adding one with the `ci-github-actions` skill is planned.)
+- **Every PR:** `php -l` on changed PHP files and the offline tests (`php tests/test-*.php`) pass on the exact commit, with results posted on the PR. A PR that changes `src/` also passes `npm run lint:js` and commits the `build/` that `npm run build` makes from it. (No CI test workflow yet; adding one with the `ci-github-actions` skill is planned.)
 - **Larger UI or behavior changes, and every release:** also `harness/wp-harness test` and `harness/wp-harness check`, plus screenshots or browser checks for admin UI changes.
 - `qa-engineer` (the review thread) has verified the change.
 - `security-compliance` has reviewed changes to capabilities, nonces, AJAX or REST handlers, redirects, uninstall, or anything that writes products.
