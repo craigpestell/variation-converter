@@ -118,7 +118,7 @@ $narrow: 782px;
 .varconv-row-sub { display: block; color: $muted; font-size: 12px; }
 .varconv-product-name__state { color: #50575e; font-weight: 600; }
 
-/* SearchPanel and SearchBox */
+/* SearchPanel */
 .varconv-search-panel {
 	max-width: 900px; margin: 0 0 8px; padding: 16px 20px; background: $surface;
 	border: 1px solid $line; border-left: 4px solid $accent;
@@ -126,10 +126,6 @@ $narrow: 782px;
 	&__row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 	&__row .components-search-control { flex: 1 1 320px; max-width: 520px; }
 	&__help { margin: 8px 0 0; color: $muted; }
-}
-.varconv-search-box {
-	display: flex; align-items: center; gap: 6px;
-	.components-search-control { width: 220px; }
 }
 
 /* ReviewCard */
@@ -270,5 +266,4 @@ $narrow: 782px;
 	/* The wide table scrolls inside the card instead of widening the page. */
 	.varconv-pick-table-wrap { overflow-x: auto; }
 	.varconv-pick-table { min-width: 640px; }
-	.varconv-search-box .components-search-control { width: 160px; }
 }

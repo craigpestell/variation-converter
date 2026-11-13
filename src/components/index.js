@@ -16,7 +16,6 @@ export { default as PairGrid } from './PairGrid';
 export { default as PickTable } from './PickTable';
 export { default as ProductName } from './ProductName';
 export { default as ReviewCard } from './ReviewCard';
-export { default as SearchBox } from './SearchBox';
 export { default as SearchPanel } from './SearchPanel';
 export { default as SelectAllBanner } from './SelectAllBanner';
 export { default as StockStatus } from './StockStatus';

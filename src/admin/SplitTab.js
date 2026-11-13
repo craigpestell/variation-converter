@@ -3,7 +3,7 @@ import { __ } from '@wordpress/i18n';
 import {
 	ListTable,
 	Pagination,
-	SearchBox,
+	SearchPanel,
 	Toolbar,
 	Views,
 } from '../components';
@@ -34,18 +34,28 @@ export default function SplitTab( { query } ) {
 		navigate( { ...filters, paged: query.paged || '', ...patch } );
 	const close = () => go( { product: '' } );
 
-	const lead = (
-		<p className="varconv-lead">
-			{ __(
+	const search = (
+		<SearchPanel
+			label={ __(
+				'Find the variable products to split',
+				'variation-converter-for-woocommerce'
+			) }
+			placeholder={ __(
+				'Product name or SKU, for example Classic Tee',
+				'variation-converter-for-woocommerce'
+			) }
+			value={ filters.s || '' }
+			onSearch={ ( s ) => go( { s, paged: '', product: '' } ) }
+			help={ __(
 				'Turn a variable product into one simple product per variation, or make just the variations you pick into simple products and keep the rest variable. Nothing is deleted, and Undo in History puts it back.',
 				'variation-converter-for-woocommerce'
 			) }
-		</p>
+		/>
 	);
 	if ( ! data ) {
 		return (
 			<>
-				{ lead }
+				{ search }
 				{ error ? (
 					<Notice status="error" isDismissible={ false }>
 						{ error }
@@ -69,49 +79,39 @@ export default function SplitTab( { query } ) {
 	);
 	return (
 		<>
-			{ lead }
-			<div className="varconv-list-head">
-				<Views
-					current={ filters.view || '' }
-					onChange={ ( view ) =>
-						navigate( { tab: 'split', view, s: filters.s || '' } )
-					}
-					views={ [
-						{
-							key: '',
-							label: __(
-								'All',
-								'variation-converter-for-woocommerce'
-							),
-							count: data.counts[ '' ],
-						},
-						{
-							key: 'ready',
-							label: __(
-								'Can be split',
-								'variation-converter-for-woocommerce'
-							),
-							count: data.counts.ready,
-						},
-						{
-							key: 'combined',
-							label: __(
-								'Combined here',
-								'variation-converter-for-woocommerce'
-							),
-							count: data.counts.combined,
-						},
-					] }
-				/>
-				<SearchBox
-					label={ __(
-						'Search products',
-						'variation-converter-for-woocommerce'
-					) }
-					value={ filters.s || '' }
-					onSearch={ ( s ) => go( { s, paged: '', product: '' } ) }
-				/>
-			</div>
+			{ search }
+			<Views
+				current={ filters.view || '' }
+				onChange={ ( view ) =>
+					navigate( { tab: 'split', view, s: filters.s || '' } )
+				}
+				views={ [
+					{
+						key: '',
+						label: __(
+							'All',
+							'variation-converter-for-woocommerce'
+						),
+						count: data.counts[ '' ],
+					},
+					{
+						key: 'ready',
+						label: __(
+							'Can be split',
+							'variation-converter-for-woocommerce'
+						),
+						count: data.counts.ready,
+					},
+					{
+						key: 'combined',
+						label: __(
+							'Combined here',
+							'variation-converter-for-woocommerce'
+						),
+						count: data.counts.combined,
+					},
+				] }
+			/>
 			{ open > 0 && ! onPage && (
 				// Opened from Products > All Products but not on this page of the list.
 				<SplitCard id={ open } alone onClose={ close } />

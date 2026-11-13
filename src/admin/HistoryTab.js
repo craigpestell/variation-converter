@@ -7,7 +7,7 @@ import {
 	ListTable,
 	Pagination,
 	ProductName,
-	SearchBox,
+	SearchPanel,
 	SelectAllBanner,
 	Toolbar,
 	Views,
@@ -47,18 +47,29 @@ export default function HistoryTab( { query } ) {
 		setMessage( '' );
 	}, [ listKey ] );
 
-	const lead = (
-		<p className="varconv-lead">
-			{ __(
+	const go = ( patch ) => navigate( { ...filters, ...patch } );
+	const search = (
+		<SearchPanel
+			label={ __(
+				'Find a conversion',
+				'variation-converter-for-woocommerce'
+			) }
+			placeholder={ __(
+				'Product name or SKU, for example Classic Tee',
+				'variation-converter-for-woocommerce'
+			) }
+			value={ filters.s || '' }
+			onSearch={ ( s ) => go( { s } ) }
+			help={ __(
 				'Every conversion made here, newest first. Undo puts the products back as they were.',
 				'variation-converter-for-woocommerce'
 			) }
-		</p>
+		/>
 	);
 	if ( ! data ) {
 		return (
 			<>
-				{ lead }
+				{ search }
 				{ error ? (
 					<Notice status="error" isDismissible={ false }>
 						{ error }
@@ -164,7 +175,6 @@ export default function HistoryTab( { query } ) {
 		}
 	};
 
-	const go = ( patch ) => navigate( { ...filters, ...patch } );
 	const pagination = (
 		<Pagination
 			page={ data.page }
@@ -213,38 +223,28 @@ export default function HistoryTab( { query } ) {
 	const total = data.total.toLocaleString();
 	return (
 		<>
-			{ lead }
-			<div className="varconv-list-head">
-				<Views
-					current={ filters.view || '' }
-					onChange={ ( view ) =>
-						navigate( { tab: 'history', view, s: filters.s || '' } )
-					}
-					views={ [
-						{
-							key: '',
-							label: __(
-								'All',
-								'variation-converter-for-woocommerce'
-							),
-							count: data.counts[ '' ],
-						},
-						...Object.keys( kinds ).map( ( key ) => ( {
-							key,
-							label: kinds[ key ].label,
-							count: data.counts[ key ],
-						} ) ),
-					] }
-				/>
-				<SearchBox
-					label={ __(
-						'Search history',
-						'variation-converter-for-woocommerce'
-					) }
-					value={ filters.s || '' }
-					onSearch={ ( s ) => go( { s } ) }
-				/>
-			</div>
+			{ search }
+			<Views
+				current={ filters.view || '' }
+				onChange={ ( view ) =>
+					navigate( { tab: 'history', view, s: filters.s || '' } )
+				}
+				views={ [
+					{
+						key: '',
+						label: __(
+							'All',
+							'variation-converter-for-woocommerce'
+						),
+						count: data.counts[ '' ],
+					},
+					...Object.keys( kinds ).map( ( key ) => ( {
+						key,
+						label: kinds[ key ].label,
+						count: data.counts[ key ],
+					} ) ),
+				] }
+			/>
 			<Toolbar end={ pagination }>{ bulkMenu }</Toolbar>
 			{ message && (
 				<Notice
