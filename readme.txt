@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 1.10.0
+Stable tag: 1.10.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -199,6 +199,9 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 5. The History tab, where every conversion can be undone.
 
 == Changelog ==
+
+= 1.10.1 =
+* Combine, Split and History share the same search panel. On the Combine tab, the counts beside All, Ready, Needs review and Skipped now follow your search and filters.
 
 = 1.10.0 =
 * Products made by Split can be combined again, or added to a combined product. Search shows them under Products not in a group, and the scan still leaves them out of its suggested groups. While any of them is in another variable product, the split's Undo waits, and History says which product to undo first.
