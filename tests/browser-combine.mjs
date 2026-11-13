@@ -84,10 +84,9 @@ export default async function ({ page, go, shot, problems }) {
 	await page.locator('.varconv-views').getByText('Needs review').click();
 	await settled(page);
 	check(/view=review/.test(page.url()), 'the view is in the URL');
-	const review = (await titles()).length;
+	await until(page, async () => (await titles()).length === 3, 'Needs review lists the three groups with a warning');
 	await page.goBack();
-	await settled(page);
-	check((await titles()).length === 4 && review < 4, 'Back returns to every group');
+	await until(page, async () => (await titles()).length === 4, 'Back returns to every group');
 
 	// Phone width: the list keeps its names and actions.
 	await page.setViewportSize({ width: 390, height: 800 });
