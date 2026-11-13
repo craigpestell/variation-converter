@@ -1,10 +1,11 @@
-# Publishes site/ to GitHub Pages, with a plugin zip built the same way as the wordpress.org submission.
+# Publishes site/ to GitHub Pages, with a plugin zip built the same way as the wordpress.org submission and the
+# component style guide (Storybook) at /components/.
 name: Site
 
 on:
   push:
     branches: [main]
-    paths: ['site/**', 'includes/**', 'assets/**', '*.php', 'readme.txt', '.github/workflows/site.yml']
+    paths: ['site/**', 'includes/**', 'assets/**', 'build/**', 'src/**', '.storybook/**', 'package*.json', '*.php', 'readme.txt', '.github/workflows/site.yml']
   workflow_dispatch:
 
 permissions:
@@ -26,6 +27,14 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build the plugin zip
         run: git archive --format=zip --prefix=variation-converter-for-woocommerce/ -o site/variation-converter-for-woocommerce.zip HEAD
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Build the component style guide into site/components
+        run: |
+          npm ci
+          npm run build-storybook
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

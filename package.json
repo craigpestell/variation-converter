@@ -1,0 +1,33 @@
+{
+  "name": "variation-converter-for-woocommerce",
+  "private": true,
+  "description": "Admin UI source for Variation Converter for WooCommerce. `npm run build` compiles src/ into build/.",
+  "license": "GPL-2.0-or-later",
+  "scripts": {
+    "build": "wp-scripts build",
+    "start": "wp-scripts start",
+    "lint:js": "wp-scripts lint-js src",
+    "test:js": "wp-scripts test-unit-js",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build -o site/components"
+  },
+  "devDependencies": {
+    "@storybook/addon-a11y": "^8.6.19",
+    "@storybook/addon-essentials": "^8.6.14",
+    "@storybook/react-webpack5": "^8.6.19",
+    "@wordpress/api-fetch": "^8.1.0",
+    "@wordpress/components": "^44.0.0",
+    "@wordpress/element": "^10.1.0",
+    "@wordpress/i18n": "^7.1.0",
+    "@wordpress/icons": "^20.0.0",
+    "@wordpress/scripts": "^37.1.0",
+    "@wordpress/url": "^5.1.0",
+    "css-loader": "^7.1.5",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "sass": "^1.108.2",
+    "sass-loader": "^17.1.0",
+    "storybook": "^8.6.19",
+    "style-loader": "^4.0.0"
+  }
+}

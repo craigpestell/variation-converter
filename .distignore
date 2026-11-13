@@ -16,3 +16,9 @@ HANDOFF.md
 /docs
 /.claude
 CLAUDE.md
+/.storybook
+*.stories.js
+eslint.config.cjs
+/package-lock.json
+*.mdx
+stories-data.js

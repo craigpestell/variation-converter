@@ -1,0 +1,29 @@
+import { Meta } from '@storybook/blocks';
+
+<Meta title="Introduction" />
+
+# Variation Converter components
+
+This is the style guide for the admin screens of Variation Converter for WooCommerce (Products > Variation Converter). The screens are a React app built from [WordPress's own components](https://developer.wordpress.org/block-editor/reference-guides/components/) (buttons, text fields, checkboxes, notices, dropdowns, dialogs) and, where WordPress has none that fits, the plugin's own components shown here.
+
+Every component has its own folder entry in the sidebar, grouped by where it is used:
+
+- **Page**: the header, the tabs, notices and the search that leads the Combine tab.
+- **Lists**: the list table and what sits around it (views, search, bulk actions, page links).
+- **Cards**: the card that reviews a change before it is made, and the tables inside it.
+- **Small parts**: badges, thumbnails, product names, filters.
+
+## Rules
+
+- Use a WordPress component when one fits. Add a component here only when a pattern repeats on more than one screen.
+- A component takes data and callbacks as props and knows nothing about the plugin's REST routes, so it can be shown here on its own. Screens (`src/admin`) load the data and pass it in.
+- Colors and sizes follow WordPress admin. Styles live in `src/components/style.scss`, under class names that start with `varconv-`.
+- Every new component gets a story beside it (`Name.stories.js`).
+
+## Working on it
+
+```sh
+npm install
+npm run storybook         # this style guide at http://localhost:6006
+npm run build             # the admin app into build/
+```

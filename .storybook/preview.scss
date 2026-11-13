@@ -1,0 +1,15 @@
+/* What WordPress admin gives the components for free: its font, text size and link color. */
+body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+	font-size: 13px;
+	line-height: 1.4;
+	color: #3c434a;
+	--wp-admin-theme-color: #2271b1;
+	--wp-admin-theme-color-darker-10: #135e96;
+	--wp-admin-theme-color-darker-20: #0a4b78;
+}
+a { color: #2271b1; }
+.screen-reader-text {
+	position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
+	clip-path: inset(50%); border: 0; word-wrap: normal;
+}

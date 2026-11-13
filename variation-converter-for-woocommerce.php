@@ -28,6 +28,8 @@ require_once __DIR__ . '/includes/add-to.php';
 require_once __DIR__ . '/includes/trash-originals.php';
 require_once __DIR__ . '/includes/job.php';
 require_once __DIR__ . '/includes/redirect.php';
+require_once __DIR__ . '/includes/admin-data.php';
+require_once __DIR__ . '/includes/rest.php';
 
 /** Product title markup as one line of plain text. */
 function varconv_plain( string $html ): string {
