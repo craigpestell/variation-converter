@@ -1,5 +1,5 @@
 // Demo clip: the six House Blend Coffee products (3 grinds x 2 weights) combined into one variable product,
-// renaming the attributes, swapping their order and dragging rows before Create. Uses the Live Preview demo data:
+// renaming the attributes, swapping their order and dragging a row before Create. Uses the Live Preview demo data:
 //   harness/wp-harness up --no-seed && harness/wp-harness eval <blueprint runPHP code>   (see clips/README.md)
 //   harness/wp-harness browse .wordpress-org/clips/combine-coffee.mjs /tmp/clips
 // Writes combine-coffee.webm to that folder; clips/make.sh turns it into a GIF and an MP4.
@@ -57,7 +57,9 @@ export default async function ({ browser, context, base, args }) {
 		await page.addStyleTag({ content: tidyCss });
 		await page.evaluate(() => document.body.classList.add('folded'));
 	};
-	const go = async (path) => { await page.goto(base + '/wp-admin/' + path); await tidy(); };
+	// The page is an app: wait until its list or card has loaded before moving on.
+	const settled = () => page.waitForFunction(() => document.querySelector('#varconv-root .varconv-tabs') && !document.querySelector('#varconv-root .is-loading, #varconv-root .components-spinner, #varconv-root .is-busy'));
+	const go = async (path) => { await page.goto(base + '/wp-admin/' + path); await tidy(); await settled(); };
 	const point = async (loc) => {
 		await loc.scrollIntoViewIfNeeded();
 		const b = await loc.boundingBox();
@@ -77,44 +79,46 @@ export default async function ({ browser, context, base, args }) {
 	// The Combine tab lists the suggested groups A to Z: tick the two House Blend Coffee groups.
 	await go('edit.php?post_type=product&page=varconv');
 	await pause(600);
-	const coffee = page.locator('tr.varconv-group-row', { hasText: 'House Blend Coffee' });
+	const coffee = page.locator('.varconv-groups > tbody > tr', { hasText: 'House Blend Coffee' });
 	const firstTop = await coffee.first().evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
 	await scrollTo(firstTop - 260);
-	for (let i = 0; i < await coffee.count(); i++) { await click(coffee.nth(i).locator('.varconv-pick')); await pause(200); }
+	for (let i = 0; i < await coffee.count(); i++) { await click(coffee.nth(i).locator('.varconv-table__check input')); await pause(200); }
 	await pause(300);
-	const combine = page.locator('.varconv-do[value="combine"]').first();
+	const combine = page.getByRole('button', { name: 'Combine into one product' }).first();
 	await point(combine);
-	await Promise.all([page.waitForNavigation(), combine.click()]);
-	await tidy();
+	await combine.click();
+	const card = page.locator('.varconv-card');
+	await card.waitFor();
+	await settled();
 	await pause(1200);
 
 	// Rename the attributes the scan guessed.
-	const card = page.locator('form.varconv-card[data-grid]');
-	await type(card.locator('[name="group_attribute"]'), 'Weight');
+	const attributes = card.locator('.varconv-fields__attribute input');
+	await type(attributes.nth(0), 'Weight');
 	await page.keyboard.press('Escape');
-	await type(card.locator('[name="attribute"]'), 'Grind');
+	await type(attributes.nth(1), 'Grind');
 	await page.keyboard.press('Escape');
-	await card.locator('[name="attribute"]').evaluate((el) => el.blur());
+	await attributes.nth(1).evaluate((el) => el.blur());
 	await pause(500);
 
 	// Shorten a label.
-	const tbodyTop = await card.locator('.varconv-members').evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
+	const tbodyTop = await card.locator('.varconv-pick-table').evaluate((el) => el.getBoundingClientRect().top + window.scrollY);
 	await scrollTo(tbodyTop - 260);
-	const espresso = card.locator('.varconv-members tbody tr', { hasText: 'CF1000-ES' }).locator('input[type=text]').nth(1);
+	const espresso = card.locator('.varconv-pick-table tbody tr', { hasText: 'CF1000-ES' }).locator('input[type=text]').nth(1);
 	await type(espresso, 'Espresso');
-	const espresso2 = card.locator('.varconv-members tbody tr', { hasText: 'CF340-ES' }).locator('input[type=text]').nth(1);
+	const espresso2 = card.locator('.varconv-pick-table tbody tr', { hasText: 'CF340-ES' }).locator('input[type=text]').nth(1);
 	await type(espresso2, 'Espresso');
 	await pause(400);
 
 	// Grind first: swap the two attributes.
 	await scrollTo(tbodyTop - 330);
-	await click(card.locator('.varconv-swap'));
+	await click(card.locator('.varconv-fields__swap'));
 	await pause(1300);
 
-	// Drag the 340g bags above the 1kg ones, so 340g comes first in the Weight dropdown.
+	// Drag a 340g bag above the 1kg ones, so 340g comes first in the Weight dropdown.
 	const drag = async (fromSku, toSku) => {
-		const from = card.locator('.varconv-members tbody tr', { hasText: fromSku }).locator('td.handle, .handle').first();
-		const to = card.locator('.varconv-members tbody tr', { hasText: toSku }).first();
+		const from = card.locator('.varconv-pick-table tbody tr', { hasText: fromSku }).locator('.varconv-pick-table__grip').first();
+		const to = card.locator('.varconv-pick-table tbody tr', { hasText: toSku }).first();
 		await point(from);
 		await page.mouse.down();
 		const tb = await to.boundingBox();
@@ -127,21 +131,22 @@ export default async function ({ browser, context, base, args }) {
 		await pause(500);
 	};
 	await scrollTo(tbodyTop - 120);
-	await drag('CF340-WB', 'CF1000-ES');
+	await drag('CF340-ES', 'CF1000-ES');
 	await pause(800);
 
 	// Create.
 	await scrollTo(tbodyTop - 330);
-	const create = card.locator('.varconv-create');
+	const create = card.getByRole('button', { name: 'Create variable product' });
 	await point(create);
 	await pause(300);
-	await Promise.all([page.waitForNavigation(), create.click()]);
-	await tidy();
+	await create.click();
+	await page.locator('.varconv-notices .varconv-notice').first().waitFor();
+	await settled();
 	await scrollTo(0);
 	await pause(1200);
 
 	// The product in the shop.
-	const view = page.locator('.notice a', { hasText: /View/i }).first();
+	const view = page.locator('.varconv-notices a', { hasText: /view/i }).first();
 	let url = (await view.count()) ? await view.getAttribute('href') : null;
 	if (!url) url = await page.evaluate(async (base) => (await (await fetch(base + '/wp-json/wc/store/v1/products?search=House+Blend+Coffee')).json()).find((p) => p.type === 'variable')?.permalink, base);
 	if (url) {
@@ -186,7 +191,7 @@ export default async function ({ browser, context, base, args }) {
 				await pause(800);
 			};
 			// Espresso in 1kg: not the first product, so the gallery switches to that variation's picture.
-			await choose(selects.nth(0), 2);
+			await choose(selects.nth(0), 1);
 			await choose(selects.nth(1), 2);
 			await pause(1600);
 		}
