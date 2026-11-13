@@ -47,6 +47,14 @@ function varconv_history_products_html( int $id, string $kind, array $originals 
 			count( $originals['trash'] )
 		) ) . '</span>';
 	}
+	$taken_by = 'split' === $kind ? varconv_split_taken_by( $id ) : array();
+	if ( $taken_by ) {
+		$html .= '<br><span class="varconv-muted">' . wp_kses_post( sprintf(
+			/* translators: %s: links to the variable products. */
+			__( 'Some are now in %s, so Undo waits until that is undone.', 'variation-converter-for-woocommerce' ),
+			varconv_named_links( $taken_by )
+		) ) . '</span>';
+	}
 	if ( $originals['gone'] ) {
 		$html .= '<br><span class="varconv-muted">' . esc_html( sprintf(
 			/* translators: %d: number of simple products. */
@@ -86,7 +94,7 @@ function varconv_rest_history( WP_REST_Request $request ): array {
 		$items[] = array_merge( varconv_rest_product( $id ), array(
 			'kind'         => $r['kind'],
 			'productsHtml' => varconv_history_products_html( $id, $r['kind'], $originals ),
-			'canUndo'      => ! $originals['gone'],
+			'canUndo'      => ! $originals['gone'] && ( 'split' !== $r['kind'] || ! varconv_split_taken_by( $id ) ),
 			'canTrash'     => (bool) $originals['hidden'],
 			'undoConfirm'  => varconv_undo_confirm( $r['kind'], $id ),
 			/* translators: 1: date, 2: time. */

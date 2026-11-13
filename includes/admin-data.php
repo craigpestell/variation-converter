@@ -80,6 +80,15 @@ function varconv_product_links( array $ids ): string {
 	), $ids ) );
 }
 
+/**
+ * Links to products' edit screens, by their names.
+ *
+ * @param array<int,string> $names Product ID => name.
+ */
+function varconv_named_links( array $names ): string {
+	return implode( ', ', array_map( static fn( $id, $name ) => sprintf( '<a href="%s">%s</a>', esc_url( (string) get_edit_post_link( (int) $id ) ), esc_html( $name ) ), array_keys( $names ), $names ) );
+}
+
 /** @return array<string,string> Note kind => short badge text for the Status column. */
 function varconv_note_badges(): array {
 	return array(
@@ -420,6 +429,33 @@ function varconv_left_out_html( array $reasons ): ?array {
 }
 
 /**
+ * The notice that some of these products were made by a split, which can't be undone while they are in this
+ * product; null when none were.
+ *
+ * @param int[] $ids
+ */
+function varconv_split_from_html( array $ids ): ?array {
+	$from = array();
+	foreach ( $ids as $id ) {
+		$parent_id = (int) get_post_meta( (int) $id, VARCONV_SPLIT_FROM_META, true );
+		if ( $parent_id && 'product' === get_post_type( $parent_id ) ) {
+			$from[ $parent_id ] = (string) get_post_field( 'post_title', $parent_id, 'raw' );
+		}
+	}
+	if ( ! $from ) {
+		return null;
+	}
+	return array(
+		'status' => 'info',
+		'html'   => wp_kses_post( sprintf(
+			/* translators: %s: links to the variable products. */
+			__( 'Some of these products were made by splitting %s. Once they are combined, undo this combine in History before you undo that split.', 'variation-converter-for-woocommerce' ),
+			varconv_named_links( $from )
+		) ),
+	);
+}
+
+/**
  * The notice that some of these products came from Make simple, which combining them ends; null when none did.
  *
  * @param int[] $ids
@@ -429,7 +465,7 @@ function varconv_made_simple_html( array $ids ): ?array {
 	if ( ! $from ) {
 		return null;
 	}
-	$links = implode( ', ', array_map( static fn( $id, $name ) => sprintf( '<a href="%s">%s</a>', esc_url( (string) get_edit_post_link( $id ) ), esc_html( $name ) ), array_keys( $from ), $from ) );
+	$links = varconv_named_links( $from );
 	return array(
 		'status' => 'info',
 		'html'   => wp_kses_post( sprintf(

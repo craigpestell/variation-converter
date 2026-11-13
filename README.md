@@ -72,12 +72,14 @@ Each new product takes its variation's SKU, prices, sale dates, stock, weight, d
 
 You can't split a variation set to "Any" for an attribute (for example "Any Size"). Give it a specific value first. A variable product that the plugin made by combining offers Undo instead of a split, so you get your original products back.
 
+The new simple products aren't suggested as groups on the Combine tab, since they came from one product, but you can combine them again by hand: search for them on the Combine tab (they show under **Products not in a group**), use the Products list bulk action, or add them to a combined product. While any of them is in another variable product, the split stays in History without Undo; undo that product first, then the split.
+
 ## Undo a conversion
 
 Open the **History** tab. It lists every combine and split, newest first. Click **Undo** on a row.
 
 - **Undoing a combine** deletes the variable product and its variations, and shows the original simple products again.
-- **Undoing a split** deletes the new simple products and shows the variable product again.
+- **Undoing a split** deletes the new simple products and shows the variable product again. It waits until none of them is in another variable product.
 
 Restored products get back the visibility they had before, plus the current prices and stock from the products being deleted, so sales made in the meantime carry over.
 

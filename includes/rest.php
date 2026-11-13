@@ -330,6 +330,7 @@ function varconv_rest_card( WP_REST_Request $request ): array {
 			'notices' => array_values( array_filter( array(
 				varconv_left_out_html( array_combine( $found['refused'], array_map( 'varconv_combine_problem', $found['refused'] ) ) ?: array() ),
 				varconv_made_simple_html( array_column( $found['products'], 'id' ) ),
+				varconv_split_from_html( array_column( $found['products'], 'id' ) ),
 			) ) ),
 			'empty'   => $enough ? '' : __( 'Select at least two products that can be combined.', 'variation-converter-for-woocommerce' ),
 			'group'   => $enough ? varconv_rest_group( varconv_manual( $found['products'] ) ) : null,
@@ -358,6 +359,7 @@ function varconv_rest_card( WP_REST_Request $request ): array {
 	$excluded = array();
 	if ( $enough ) {
 		$notices[] = varconv_made_simple_html( $product_ids );
+		$notices[] = varconv_split_from_html( $product_ids );
 		// Products unchecked in a group start unchecked here too.
 		foreach ( $collections as $c ) {
 			$excluded = array_merge( $excluded, varconv_excluded()[ $c['key'] ] ?? array() );
