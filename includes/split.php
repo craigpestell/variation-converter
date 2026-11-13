@@ -424,7 +424,58 @@ function varconv_split_product( int $parent_id, array $names ): array {
 }
 
 /**
+ * The variable products that now hold products this split made, by ID => name: Combine or Add to a combined product
+ * took them, and a variation there still stands for them (also after Make simple, or once deleted from the Trash).
+ * While there are any, the split cannot be undone: Undo would delete those products and sell their SKUs twice.
+ *
+ * @return array<int,string>
+ */
+function varconv_split_taken_by( int $parent_id ): array {
+	$ids = array_values( array_filter( array_map( 'intval', (array) json_decode( (string) get_post_meta( $parent_id, VARCONV_SPLIT_META, true ), true ) ) ) );
+	if ( ! $ids ) {
+		return array();
+	}
+	global $wpdb;
+	$holders = array();
+	foreach ( $ids as $id ) {
+		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
+		$holders = array_merge( $holders, array_map( 'intval', $wpdb->get_col( $wpdb->prepare(
+			"SELECT v.post_parent FROM {$wpdb->posts} v JOIN {$wpdb->postmeta} m ON m.post_id = v.ID AND m.meta_key = %s AND m.meta_value = %s
+			WHERE v.post_type = 'product_variation' AND v.post_parent <> %d",
+			VARCONV_TWIN_META,
+			(string) $id,
+			$parent_id
+		) ) ) );
+	}
+	foreach ( $ids as $id ) {
+		$holders[] = (int) get_post_meta( $id, VARCONV_PARENT_META, true );
+	}
+	$out = array();
+	foreach ( array_unique( array_filter( $holders ) ) as $holder ) {
+		if ( 'product' === get_post_type( $holder ) ) {
+			$out[ $holder ] = (string) get_post_field( 'post_title', $holder, 'raw' );
+		}
+	}
+	return $out;
+}
+
+/** Why this split cannot be undone now, or '' when it can. */
+function varconv_split_undo_problem( int $parent_id ): string {
+	$by = varconv_split_taken_by( $parent_id );
+	if ( ! $by ) {
+		return '';
+	}
+	return sprintf(
+		/* translators: 1: product ID, 2: names of the variable products. */
+		_n( 'Product %1$d can\'t be undone yet: some of its simple products are now in %2$s. Undo that in History first.', 'Product %1$d can\'t be undone yet: some of its simple products are now in %2$s. Undo those in History first.', count( $by ), 'variation-converter-for-woocommerce' ),
+		$parent_id,
+		implode( ', ', $by )
+	);
+}
+
+/**
  * Undo a split: deletes the simple products made from the variable product and gives it its catalog visibility back.
+ * Refused while any of them is in another variable product (varconv_split_taken_by()).
  *
  * @return int Simple products deleted.
  */
@@ -432,6 +483,10 @@ function varconv_split_undo( int $parent_id ): int {
 	if ( 'product' !== get_post_type( $parent_id ) || '' === (string) get_post_meta( $parent_id, VARCONV_SPLIT_META, true ) ) {
 		/* translators: %d: product ID. */
 		throw new RuntimeException( esc_html( sprintf( __( 'Product %d was not split by Variation Converter.', 'variation-converter-for-woocommerce' ), $parent_id ) ) );
+	}
+	$problem = varconv_split_undo_problem( $parent_id );
+	if ( '' !== $problem ) {
+		throw new RuntimeException( esc_html( $problem ) );
 	}
 	global $wpdb;
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching

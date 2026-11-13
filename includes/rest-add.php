@@ -27,6 +27,7 @@ function varconv_rest_add_screen( WP_REST_Request $request ): array {
 		'notices'  => array_values( array_filter( array(
 			varconv_left_out_html( array_combine( $found['refused'], array_map( static fn( $id ) => varconv_add_problem( wc_get_product( $id ) ), $found['refused'] ) ) ?: array() ),
 			varconv_made_simple_html( array_column( $products, 'id' ) ),
+			varconv_split_from_html( array_column( $products, 'id' ) ),
 		) ) ),
 		'products' => array(),
 		'targets'  => null,

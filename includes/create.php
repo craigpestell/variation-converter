@@ -54,19 +54,19 @@ const VARCONV_EXCLUDED_OPTION = 'varconv_excluded';
 const VARCONV_LOCK_OPTION = 'varconv_lock';
 
 /**
- * Simple products with a SKU (published, private, pending or draft), shown in the catalog, not already in a collection
- * or made by a split. Products made by Make simple are only included with $made_simple, marked with made_simple: the
+ * Simple products with a SKU (published, private, pending or draft), shown in the catalog, not already in a collection.
+ * Products made by Make simple or by a split are only included with $by_hand, marked with made_simple or split: the
  * scan leaves them out (the admin took them out of a variable product), but they can be picked by hand.
  *
- * @return array<int,array{id:int,sku:string,name:string,title:string,price:string,stock:string,cats:int[],brands:string[],made_simple:bool}>
+ * @return array<int,array{id:int,sku:string,name:string,title:string,price:string,stock:string,cats:int[],brands:string[],made_simple:bool,split:bool}>
  */
-function varconv_products( bool $made_simple = false ): array {
+function varconv_products( bool $by_hand = false ): array {
 	global $wpdb;
 	// One query for the whole catalog: WC_Product_Query would load every product object. The result is cached by
 	// varconv_candidates().
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
 	$rows = $wpdb->get_results( $wpdb->prepare(
-		"SELECT p.ID, p.post_title, p.post_status, sku.meta_value AS sku, COALESCE( NULLIF( price.meta_value, '' ), active.meta_value ) AS price, stock.meta_value AS stock, taken.meta_value AS taken
+		"SELECT p.ID, p.post_title, p.post_status, sku.meta_value AS sku, COALESCE( NULLIF( price.meta_value, '' ), active.meta_value ) AS price, stock.meta_value AS stock, taken.meta_value AS taken, split.meta_value AS split
 		FROM {$wpdb->posts} p
 		JOIN {$wpdb->term_relationships} tr ON tr.object_id = p.ID
 		JOIN {$wpdb->term_taxonomy} tt ON tt.term_taxonomy_id = tr.term_taxonomy_id AND tt.taxonomy = 'product_type'
@@ -76,14 +76,15 @@ function varconv_products( bool $made_simple = false ): array {
 		LEFT JOIN {$wpdb->postmeta} active ON active.post_id = p.ID AND active.meta_key = '_price'
 		LEFT JOIN {$wpdb->postmeta} stock ON stock.post_id = p.ID AND stock.meta_key = '_stock_status'
 		LEFT JOIN {$wpdb->postmeta} taken ON taken.post_id = p.ID AND taken.meta_key = %s
+		LEFT JOIN {$wpdb->postmeta} split ON split.post_id = p.ID AND split.meta_key = %s
 		WHERE p.post_type = 'product' AND p.post_status IN ( 'publish', 'private', 'pending', 'draft' )
-		AND p.ID NOT IN ( SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key IN ( %s, %s ) )
+		AND p.ID NOT IN ( SELECT post_id FROM {$wpdb->postmeta} WHERE meta_key = %s )
 		AND p.ID NOT IN ( SELECT vr.object_id FROM {$wpdb->term_relationships} vr
 			JOIN {$wpdb->term_taxonomy} vt ON vt.term_taxonomy_id = vr.term_taxonomy_id AND vt.taxonomy = 'product_visibility'
 			JOIN {$wpdb->terms} v ON v.term_id = vt.term_id AND v.slug = 'exclude-from-catalog' )",
 		VARCONV_TAKEN_META,
-		VARCONV_PARENT_META,
-		VARCONV_SPLIT_FROM_META
+		VARCONV_SPLIT_FROM_META,
+		VARCONV_PARENT_META
 	) );
 	$cats = array();
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -107,7 +108,8 @@ function varconv_products( bool $made_simple = false ): array {
 	$products = array();
 	foreach ( $rows as $row ) {
 		$taken = '' !== (string) $row->taken;
-		if ( $taken && ! $made_simple ) {
+		$split = '' !== (string) $row->split;
+		if ( ( $taken || $split ) && ! $by_hand ) {
 			continue;
 		}
 		$id = (int) $row->ID;
@@ -123,6 +125,7 @@ function varconv_products( bool $made_simple = false ): array {
 			'cats'   => $cats[ $id ] ?? array(),
 			'brands' => $brands[ $id ] ?? array(),
 			'made_simple' => $taken,
+			'split'       => $split,
 		);
 	}
 	return $products;
@@ -151,9 +154,6 @@ function varconv_combine_problem( int $id ): string {
 	}
 	if ( $product->get_meta( VARCONV_PARENT_META ) ) {
 		return __( 'Already in a combined product.', 'variation-converter-for-woocommerce' );
-	}
-	if ( $product->get_meta( VARCONV_SPLIT_FROM_META ) ) {
-		return __( 'Made by a split; undo the split in History instead.', 'variation-converter-for-woocommerce' );
 	}
 	if ( '' === trim( (string) $product->get_sku( 'edit' ) ) ) {
 		return __( 'No SKU; Combine needs one ("Add to a combined product" does not).', 'variation-converter-for-woocommerce' );
@@ -185,8 +185,9 @@ function varconv_candidates( bool $fresh = false ): array {
 	 * @param array $products Each with id, sku, name, title, price, stock, cats (term IDs) and brands (names).
 	 */
 	$all_products = varconv_products( true );
-	$made_simple = array_values( array_filter( $all_products, static fn( $p ) => $p['made_simple'] ) );
-	$products = (array) apply_filters( 'varconv_scan_products', array_values( array_filter( $all_products, static fn( $p ) => ! $p['made_simple'] ) ) );
+	$by_hand = static fn( $p ) => $p['made_simple'] || $p['split'];
+	$picked_only = array_values( array_filter( $all_products, $by_hand ) );
+	$products = (array) apply_filters( 'varconv_scan_products', array_values( array_filter( $all_products, static fn( $p ) => ! $by_hand( $p ) ) ) );
 	/**
 	 * Filters the brand names a product name can start with. A shared brand is not a shared product name, so
 	 * "Acme Plug" and "Acme Wand" are not proposed as variants. Defaults to the WooCommerce Brands terms.
@@ -211,9 +212,9 @@ function varconv_candidates( bool $fresh = false ): array {
 		'collections' => $collections,
 		// Groups the admin skipped ("not variants"), for the list's Skipped view.
 		'skipped'     => $skipped,
-		// Products in no group, which search also finds so they can be combined by hand, with those Make simple made,
-		// which the scan does not group.
-		'loose'       => varconv_loose( array_merge( $products, $made_simple ), array_merge( $collections, $skipped ) ),
+		// Products in no group, which search also finds so they can be combined by hand, with those Make simple or a
+		// split made, which the scan does not group.
+		'loose'       => varconv_loose( array_merge( $products, $picked_only ), array_merge( $collections, $skipped ) ),
 	);
 	set_transient( VARCONV_SCAN_TRANSIENT, $scan, 30 * MINUTE_IN_SECONDS );
 	return $scan;
@@ -550,7 +551,8 @@ function varconv_undo( int $parent_id ): int {
 
 /**
  * The products one combine or split made or kept, given any of them: the variable product, its variations and the
- * simple products. Empty for a product no conversion here touched.
+ * simple products. A product a split made and Combine then took belongs to both, so both conversions' products are
+ * included: its SKU is on the split's variation and on the new one. Empty for a product no conversion here touched.
  *
  * @return int[]
  */
@@ -563,23 +565,40 @@ function varconv_conversion_ids( int $id ): array {
 	$pair = 'product_variation' === $post->post_type ? varconv_taken_simple( $id ) : (int) get_post_meta( $id, VARCONV_TAKEN_META, true );
 	$pair = $pair ? array( $id, $pair ) : array();
 	$parent = 'product_variation' === $post->post_type ? (int) $post->post_parent : $id;
-	$combined = (int) get_post_meta( $id, VARCONV_PARENT_META, true ) ?: ( '' !== (string) get_post_meta( $parent, VARCONV_META, true ) ? $parent : 0 );
-	$split = (int) get_post_meta( $id, VARCONV_SPLIT_FROM_META, true ) ?: ( '' !== (string) get_post_meta( $parent, VARCONV_SPLIT_META, true ) ? $parent : 0 );
-	$variable = $combined ?: $split;
-	if ( ! $variable ) {
+	$variables = array_filter( array(
+		(int) get_post_meta( $id, VARCONV_PARENT_META, true ) ?: ( '' !== (string) get_post_meta( $parent, VARCONV_META, true ) ? $parent : 0 ),
+		(int) get_post_meta( $id, VARCONV_SPLIT_FROM_META, true ) ?: ( '' !== (string) get_post_meta( $parent, VARCONV_SPLIT_META, true ) ? $parent : 0 ),
+	) );
+	if ( ! $variables ) {
 		return $pair;
 	}
-	$simples = (array) json_decode( (string) get_post_meta( $variable, $combined ? VARCONV_META : VARCONV_SPLIT_META, true ), true );
-	$children = get_posts(
-		array(
-			'post_type'   => 'product_variation',
-			'post_parent' => $variable,
-			'post_status' => 'any',
-			'numberposts' => -1,
-			'fields'      => 'ids',
-		)
-	);
-	return array_values( array_unique( array_map( 'intval', array_merge( array( $variable ), $simples, $children, $pair ) ) ) );
+	$ids = $pair;
+	$done = array();
+	// Each conversion's products, then the other conversion of any of its simple products (one step is enough: a split
+	// product can be in one combine, and a combine's members in one split each).
+	for ( $step = 0; $step < 2 && $variables; ++$step ) {
+		$next = array();
+		foreach ( array_diff( array_unique( $variables ), $done ) as $variable ) {
+			$done[] = $variable;
+			$combined = '' !== (string) get_post_meta( $variable, VARCONV_META, true );
+			$simples = array_map( 'intval', (array) json_decode( (string) get_post_meta( $variable, $combined ? VARCONV_META : VARCONV_SPLIT_META, true ), true ) );
+			$children = get_posts(
+				array(
+					'post_type'   => 'product_variation',
+					'post_parent' => $variable,
+					'post_status' => 'any',
+					'numberposts' => -1,
+					'fields'      => 'ids',
+				)
+			);
+			$ids = array_merge( $ids, array( $variable ), $simples, $children );
+			foreach ( $simples as $simple ) {
+				$next[] = (int) get_post_meta( $simple, $combined ? VARCONV_SPLIT_FROM_META : VARCONV_PARENT_META, true );
+			}
+		}
+		$variables = array_filter( $next );
+	}
+	return array_values( array_unique( array_map( 'intval', $ids ) ) );
 }
 
 /**

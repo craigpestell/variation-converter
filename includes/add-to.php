@@ -137,9 +137,6 @@ function varconv_add_problem( $product ): string {
 	if ( $product->get_meta( VARCONV_PARENT_META ) ) {
 		return __( 'It is already in a combined product.', 'variation-converter-for-woocommerce' );
 	}
-	if ( $product->get_meta( VARCONV_SPLIT_FROM_META ) ) {
-		return __( 'It was made by a split; undo the split in History instead.', 'variation-converter-for-woocommerce' );
-	}
 	return '';
 }
 
