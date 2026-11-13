@@ -68,7 +68,7 @@ try {
 	check( array( $job['done'], $job['made'], $job['products'], $job['skip'], $job['failed'] ), array( $count + 1, $count, 2 * $count, 1, 0 ), 'trash job counts' );
 	check( array_unique( array_map( 'get_post_status', $originals ) ), array( 'trash' ), 'every original in the Trash' );
 	check( str_contains( varconv_job_html( $job ), sprintf( 'Moved %d original simple products to the Trash, from %d combined products.', 2 * $count, $count ) ), true, 'trash summary' );
-	check( str_contains( varconv_job_class( $job ), 'notice-success' ), true, 'trash summary is a success' );
+	check( varconv_job_status( $job ), 'success', 'trash summary is a success' );
 
 	// Again: nothing is left to move.
 	delete_option( VARCONV_JOB_OPTION );
@@ -76,7 +76,7 @@ try {
 	$job = run_job();
 	check( array( $job['made'], $job['skip'] ), array( 0, $count ), 'nothing to move' );
 	check( str_contains( varconv_job_html( $job ), 'Nothing was moved' ), true, 'nothing-moved summary' );
-	check( str_contains( varconv_job_class( $job ), 'notice-warning' ), true, 'nothing-moved is a warning' );
+	check( varconv_job_status( $job ), 'warning', 'nothing-moved is a warning' );
 
 	// Undo, stopped part way: what was undone stays undone, the rest stay combined.
 	delete_option( VARCONV_JOB_OPTION );
