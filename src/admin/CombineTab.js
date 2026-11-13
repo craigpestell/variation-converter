@@ -101,7 +101,7 @@ export default function CombineTab( { query } ) {
 		}
 	}, [ query.open ] );
 	const total = data ? data.total : 0;
-	const all = data ? data.counts[ '' ] : null;
+	const all = data ? data.groups : null;
 	const scanned = data ? data.scanned : '';
 	useEffect( () => {
 		if ( null !== all ) {
@@ -117,13 +117,36 @@ export default function CombineTab( { query } ) {
 		setMessage( '' );
 	}, [ filterKey ] );
 
+	const search = (
+		<SearchPanel
+			label={ __(
+				'Find the products to combine',
+				'variation-converter-for-woocommerce'
+			) }
+			placeholder={ __(
+				'Product name or SKU, for example Classic Tee',
+				'variation-converter-for-woocommerce'
+			) }
+			value={ filters.s || '' }
+			onSearch={ ( s ) => navigate( { ...filters, s } ) }
+			help={ __(
+				'Tick the groups and products that are one product, then click Combine into one product. Nothing changes until you create it, and History can undo every change.',
+				'variation-converter-for-woocommerce'
+			) }
+		/>
+	);
 	if ( ! data ) {
-		return error ? (
-			<Notice status="error" isDismissible={ false }>
-				{ error }
-			</Notice>
-		) : (
-			<ListTable columns={ [] } items={ [] } loading />
+		return (
+			<>
+				{ search }
+				{ error ? (
+					<Notice status="error" isDismissible={ false }>
+						{ error }
+					</Notice>
+				) : (
+					<ListTable columns={ [] } items={ [] } loading />
+				) }
+			</>
 		);
 	}
 
@@ -486,22 +509,7 @@ export default function CombineTab( { query } ) {
 
 	return (
 		<>
-			<SearchPanel
-				label={ __(
-					'Find the products to combine',
-					'variation-converter-for-woocommerce'
-				) }
-				placeholder={ __(
-					'Product name or SKU, for example Classic Tee',
-					'variation-converter-for-woocommerce'
-				) }
-				value={ filters.s || '' }
-				onSearch={ ( s ) => go( { s } ) }
-				help={ __(
-					'Tick the groups and products that are one product, then click Combine into one product. Nothing changes until you create it, and History can undo every change.',
-					'variation-converter-for-woocommerce'
-				) }
-			/>
+			{ search }
 			<h2 className="varconv-list-title">
 				{ filters.s
 					? sprintf(

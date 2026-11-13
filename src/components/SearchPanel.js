@@ -3,7 +3,8 @@ import { useEffect, useState } from '@wordpress/element';
 import { __ } from '@wordpress/i18n';
 
 /**
- * A search that leads a page: a heading, a wide field with its Search button, and a line of help under it.
+ * The search that leads every tab and the Add screen: a heading, a wide field with its Search button, and a line of
+ * help under it. While a search is active, the tab's view counts count only what it finds.
  */
 export default function SearchPanel( {
 	label,
@@ -32,7 +33,13 @@ export default function SearchPanel( {
 					hideLabelFromVision
 					placeholder={ placeholder }
 					value={ text }
-					onChange={ setText }
+					onChange={ ( next ) => {
+						setText( next );
+						// The field's own clear button shows everything again right away.
+						if ( '' === next && value ) {
+							onSearch( '' );
+						}
+					} }
 				/>
 				<Button variant="primary" type="submit" __next40pxDefaultSize>
 					{ __( 'Search', 'variation-converter-for-woocommerce' ) }

@@ -294,13 +294,15 @@ function varconv_rest_combine( WP_REST_Request $request ): array {
 		);
 	}
 	$filtered = '' !== $f['s'] || '' !== $f['brand'] || 2 !== $f['min'] || '' !== $f['warn'];
+	// Each view's count is what that view lists with the same search and filters, as on the Split and History tabs.
+	$counts = array();
+	foreach ( array_keys( varconv_views() ) as $view ) {
+		$counts[ $view ] = $view === $f['view'] ? $total : count( varconv_filtered( $scan, array_merge( $f, array( 'view' => $view ) ) ) );
+	}
 	return array(
-		'counts'   => array(
-			''        => count( $scan['collections'] ),
-			'ready'   => count( array_filter( $scan['collections'], static fn( $c ) => ! $c['notes'] ) ),
-			'review'  => count( array_filter( $scan['collections'], static fn( $c ) => (bool) $c['notes'] ) ),
-			'skipped' => count( (array) ( $scan['skipped'] ?? array() ) ),
-		),
+		'counts'   => $counts,
+		// Every suggested group, whatever the search: the number on the Combine tab.
+		'groups'   => count( $scan['collections'] ),
 		/* translators: %s: time since the scan, e.g. "5 mins". */
 		'scanned'  => sprintf( __( 'Scanned %s ago', 'variation-converter-for-woocommerce' ), human_time_diff( (int) $scan['time'] ) ),
 		'brands'   => array_values( $brands ),
