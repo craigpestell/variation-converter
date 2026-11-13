@@ -101,7 +101,7 @@ export default function CombineTab( { query } ) {
 		}
 	}, [ query.open ] );
 	const total = data ? data.total : 0;
-	const all = data ? data.groups : null;
+	const all = data ? data.allGroups : null;
 	const scanned = data ? data.scanned : '';
 	useEffect( () => {
 		if ( null !== all ) {
