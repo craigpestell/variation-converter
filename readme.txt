@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 1.8.0
+Stable tag: 1.9.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -199,6 +199,10 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 5. The History tab, where every conversion can be undone.
 
 == Changelog ==
+
+= 1.9.0 =
+* The Variation Converter page is rebuilt with WordPress's own components, so Combine, Split, History and Add to a combined product all look and work the same way, and the page updates without reloading. Its links and bookmarks still work, and the browser's Back button steps through what you did. The page now needs JavaScript.
+* Developers: the page talks to REST routes under `varconv/v1`, which need the `manage_woocommerce` capability. The admin-post and admin-ajax handlers are gone. The JavaScript source is in `src/`.
 
 = 1.8.0 =
 * Products made by Make simple can be combined again, or added to a combined product. They show under Products not in a group when you search, and the scan still leaves them out of its suggested groups. Once one is combined, its Make simple leaves History, and its old variant links still lead to it.
