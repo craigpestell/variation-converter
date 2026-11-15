@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 1.11.0
+Stable tag: 1.11.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -199,6 +199,9 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 5. The History tab, where every conversion can be undone.
 
 == Changelog ==
+
+= 1.11.1 =
+* Expanded variant rows on Products > All Products are shaded every other row, so each variant is easier to follow across the columns. The Live Preview demo store's variant rows are shaded the same way.
 
 = 1.11.0 =
 * Choose the combined product's main image on the combine card: it shows a preview of the picture the variable product will use, opens the media library to pick another, and can go back to the first product's image. The chosen picture is left out of the gallery so it isn't shown twice.
