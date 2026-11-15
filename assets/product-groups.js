@@ -107,8 +107,9 @@ jQuery( function ( $ ) {
 			$after.after( message( id, varconvGroups.none, cols ) );
 			return;
 		}
-		$after.after( $.map( rows, function ( v ) {
-			return row( id, v, cols );
+		// Every other variant shaded, counted from the group's first row.
+		$after.after( $.map( rows, function ( v, i ) {
+			return row( id, v, cols ).toggleClass( 'varconv-alt', 1 === i % 2 );
 		} ) );
 	}
 
