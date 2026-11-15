@@ -18,3 +18,4 @@ if ( function_exists( 'as_unschedule_all_actions' ) ) {
 }
 delete_transient( 'varconv_scan' );
 delete_metadata( 'user', 0, 'varconv_per_page', '', true );
+delete_metadata( 'user', 0, 'varconv_group_products', '', true );

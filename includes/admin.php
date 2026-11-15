@@ -10,6 +10,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 }
 
 require_once __DIR__ . '/admin-products.php';
+require_once __DIR__ . '/admin-product-groups.php';
 require_once __DIR__ . '/admin-quick-edit.php';
 require_once __DIR__ . '/admin-variations.php';
 
