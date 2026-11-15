@@ -12,6 +12,16 @@ foreach ( array(
 	update_option( $name, $value );
 }
 delete_transient( '_wc_activation_redirect' );
+// A store, not a blog: no Hello World post or Sample Page, and the Shop page is the home page.
+foreach ( get_posts( array( 'post_type' => array( 'post', 'page' ), 'post_status' => 'any', 'post_name__in' => array( 'hello-world', 'sample-page' ), 'numberposts' => -1 ) ) as $post ) {
+	wp_delete_post( $post->ID, true );
+}
+if ( wc_get_page_id( 'shop' ) < 1 ) {
+	WC_Install::create_pages();
+}
+update_option( 'show_on_front', 'page' );
+update_option( 'page_on_front', wc_get_page_id( 'shop' ) );
+update_option( 'page_for_posts', 0 );
 function demo_cat( $name ) {
 	$term = term_exists( $name, 'product_cat' ) ?: wp_insert_term( $name, 'product_cat' );
 	return (int) $term['term_id'];
