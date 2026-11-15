@@ -62,9 +62,9 @@ function demo_text( $im, $text, $cx, $cy, $height, $color ) {
 	imagecopyresized( $im, $small, (int) ( $cx - $w * $k / 2 ), (int) ( $cy - $height / 2 ), 0, 0, (int) ( $w * $k ), (int) $height, $w, 15 );
 	imagedestroy( $small );
 }
-function demo_image( $shape, $hex, $s = 1.0, $accent = '', $label = '' ) {
+function demo_image( $shape, $hex, $s = 1.0, $accent = '', $label = '', $title = '' ) {
 	static $made = array();
-	$key = sanitize_title( "$shape-$hex-$s-$accent-$label" );
+	$key = sanitize_title( "$shape-$hex-$s-$accent-$label-$title" );
 	if ( isset( $made[ $key ] ) || ! function_exists( 'imagecreatetruecolor' ) ) {
 		return $made[ $key ] ?? 0;
 	}
@@ -134,7 +134,7 @@ function demo_image( $shape, $hex, $s = 1.0, $accent = '', $label = '' ) {
 	if ( ! empty( $file['error'] ) ) {
 		return $made[ $key ] = 0;
 	}
-	$id = wp_insert_attachment( array( 'post_mime_type' => 'image/png', 'post_title' => $key, 'post_status' => 'inherit' ), $file['file'] );
+	$id = wp_insert_attachment( array( 'post_mime_type' => 'image/png', 'post_title' => '' !== $title ? $title : $key, 'post_status' => 'inherit' ), $file['file'] );
 	wp_update_attachment_metadata( $id, wp_generate_attachment_metadata( $id, $file['file'] ) );
 	return $made[ $key ] = $id;
 }
@@ -197,3 +197,8 @@ foreach ( $rows as $row ) {
 	$p->set_status( 'publish' );
 	$p->save();
 }
+// Pictures without a size on them, one per color, for the media library: pick one as a combined tee's main image.
+foreach ( array( 'Black', 'White', 'Navy' ) as $color ) {
+	demo_image( 'tee', $tees[ $color ], 1.0, '', '', "Everyday Tee $color" );
+}
+demo_image( 'vneck', '#6b7a4b', 1.0, '', '', 'Organic V-Neck Tee' );
