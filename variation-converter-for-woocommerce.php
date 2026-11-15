@@ -30,6 +30,7 @@ require_once __DIR__ . '/includes/job.php';
 require_once __DIR__ . '/includes/redirect.php';
 require_once __DIR__ . '/includes/admin-data.php';
 require_once __DIR__ . '/includes/rest.php';
+require_once __DIR__ . '/includes/menu-badge.php';
 
 /** Product title markup as one line of plain text. */
 function varconv_plain( string $html ): string {
@@ -44,6 +45,8 @@ function varconv_clean_name( string $title, string $sku ): string {
 	$code  = static fn( string $s ): string => strtoupper( (string) preg_replace( '/[\s\-_.]+/', '', $s ) );
 	return 2 === count( $words ) && '' !== $code( $sku ) && $code( $words[0] ) === $code( $sku ) ? $words[1] : $name;
 }
+
+register_activation_hook( VARCONV_FILE, 'varconv_badge_activate' );
 
 // Touches products only, never orders, so it works with High-Performance Order Storage.
 add_action(

@@ -35,7 +35,7 @@ function varconv_menu(): void {
 	$hook = add_submenu_page(
 		'edit.php?post_type=product',
 		__( 'Variation Converter', 'variation-converter-for-woocommerce' ),
-		__( 'Variation Converter', 'variation-converter-for-woocommerce' ),
+		__( 'Variation Converter', 'variation-converter-for-woocommerce' ) . ( varconv_badge_showing() ? varconv_badge_html() : '' ),
 		VARCONV_CAP,
 		VARCONV_PAGE,
 		'varconv_render'
@@ -43,6 +43,7 @@ function varconv_menu(): void {
 	if ( $hook ) {
 		add_action( 'admin_print_styles-' . $hook, 'varconv_assets' );
 		add_action( 'load-' . $hook, 'varconv_screen_options' );
+		add_action( 'load-' . $hook, 'varconv_badge_seen' );
 	}
 }
 
