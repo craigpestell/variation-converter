@@ -62,12 +62,8 @@ function demo_text( $im, $text, $cx, $cy, $height, $color ) {
 	imagecopyresized( $im, $small, (int) ( $cx - $w * $k / 2 ), (int) ( $cy - $height / 2 ), 0, 0, (int) ( $w * $k ), (int) $height, $w, 15 );
 	imagedestroy( $small );
 }
-function demo_image( $shape, $hex, $s = 1.0, $accent = '', $label = '', $title = '' ) {
-	static $made = array();
-	$key = sanitize_title( "$shape-$hex-$s-$accent-$label-$title" );
-	if ( isset( $made[ $key ] ) || ! function_exists( 'imagecreatetruecolor' ) ) {
-		return $made[ $key ] ?? 0;
-	}
+// Draws one picture and returns the GD image.
+function demo_draw( $shape, $hex, $s = 1.0, $accent = '', $label = '' ) {
 	$im   = imagecreatetruecolor( 600, 600 );
 	$bg   = demo_color( $im, '#f2f1ee' );
 	$fill = demo_color( $im, $hex );
@@ -150,6 +146,46 @@ function demo_image( $shape, $hex, $s = 1.0, $accent = '', $label = '', $title =
 		$ink  = $dark ? imagecolorallocate( $im, 40, 40, 40 ) : imagecolorallocate( $im, 255, 255, 255 );
 		demo_text( $im, $label, $p[0], $p[1], (int) ( ( 'bottle' === $shape ? 44 : 90 ) * $s ), $ink );
 	}
+	return $im;
+}
+function demo_image( $shape, $hex, $s = 1.0, $accent = '', $label = '', $title = '' ) {
+	static $made = array();
+	$key = sanitize_title( "$shape-$hex-$s-$accent-$label-$title" );
+	if ( strlen( $key ) > 80 ) {
+		$key = sanitize_title( $title ) . '-' . substr( md5( $key ), 0, 8 );
+	}
+	if ( isset( $made[ $key ] ) || ! function_exists( 'imagecreatetruecolor' ) ) {
+		return $made[ $key ] ?? 0;
+	}
+	if ( 'shelf' === $shape ) {
+		// Several pictures standing on one or two wooden shelves. $hex lists them as shape|color|scale|accent|label,
+		// joined by commas, with a semicolon between the two shelves.
+		$im    = imagecreatetruecolor( 600, 600 );
+		imagefill( $im, 0, 0, demo_color( $im, '#f2f1ee' ) );
+		$rows  = array_map( function ( $row ) {
+			return explode( ',', $row );
+		}, explode( ';', $hex ) );
+		$tops  = 2 === count( $rows ) ? array( 255, 545 ) : array( 450 );
+		$tall  = 2 === count( $rows ) ? 235 : 380;
+		foreach ( $rows as $r => $row ) {
+			$top = $tops[ $r ];
+			imagefilledrectangle( $im, 15, $top, 585, $top + 14, demo_color( $im, '#a8794e' ) );
+			imagefilledrectangle( $im, 15, $top + 14, 585, $top + 26, demo_color( $im, '#8a6040' ) );
+			$n = count( $row );
+			// Items are cropped to x 165-435 and y 0-511 of their 600px picture (above the floor shadow).
+			$w = (int) min( 540 / $n - 10, $tall * 270 / 511 );
+			$h = (int) ( $w * 511 / 270 );
+			foreach ( $row as $i => $item ) {
+				$a   = array_pad( explode( '|', $item ), 5, '' );
+				$one = demo_draw( $a[0], $a[1], (float) ( $a[2] ?: 1 ), $a[3], $a[4] );
+				$x   = (int) ( 300 + ( $i - ( $n - 1 ) / 2 ) * ( 540 / $n ) - $w / 2 );
+				imagecopyresampled( $im, $one, $x, $top - $h, 165, 0, $w, $h, 270, 511 );
+				imagedestroy( $one );
+			}
+		}
+	} else {
+		$im = demo_draw( $shape, $hex, $s, $accent, $label );
+	}
 	ob_start();
 	imagepng( $im );
 	$png = ob_get_clean();
@@ -229,3 +265,24 @@ demo_image( 'vneck', '#6b7a4b', 1.0, '', '', 'Organic V-Neck Tee' );
 // One picture of every color, fanned out, for a combined tee's main image.
 demo_image( 'fan', implode( ',', array( $tees['Black'], $tees['Blue'], $tees['Red'], $tees['White'] ) ), 1.0, '', '', 'Classic Tee, all colors' );
 demo_image( 'fan', implode( ',', array( $tees['Black'], $tees['White'], $tees['Navy'] ) ), 1.0, '', '', 'Everyday Tee, all colors' );
+// Every bag or bottle on a shelf, for a combined coffee's or syrup's main image.
+$bags = array();
+foreach ( array( '340g' => 0.8, '1kg' => 1.0 ) as $weight => $scale ) {
+	$row = array();
+	foreach ( $grinds as $grind ) {
+		$row[] = "bag|{$grind[0]}|$scale|{$grind[1]}|$weight";
+	}
+	$bags[] = implode( ',', $row );
+}
+demo_image( 'shelf', implode( ';', $bags ), 1.0, '', '', 'House Blend Coffee, all grinds' );
+$bottles = array();
+foreach ( array( 'Vanilla' => '#efe0b0', 'Caramel' => '#c2772b' ) as $flavor => $color ) {
+	$row = array();
+	foreach ( array( '250ml' => 0.7, '750ml' => 0.88, '1L' => 1.0 ) as $size => $scale ) {
+		if ( 'Vanilla' !== $flavor || '1L' !== $size ) {
+			$row[] = "bottle|$color|$scale||$size";
+		}
+	}
+	$bottles[] = implode( ',', $row );
+}
+demo_image( 'shelf', implode( ';', $bottles ), 1.0, '', '', 'Barista Syrup, all flavors' );

@@ -201,6 +201,7 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 == Changelog ==
 
 = 1.10.5 =
+* The Live Preview demo store's media library has shelf pictures of all the coffee bags and all the syrup bottles, to use as those combined products' main images.
 * The Live Preview demo store lists each variation in its own row on product pages, with its picture, price, stock and Add to cart. This comes from a small demo-only plugin the preview adds; Variation Converter itself doesn't change product pages.
 
 = 1.10.4 =
