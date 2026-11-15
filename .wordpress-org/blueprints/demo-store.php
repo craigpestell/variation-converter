@@ -78,7 +78,31 @@ function demo_image( $shape, $hex, $s = 1.0, $accent = '', $label = '', $title =
 	imagefill( $im, 0, 0, $bg );
 	$shadow = demo_color( $im, '#e2e0db' );
 	imagefilledellipse( $im, 300, 530, (int) ( 360 * $s ), 36, $shadow );
-	if ( 'tee' === $shape || 'vneck' === $shape ) {
+	if ( 'fan' === $shape ) {
+		// Tees in several colors, one on top of the other, fanned out from a point below the picture.
+		$tee = array( 240, 110, 150, 140, 80, 250, 160, 290, 185, 255, 185, 510, 415, 510, 415, 255, 440, 290, 520, 250, 450, 140, 360, 110 );
+		for ( $t = 1; $t < 12; $t++ ) {
+			$tee[] = 300 + 62 * cos( M_PI * $t / 12 );
+			$tee[] = 108 + 35 * sin( M_PI * $t / 12 );
+		}
+		$colors = explode( ',', $hex );
+		$n      = count( $colors );
+		foreach ( $colors as $i => $color ) {
+			$a   = deg2rad( ( $i - ( $n - 1 ) / 2 ) * ( 36 / max( 1, $n - 1 ) ) );
+			$pts = array();
+			for ( $j = 0; $j < count( $tee ); $j += 2 ) {
+				$x     = ( $tee[ $j ] - 300 ) * 0.8;
+				$y     = ( $tee[ $j + 1 ] - 620 ) * 0.8;
+				$pts[] = (int) round( 300 + $x * cos( $a ) - $y * sin( $a ) );
+				$pts[] = (int) round( 560 + $x * sin( $a ) + $y * cos( $a ) );
+			}
+			$white = hexdec( substr( $color, 1, 2 ) ) > 230;
+			imagefilledpolygon( $im, $pts, demo_color( $im, $color ) );
+			imagesetthickness( $im, 4 );
+			imagepolygon( $im, $pts, $white ? demo_color( $im, '#c9c6bf' ) : demo_color( $im, $color, 0.7 ) );
+			imagesetthickness( $im, 1 );
+		}
+	} elseif ( 'tee' === $shape || 'vneck' === $shape ) {
 		demo_shape( $im, array( 240, 110, 150, 140, 80, 250, 160, 290, 185, 255, 185, 510, 415, 510, 415, 255, 440, 290, 520, 250, 450, 140, 360, 110 ), $s, $fill, $line );
 		$neck = demo_points( array( 300, 108 ), $s );
 		imagesetthickness( $im, 4 );
@@ -202,3 +226,6 @@ foreach ( array( 'Black', 'White', 'Navy' ) as $color ) {
 	demo_image( 'tee', $tees[ $color ], 1.0, '', '', "Everyday Tee $color" );
 }
 demo_image( 'vneck', '#6b7a4b', 1.0, '', '', 'Organic V-Neck Tee' );
+// One picture of every color, fanned out, for a combined tee's main image.
+demo_image( 'fan', implode( ',', array( $tees['Black'], $tees['Blue'], $tees['Red'], $tees['White'] ) ), 1.0, '', '', 'Classic Tee, all colors' );
+demo_image( 'fan', implode( ',', array( $tees['Black'], $tees['White'], $tees['Navy'] ) ), 1.0, '', '', 'Everyday Tee, all colors' );
