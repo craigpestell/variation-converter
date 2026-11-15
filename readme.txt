@@ -201,6 +201,7 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 == Changelog ==
 
 = 1.11.1 =
+* After a first install, Products and Products > Variation Converter show a "1" count bubble so the page is easy to find. It goes away once someone opens the page. Updates, and stores that used the plugin before, get no bubble.
 * Expanded variant rows on Products > All Products are shaded every other row, so each variant is easier to follow across the columns. The Live Preview demo store's variant rows are shaded the same way.
 
 = 1.11.0 =
