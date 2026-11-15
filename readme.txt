@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 1.10.4
+Stable tag: 1.10.5
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -199,6 +199,9 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 5. The History tab, where every conversion can be undone.
 
 == Changelog ==
+
+= 1.10.5 =
+* The Live Preview demo store lists each variation in its own row on product pages, with its picture, price, stock and Add to cart. This comes from a small demo-only plugin the preview adds; Variation Converter itself doesn't change product pages.
 
 = 1.10.4 =
 * The Live Preview demo store's media library has an "all colors" picture for the Classic Tee and the Everyday Tee, to use as the combined product's main image.
