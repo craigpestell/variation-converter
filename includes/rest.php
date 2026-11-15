@@ -5,8 +5,9 @@
  * shape requests and answers; the work is in scan.php, create.php, split.php, take-out.php, add-to.php,
  * trash-originals.php and job.php.
  *
- * This file holds what every tab shares (status, the bulk job) and the Combine tab. Split, History and
- * "Add to a combined product" are in rest-split.php, rest-history.php and rest-add.php.
+ * This file holds what every tab shares (status, the bulk job) and the Combine tab. Split, History,
+ * "Add to a combined product" and the Products list's variant rows are in rest-split.php, rest-history.php,
+ * rest-add.php and rest-products.php.
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -18,6 +19,7 @@ const VARCONV_REST = 'varconv/v1';
 require_once __DIR__ . '/rest-split.php';
 require_once __DIR__ . '/rest-history.php';
 require_once __DIR__ . '/rest-add.php';
+require_once __DIR__ . '/rest-products.php';
 
 /** Every route's permission check. */
 function varconv_rest_can(): bool {
@@ -68,6 +70,7 @@ function varconv_rest_routes(): void {
 	varconv_rest_split_routes();
 	varconv_rest_history_routes();
 	varconv_rest_add_routes();
+	varconv_rest_products_routes();
 }
 
 /** A sanitized text value from the request. */

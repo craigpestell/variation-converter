@@ -1,0 +1,17 @@
+/* Products > All Products: combined products as groups (assets/product-groups.js). */
+.varconv-group-controls { display: flex; align-items: center; gap: 6px; }
+.varconv-group-controls label { margin-right: 4px; line-height: 30px; }
+.varconv-group-toggle.button-link { display: inline-flex; align-items: center; gap: 2px; margin-top: 4px; color: #2271b1; text-decoration: none; }
+.varconv-group-toggle .dashicons { font-size: 16px; width: 16px; height: 16px; }
+.wp-list-table tr.varconv-child > * { background: #f6f7f7; border-top: 1px solid #f0f0f1; }
+.wp-list-table tr.varconv-child > .column-primary { border-left: 3px solid #c3c4c7; padding-left: 14px; }
+.wp-list-table tr.varconv-child .column-thumb img { width: 32px; height: 32px; margin-left: 8px; }
+.varconv-child-name strong { font-weight: 500; }
+.varconv-child-link { display: block; color: #646970; font-size: 12px; }
+.varconv-child-meta { display: none; color: #646970; font-size: 12px; }
+.varconv-child-meta span + span::before { content: " · "; }
+.varconv-child-message td { color: #646970; font-style: italic; }
+@media screen and (max-width: 782px) {
+	.varconv-child-meta { display: block; }
+	.tablenav.top .actions.varconv-group-controls { display: flex; flex-wrap: wrap; margin-bottom: 8px; }
+}
