@@ -5,6 +5,7 @@ Short screen recordings for the plugin website, made with Playwright on the wp-h
 | Clip | Shows |
 |---|---|
 | `combine-coffee.mjs` | Ticking the House Blend Coffee 340g and 1kg groups on the Combine tab, Combine into one product, renaming the attributes to Weight and Grind, shortening "Espresso Grind" to "Espresso", swapping so Grind comes first, dragging a 340g bag to the top, Create, then the variable product in the shop with each dropdown shown open before Espresso and 1kg are picked, so the gallery switches to that picture (main image shrunk so the thumbnails show). |
+| `combine-tees.mjs` | The nine Everyday Tee products in the shop, then ticking the three Everyday Tee groups on the Combine tab, Combine into one product, choosing "Everyday Tee, all colors" as the main image in the media library, Create, the shop again with one Everyday Tee in its A to Z place, and its product page: each color in the gallery (Black clicked, then the all-colors picture again) and the nine variations in rows. |
 
 ## Record
 
@@ -17,7 +18,19 @@ harness/wp-harness browse "$PWD/.wordpress-org/clips/combine-coffee.mjs" /tmp/cl
 .wordpress-org/clips/make.sh /tmp/clips/combine-coffee.webm site/images
 ```
 
-Run `harness/wp-harness reset` before each take: the clip combines the coffee, so a second take on the same database finds nothing to combine.
+The tee clip shows the product page as Live Preview does, with the variations in rows, so add the demo-only plugin before the snapshot:
+
+```sh
+cp .wordpress-org/blueprints/demo-variant-rows.php ~/.cache/wp-harness/sites/variation-converter-for-woocommerce/wordpress/wp-content/plugins/
+harness/wp-harness wp plugin activate demo-variant-rows
+harness/wp-harness snapshot
+harness/wp-harness browse "$PWD/.wordpress-org/clips/combine-tees.mjs" /tmp/clips
+.wordpress-org/clips/make.sh /tmp/clips/combine-tees.webm site/images 34
+```
+
+Leave it off for the coffee clip, which picks from the dropdowns. `lib.mjs` holds what both scripts share: the recording context, the drawn pointer and the helpers.
+
+Run `harness/wp-harness reset` before each take: each clip combines its products, so a second take on the same database finds nothing to combine.
 
 The recording is 1100 x 700 with the admin menu folded and a drawn pointer (video has none). `make.sh` writes an MP4 (the website plays it), a 772px GIF and a poster frame. The coffee GIF is also copied to `.wordpress-org/screenshot-1.gif`, the first screenshot on the wordpress.org listing (screenshots may be GIFs, and `bin/svn-release.sh` copies them). Needs `ffmpeg`.
 
