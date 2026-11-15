@@ -68,6 +68,8 @@ function varconv_assets(): void {
 	$url = plugin_dir_url( VARCONV_FILE ) . 'build/';
 	$asset = is_readable( $dir . 'admin.asset.php' ) ? require $dir . 'admin.asset.php' : array( 'dependencies' => array(), 'version' => VARCONV_VERSION );
 	varconv_jsx_runtime();
+	// The media modal, for choosing a combined product's main image.
+	wp_enqueue_media();
 	wp_enqueue_style( 'varconv-admin', $url . 'admin.css', array( 'wp-components' ), $asset['version'] );
 	wp_enqueue_script( 'varconv-admin', $url . 'admin.js', $asset['dependencies'], $asset['version'], true );
 	wp_set_script_translations( 'varconv-admin', 'variation-converter-for-woocommerce' );

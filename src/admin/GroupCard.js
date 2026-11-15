@@ -9,6 +9,7 @@ import { useState } from '@wordpress/element';
 import { __, sprintf } from '@wordpress/i18n';
 import {
 	ChipGroup,
+	MainImage,
 	PairGrid,
 	PickTable,
 	ProductName,
@@ -33,6 +34,8 @@ export function makeDraft( group ) {
 		removed: false,
 		members: group.members.map( ( m ) => ( { ...m } ) ),
 		categories: group.chosenCats,
+		// The main image chosen in the media library, as { id, url }; null for the first checked product's.
+		image: null,
 		band: null,
 		filter: '',
 	};
@@ -157,6 +160,8 @@ export default function GroupCard( {
 	};
 
 	const twice = draft.removed ? repeatedLabels( members ) : [];
+	// The default main image follows the first checked product, so it changes as products are reordered or unchecked.
+	const firstChecked = members.find( ( m ) => m.checked );
 	const create = () => {
 		setBusy( true );
 		setError( '' );
@@ -166,6 +171,7 @@ export default function GroupCard( {
 			attribute: draft.attribute,
 			groupAttribute: draft.two ? draft.groupAttribute : null,
 			categories: group.catsDiffer ? draft.categories : [],
+			image: draft.image ? draft.image.id : 0,
 			members: members.map( ( m ) => ( {
 				id: m.id,
 				label: m.label,
@@ -293,7 +299,7 @@ export default function GroupCard( {
 		<ReviewCard
 			alone={ alone }
 			help={ __(
-				'Drag to reorder. The first product gives the variable product its image and description.',
+				'Drag to reorder. The first product gives the variable product its description, and its main image unless you choose one.',
 				'variation-converter-for-woocommerce'
 			) }
 			actions={
@@ -418,6 +424,13 @@ export default function GroupCard( {
 					)
 				) }
 			</div>
+			<MainImage
+				chosen={ draft.image || null }
+				fallback={
+					firstChecked ? firstChecked.large || firstChecked.thumb : ''
+				}
+				onChange={ ( image ) => set( { image } ) }
+			/>
 			{ group.catsDiffer && (
 				<fieldset className="varconv-cats">
 					<legend>

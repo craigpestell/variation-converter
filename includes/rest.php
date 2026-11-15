@@ -402,9 +402,11 @@ function varconv_rest_create( WP_REST_Request $request ): array {
 	$name = varconv_rest_text( $request, 'name' );
 	$attribute = varconv_rest_text( $request, 'attribute' );
 	$categories = varconv_rest_ids( $request->get_param( 'categories' ) );
+	// The main image the admin chose in the media library; 0 keeps the first checked product's.
+	$image = absint( $request->get_param( 'image' ) );
 	$id = $two
-		? varconv_create_grid( $name, varconv_rest_text( $request, 'groupAttribute' ), $attribute, $pairs, $categories )
-		: varconv_create( $name, $attribute, $members, $categories );
+		? varconv_create_grid( $name, varconv_rest_text( $request, 'groupAttribute' ), $attribute, $pairs, $categories, $image )
+		: varconv_create( $name, $attribute, $members, $categories, $image );
 	// The checked products are in the new product now; what stays unchecked is the rest of the group.
 	varconv_set_excluded( $key, array_keys( $members ), false );
 	return array(

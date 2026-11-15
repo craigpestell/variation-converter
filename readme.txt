@@ -5,7 +5,7 @@ Requires at least: 6.5
 Tested up to: 7.1
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 1.10.5
+Stable tag: 1.11.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -200,7 +200,8 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 
 == Changelog ==
 
-= 1.10.5 =
+= 1.11.0 =
+* Choose the combined product's main image on the combine card: it shows a preview of the picture the variable product will use, opens the media library to pick another, and can go back to the first product's image. The chosen picture is left out of the gallery so it isn't shown twice.
 * The Live Preview demo store's media library has shelf pictures of all the coffee bags and all the syrup bottles, to use as those combined products' main images.
 * The Live Preview demo store lists each variation in its own row on product pages, with its picture, price, stock and Add to cart. This comes from a small demo-only plugin the preview adds; Variation Converter itself doesn't change product pages.
 

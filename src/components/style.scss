@@ -267,3 +267,13 @@ $narrow: 782px;
 	.varconv-pick-table-wrap { overflow-x: auto; }
 	.varconv-pick-table { min-width: 640px; }
 }
+
+.varconv-main-image {
+	display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+	&__preview {
+		flex: none; width: 56px; height: 56px; border: 1px solid #dcdcde; border-radius: 2px; overflow: hidden;
+		> img, > .varconv-thumb { display: block; width: 100%; height: 100%; object-fit: cover; }
+	}
+	&__text { display: flex; flex-direction: column; gap: 2px; }
+	&__actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-left: 8px; }
+}

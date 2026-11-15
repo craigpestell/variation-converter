@@ -10,6 +10,7 @@ export { default as ChipGroup } from './ChipGroup';
 export { default as HtmlNotice } from './HtmlNotice';
 export { default as JobNotice } from './JobNotice';
 export { default as ListTable } from './ListTable';
+export { default as MainImage } from './MainImage';
 export { default as PageHeader } from './PageHeader';
 export { default as Pagination } from './Pagination';
 export { default as PairGrid } from './PairGrid';
