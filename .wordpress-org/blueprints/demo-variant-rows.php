@@ -31,7 +31,7 @@ function demo_variant_rows() {
 	if ( ! $rows ) {
 		return;
 	}
-	echo '<style>.demo-variants{width:100%;border-collapse:collapse;margin:0 0 1.5em}.demo-variants td{padding:.6em .4em;border-bottom:1px solid #ddd;vertical-align:middle}.demo-variants img{width:56px;height:56px;object-fit:cover;display:block}.demo-variants form{display:flex;gap:.4em;justify-content:flex-end;margin:0}.demo-variants input.qty{width:3.5em}.demo-variants .out{color:#a00}</style>';
+	echo '<style>.demo-variants{width:100%;border-collapse:collapse;margin:0 0 1.5em}.demo-variants tr:nth-child(even) td{background:rgba(0,0,0,.04)}.demo-variants td{padding:.6em .4em;border-bottom:1px solid #ddd;vertical-align:middle}.demo-variants img{width:56px;height:56px;object-fit:cover;display:block}.demo-variants form{display:flex;gap:.4em;justify-content:flex-end;margin:0}.demo-variants input.qty{width:3.5em}.demo-variants .out{color:#a00}</style>';
 	echo '<table class="demo-variants"><tbody>';
 	foreach ( $rows as $variation ) {
 		$names = array();
