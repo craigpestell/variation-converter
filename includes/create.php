@@ -247,12 +247,13 @@ function varconv_created(): array {
  * @param array<int,string> $members Simple product ID => variant label.
  * @param int[] $categories Product categories for the new product, each one of the members'; none takes the first
  *                          member's categories.
+ * @param int $image The variable product's main image, an image in the media library; 0 takes the first member's.
  * @return int The new product's ID.
  * @throws RuntimeException When the collection cannot be made; nothing is left half made.
  */
-function varconv_create( string $name, string $attribute_name, array $members, array $categories = array() ): int {
+function varconv_create( string $name, string $attribute_name, array $members, array $categories = array(), int $image = 0 ): int {
 	$errors = varconv_validate( $name, $attribute_name, $members );
-	return varconv_make( $name, array( $attribute_name ), array_map( static fn( $label ) => array( (string) $label ), $members ), $categories, $errors );
+	return varconv_make( $name, array( $attribute_name ), array_map( static fn( $label ) => array( (string) $label ), $members ), $categories, $errors, $image );
 }
 
 /**
@@ -261,13 +262,14 @@ function varconv_create( string $name, string $attribute_name, array $members, a
  *
  * @param array<int,array{0:string,1:string}> $members Simple product ID => array( group label, label ).
  * @param int[] $categories As for varconv_create().
+ * @param int $image As for varconv_create().
  * @return int The new product's ID.
  * @throws RuntimeException When the product cannot be made; nothing is left half made.
  */
-function varconv_create_grid( string $name, string $group_attribute, string $attribute_name, array $members, array $categories = array() ): int {
+function varconv_create_grid( string $name, string $group_attribute, string $attribute_name, array $members, array $categories = array(), int $image = 0 ): int {
 	$members = array_map( static fn( $pair ) => array( (string) ( $pair[0] ?? '' ), (string) ( $pair[1] ?? '' ) ), $members );
 	$errors = varconv_validate_grid( $name, $group_attribute, $attribute_name, $members );
-	return varconv_make( $name, array( $group_attribute, $attribute_name ), $members, $categories, $errors );
+	return varconv_make( $name, array( $group_attribute, $attribute_name ), $members, $categories, $errors, $image );
 }
 
 /**
@@ -364,9 +366,10 @@ function varconv_new_variation( WC_Product $simple, WC_Product_Variable $parent,
  * @param string[] $attribute_names The variation attributes, in order.
  * @param array<int,string[]> $members Simple product ID => its label for each attribute, in the same order.
  * @param string[] $errors Problems already found with what was submitted.
+ * @param int $image The main image the admin chose; 0 takes the first member's.
  * @throws RuntimeException When the product cannot be made; nothing is left half made.
  */
-function varconv_make( string $name, array $attribute_names, array $members, array $categories, array $errors ): int {
+function varconv_make( string $name, array $attribute_names, array $members, array $categories, array $errors, int $image = 0 ): int {
 	$name = trim( $name );
 	$attribute_names = array_map( static fn( $n ) => trim( (string) $n ), $attribute_names );
 	if ( count( array_unique( array_map( 'sanitize_title', $attribute_names ) ) ) < count( $attribute_names ) ) {
@@ -389,6 +392,9 @@ function varconv_make( string $name, array $attribute_names, array $members, arr
 	$member_cats = array_merge( array(), ...array_map( static fn( $s ) => array_map( 'intval', $s[0]->get_category_ids( 'edit' ) ), $sources ) );
 	if ( array_diff( $categories, $member_cats ) ) {
 		$errors[] = __( 'A chosen category is not one of the selected products\' categories.', 'variation-converter-for-woocommerce' );
+	}
+	if ( $image < 0 || ( $image && ! wp_attachment_is_image( $image ) ) ) {
+		$errors[] = __( 'The chosen main image is not an image in the media library.', 'variation-converter-for-woocommerce' );
 	}
 	if ( $errors ) {
 		throw new RuntimeException( esc_html( implode( ' ', array_unique( $errors ) ) ) );
@@ -421,11 +427,12 @@ function varconv_make( string $name, array $attribute_names, array $members, arr
 		$parent->set_status( $status );
 		$parent->set_description( $first->get_description( 'edit' ) );
 		$parent->set_short_description( $first->get_short_description( 'edit' ) );
-		$parent->set_image_id( $first->get_image_id( 'edit' ) );
+		$main = $image ?: (int) $first->get_image_id( 'edit' );
+		$parent->set_image_id( $main );
 		$parent->set_gallery_image_ids( varconv_gallery( array_map(
 			static fn( $s ) => array_merge( array( $s[0]->get_image_id( 'edit' ) ), $s[0]->get_gallery_image_ids( 'edit' ) ),
 			$sources
-		) ) );
+		), $main ) );
 		$parent->set_tax_class( $first->get_tax_class( 'edit' ) );
 		$parent->set_tax_status( $first->get_tax_status( 'edit' ) );
 		$parent->set_shipping_class_id( $first->get_shipping_class_id( 'edit' ) );
@@ -483,15 +490,16 @@ function varconv_make( string $name, array $attribute_names, array $members, arr
 }
 
 /**
- * The variable product's gallery: every source's featured and gallery images, in source order, each once. The first
- * source's featured image is left out, as it is the variable product's own image.
+ * The variable product's gallery: every source's featured and gallery images, in source order, each once. The
+ * variable product's own main image is left out: by default the first source's featured image.
  *
  * @param array<int, array<int, int|string>> $images Per source: its featured image ID, then its gallery image IDs.
+ * @param int|null $main The variable product's main image; null for the first source's featured image.
  * @return int[]
  */
-function varconv_gallery( array $images ): array {
+function varconv_gallery( array $images, ?int $main = null ): array {
 	$ids = array_map( 'intval', array_merge( ...array_values( $images ) ) );
-	$featured = $images ? (int) ( reset( $images )[0] ?? 0 ) : 0;
+	$featured = $main ?? ( $images ? (int) ( reset( $images )[0] ?? 0 ) : 0 );
 	return array_values( array_unique( array_filter( $ids, static fn( $id ) => $id > 0 && $id !== $featured ) ) );
 }
 

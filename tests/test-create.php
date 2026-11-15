@@ -15,6 +15,8 @@ expect( varconv_gallery( array( array( 1, 2 ), array( 3, 2 ), array( 3, 1 ) ) ),
 expect( varconv_gallery( array( array( 0, 2 ), array( 0 ), array( '7', 8 ) ) ), array( 2, 7, 8 ), 'missing images skipped' );
 expect( varconv_gallery( array( array( 1 ) ) ), array(), 'one image only' );
 expect( varconv_gallery( array() ), array(), 'no sources' );
+expect( varconv_gallery( array( array( 1, 2 ), array( 3 ) ), 9 ), array( 1, 2, 3 ), 'chosen main image: first featured stays in the gallery' );
+expect( varconv_gallery( array( array( 1, 2 ), array( 3 ) ), 3 ), array( 1, 2 ), 'chosen main image left out of the gallery' );
 
 // Status of a product made from others: the most visible of theirs.
 expect( varconv_status_for( array( 'private', 'private' ) ), 'private', 'all private stays private' );
