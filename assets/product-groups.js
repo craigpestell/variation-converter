@@ -13,7 +13,7 @@ jQuery( function ( $ ) {
 				key: 'cb' === this.id ? 'cb' : String( this.id || '' ),
 				primary: $c.hasClass( 'column-primary' ),
 				hidden: $c.hasClass( 'hidden' ),
-				name: $.trim( $c.text() ),
+				name: $c.text().trim(),
 			};
 		} ).get();
 	}

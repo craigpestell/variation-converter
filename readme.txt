@@ -2,10 +2,10 @@
 Contributors: craigpestell
 Tags: simple to variable, variable products, product variations, merge products, combine products
 Requires at least: 6.5
-Tested up to: 7.1
+Tested up to: 7.2
 Requires PHP: 7.4
 Requires Plugins: woocommerce
-Stable tag: 1.11.1
+Stable tag: 1.11.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -199,6 +199,10 @@ Ask questions in the support forum here on wordpress.org. Bug reports and pull r
 5. The History tab, where every conversion can be undone.
 
 == Changelog ==
+
+= 1.11.2 =
+* Tested with WordPress 7.2 and PHP 8.6.
+* The Products list grouping script no longer uses jQuery.trim(), which jQuery 4 removes (WordPress 7.2 warns about it through jQuery Migrate 3.6).
 
 = 1.11.1 =
 * After a first install, Products and Products > Variation Converter show a "1" count bubble so the page is easy to find. It goes away once someone opens the page. Updates, and stores that used the plugin before, get no bubble.
